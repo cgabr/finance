@@ -10,11 +10,11 @@ setup (
 
 name                          = "konto",
 version                       = "0.0.1",
-packages                      = ['.konto']
+packages                      = ['.konto'],
 author                        = "Christian Martin Gabriel",
 author_email                  = "christian.gabriel@ift-informatik.de",
 url                           = "https://github.com/cgabr/konto",
-description                   = "A Python Library for Accounting"
+description                   = "A Python Library for Accounting",
 
 python_requires               = '>=3.6',
 long_description_content_type = "text/markdown",
