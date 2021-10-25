@@ -133,3 +133,4 @@ dmypy.json
 sync.bat
 *~
 geckodriver*
+example/
