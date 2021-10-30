@@ -374,7 +374,7 @@ class Konto ():
 
         self.mark("")
         pattern1 = re.sub(r"\^"," ",pattern,9999)
-        (pattern1,interval,egrep) = self.parse_pattern(pattern1)
+        (pattern1,interval,egrep,interval0) = self.parse_pattern(pattern1)
 
         self.mark("A. Compute query for transaction file " + pattern1 + " " + str(interval)[0:40] + " ...")
         if interval:
@@ -412,12 +412,12 @@ class Konto ():
 #                    zeile0  = zeile1
 #            open(file+".orig","w").write("\n".join(text1)+"\n")
         
-        open(file+".par","w").write(pattern+","+str(interval)+","+egrep+"\n")
+        open(file+".par","w").write(pattern1+","+str(interval)+","+egrep+"\n")
 
         self.mark("B. Transaction file generated.")
 
         if len(glob.glob("*.acc")) == len(glob.glob("*.sum")):
-            self.format_kto(pattern1,interval,pattern)
+            self.format_kto(pattern1,interval0,pattern)
             self.mark("C. ... and formatted.")
         
         return([startdate,enddate,pattern1,interval,egrep])
@@ -431,6 +431,9 @@ class Konto ():
         pattern   = pars[2]
         interval  = pars[3]
         egrep     = pars[4]
+
+        print(pars)
+
 
         pattern1  = re.sub(r"\^"," ",pattern,9999)
 
@@ -467,9 +470,10 @@ class Konto ():
 
     def parse_pattern (self,pattern=""):    #   parse the pattern
 
-        interval = None
-        egrep    = ""
-        m        = re.search(r"^(.*)([\.\:])(.*)$",pattern)
+        interval  = None
+        interval0 = None
+        egrep     = ""
+        m         = re.search(r"^(.*)([\.\:])(.*)$",pattern)
             
         if m:
 
@@ -477,6 +481,7 @@ class Konto ():
             mode          = m.group(2)
             interval      = "20" + m.group(3)[0:2]
             months        = m.group(3)[2:]
+            interval0     = mode + m.group(3)[0:2]
             
             if   months == "A":
                 months = "10"
@@ -521,14 +526,14 @@ class Konto ():
             else:
                 interval = interval + months
 
-        return(pattern,interval,egrep)            
+        return(pattern,interval,egrep,interval0)            
                 
 #**********************************************************************************
 
     def format_kto (self,pattern,interval,pattern0,file="result"):
 
         if interval:
-            interval = "." + interval
+            interval = interval
         else:
             interval = ""
 
@@ -610,7 +615,8 @@ class Konto ():
 
             orig_text_new_sorted.append(zeile[6])
 
-        text_match1  = "" + ("%-50s"%(re.sub(r"\.$","",ukto+"."+interval))) + ("%13.2f"%gesamt) + "\n\n" + "\n".join(text_match1) + "\n"
+#        text_match1  = "" + ("%-50s"%(pattern0)) + ("%13.2f"%gesamt) + "\n\n" + "\n".join(text_match1) + "\n"
+        text_match1  = "" + ("%-50s"%(re.sub(r"\.$","",ukto+interval))) + ("%13.2f"%gesamt) + "\n\n" + "\n".join(text_match1) + "\n"
         text_match2  = "\n".join(text_match2) + "\n"
         
         salden_text = self.format_salden(ukto,datum,datum0,"^"+ukto+"(-[^- ]+){0,99},")
@@ -985,45 +991,48 @@ class Konto ():
         if ktofile:
             ktodir   = re.sub(r"^(.*)[\\\/](.*).kto$","\\1",os.path.abspath(ktofile))
             ktotext  = open(ktodir+"/"+ktofile).read()
-            pattern0 = re.sub(r"^(\S*) (.*)$","\\1",ktotext[0:50])
+            pattern0 = "^" + re.sub(r"^(\S*) (.*)$","\\1",ktotext[0:50])
         else:
+            ktotext  = ""
             ktodir   = re.sub(r"[\\\/]$","",os.path.abspath("."))
 
-        while (0 == 0):
+        while (0 == 0):   #  check if we are in a directory with acc files
             x = glob.glob("2*.acc")
             if len(x) > 0:
                 y = glob.glob("2*.sum")
                 break
             os.chdir("..")
             
-            
 #        os.system("ls")
 
         if os.path.isfile("result.orig"):
             hkey = os.popen("md5sum result.kto").read()[0:12]
-            if hkey + ".kto" == ktofile:
+            if hkey + ".kto" == ktofile or hkey in ktotext[0:200]:
                 open("result.kto","w").write(ktotext)
                     
         udir = None
         if ktofile:
-#            print("P0 P1",pattern0,pattern)
             udir = ktodir
             if pattern == "":
-                pattern = pattern0
+                pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
             else:
-                m = re.search(r"^(.*)\.(.*)",pattern0)
+                m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
                 if m:
                     p0 = m.group(1)
-                    i0 = m.group(2)
+                    m0 = m.group(2)
+                    i0 = m.group(3)
                 else:
                     p0 = pattern0
+                    m0 = None
                     i0 = None
-                m = re.search(r"^(.*)\.(.*)",pattern)
+                m = re.search(r"^(.*)([\.\:])(.*)",pattern)
                 if m:
                     p1 = m.group(1)
-                    i1 = m.group(2)
+                    m1 = m.group(2)
+                    i1 = m.group(3)
                 else:
                     p1 = pattern
+                    m1 = None
                     i1 = None
                 if not i1:
                     i1 = i0
@@ -1043,7 +1052,8 @@ class Konto ():
                     except:
                         pass
 
-                pattern = p2 + "." + i1
+                if m0 == m1:
+                    pattern = p2 + m1 + i1
                 pattern = re.sub(r"\.$","",pattern)
 
         print("PATTERN",pattern)
@@ -1078,7 +1088,13 @@ class Konto ():
             hkey = os.popen("md5sum result.kto").read()[0:12]
             
             ktotext = open("result.kto").read()
-            open(udir+"/"+hkey+".kto","w").write(ktotext)
+            print(hkey)
+            ktotext = re.sub(r"^(\S+  )( +\S+)","\\1 " + hkey + "\\2",ktotext)
+            print(ktotext[0:100])
+            if ktofile == None or re.search(r"^[abcdef0123456789]{12}\.kto$",ktofile):
+                open(udir+"/"+hkey+".kto","w").write(ktotext)
+            else:
+                open(udir+"/"+ktofile,"w").write(ktotext)
 
         os.chdir(ktodir)
 
@@ -1088,4 +1104,5 @@ class Konto ():
 
 if __name__ == "__main__":
         
-    Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
+#    Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
+    Konto.__dict__["kto"](Konto(),*sys.argv[1:])
