@@ -91,9 +91,12 @@ because the are lacking or not consistent anymore for some reason, do the follow
 
 -   Delete all sum-files, if there are some.
 
--   python3 -m konto.base.konto kto 2 (1st run)
+-   python3 -m konto.base.konto 2 (1st run)
 
--   python3 -m konto.base.konto kto 2 (2nd run)
+-   python3 -m konto.base.konto 2 (2nd run)
+
+
+1.3.
 
 
 
