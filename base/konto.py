@@ -432,9 +432,6 @@ class Konto ():
         interval  = pars[3]
         egrep     = pars[4]
 
-        print(pars)
-
-
         pattern1  = re.sub(r"\^"," ",pattern,9999)
 
 
@@ -1088,9 +1085,7 @@ class Konto ():
             hkey = os.popen("md5sum result.kto").read()[0:12]
             
             ktotext = open("result.kto").read()
-            print(hkey)
             ktotext = re.sub(r"^(\S+  )( +\S+)","\\1 " + hkey + "\\2",ktotext)
-            print(ktotext[0:100])
             if ktofile == None or re.search(r"^[abcdef0123456789]{12}\.kto$",ktofile):
                 open(udir+"/"+hkey+".kto","w").write(ktotext)
             else:

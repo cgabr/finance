@@ -99,7 +99,6 @@ class USteuer (object):
                 neue_ust_buchungen[datrem].append('  '.join(buchung))
 
         for datrem in neue_ust_buchungen:
-            print(datrem)
             if not datrem in umsatzsteuerbuchungen:
                 for ust_buchung in neue_ust_buchungen[datrem]:
                     text.append(ust_buchung)
