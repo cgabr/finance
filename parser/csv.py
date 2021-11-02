@@ -271,7 +271,7 @@ class CSV (object):
                                     patterns_orig = self.extract_patterns_from_remark(remark_orig)
                                     for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
                                         remark.replace(pattern,"#"+pattern+"#")
-                                    self.kto_text[zaehler] = m.group(1) + remark + ";"
+                                    self.kto_text[zaehler] = m.group(1) + remark
                                 
                         
         return("")
