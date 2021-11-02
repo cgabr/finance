@@ -64,13 +64,17 @@ class CSV (object):
             return()
 
         for csv_file in csv_files:
-#            print(csv_file)
+            print(csv_file)
             erg = self.merge_with_ktofile_0(open(csv_file).read())
             if not erg == "":
                 print(erg)
                 return()
 
-        self.merge_with_ktofile()
+        erg = self.merge_with_ktofile()
+        if not erg == "":
+            print(erg)
+            return()
+
 
         self.assign_contra_accounts()
 
@@ -185,7 +189,9 @@ class CSV (object):
             if bed == 0:
                 continue
                 
+#            print(zeile)
             erg       = self.create_buchung(zeile)
+#            print(erg)
             if erg == None:
                 continue
             datum     = erg['DATUM']
@@ -197,7 +203,6 @@ class CSV (object):
             
         return("")
 
-
 #*********************************************************************************
 
     def merge_with_ktofile (self):
@@ -208,13 +213,13 @@ class CSV (object):
 
                     remark    = erg['REMARK']
 
-                    print(datum,absbetrag,remark)
                     if not datum in self.ktolines or not absbetrag in self.ktolines[datum]:
                         self.append_to_konto(erg)
 
                     else:
-
-                        #  es gibt also mindestens einen Eintrag mit gleichem Datum und gleichen Absolutbetrag
+#                        print("-----")                        
+#                        print("VVV",datum,absbetrag,remark)
+#                        #  es gibt also mindestens einen Eintrag mit gleichem Datum und gleichen Absolutbetrag
                         #  Alle diese Eintrage durchgehen, fuer jedes moegliche Pattern in der CSV-Remark:
 
                         for pattern in (remark.split(";")):
@@ -225,8 +230,8 @@ class CSV (object):
                             anzahl_ziel   = 0
                             anzahl_zeilen = 0
                             for entry in self.ktolines[datum][absbetrag]:
-                                print("WW",pattern)
-                                print("VV",entry['REMARK'])
+#                                print("WW",pattern)
+#                                print("VV",entry['REMARK'])
                                 if self.no_umlaute(pattern) in self.no_umlaute(entry['REMARK']):
                                     matching_entry = entry
                                     anzahl_zeilen  = anzahl_zeilen + 1
@@ -244,6 +249,7 @@ class CSV (object):
                                     break
 
                         if anzahl_zeilen > 1:
+                            print("hier")
                             return("More than one matching line found for " + entry['ZEILE'] + ".")
 
 
@@ -255,8 +261,8 @@ class CSV (object):
                             remark_orig = matching_entry['REMARK']
                             remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
                             remark1     = re.sub(r"\#","",remark1)
-                            print(remark)
-                            print("    ",remark1)
+#                            print(remark)
+#                            print("    ",remark1)
                             if not remark == remark1:                  #  only if the remark is changed
                                 zaehler = matching_entry['ZAEHLER']    #  we replace it by the CSV
                                 zeile1  = matching_entry['ZEILE']
@@ -267,7 +273,6 @@ class CSV (object):
                                         remark.replace(pattern,"#"+pattern+"#")
                                     self.kto_text[zaehler] = m.group(1) + remark + ";"
                                 
-#                    return("")
                         
         return("")
 
@@ -331,7 +336,7 @@ class CSV (object):
             patterns.append("xyz123")
         remark = ";".join(patterns)
 
-        print(betrag)
+#        print(betrag)
         try:
             if not type(eval(betrag)) == type(0.1):
                 return(None)
@@ -352,7 +357,7 @@ class CSV (object):
         remark = entry['REMARK']
 
         zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + config.STANDARD_CONTRA_ACCOUNT + "  0.00  " + remark
-        print("XX",zeile)
+#        print("XX",zeile)
 
         self.new_lines.append(zeile)
 
