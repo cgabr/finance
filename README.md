@@ -17,7 +17,6 @@ konto is supposed to deal fast with big amounts of data.
 
 
 
-
 1.  Basic functionality
 =======================
 
