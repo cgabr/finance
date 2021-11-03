@@ -90,10 +90,15 @@ class CSV (object):
 
         self.ukto             = None
         self.kto_text         = kto_text0.split("\n")
-        self.counter_accounts = {}
+        self.equivalent_acc   = {}
         self.ktolines         = {}
         self.new_lines        = []
         self.csvlines         = {}
+        self.undef_acc        = []
+
+
+        ktotext1              = self.kto_text
+        ktotext1.sort()
         
         zaehler = -1
         for zeile in self.kto_text:
@@ -108,13 +113,15 @@ class CSV (object):
             kto1     = m.group(3)
             kto2     = m.group(4)
             remark   = m.group(6)
+            
+            if kto2 == config.STANDARD_CONTRA_ACCOUNT:
+                self.undef_acc.append(zaehler)
+
             patterns = self.extract_patterns_from_remark(remark)
 
-
-            if not patterns in self.counter_accounts:
-                self.counter_accounts[patterns] = []
-                if not kto2 in self.counter_accounts[patterns]:
-                    self.counter_accounts[patterns].append(kto2)
+            if not patterns in self.equivalent_acc:
+                self.equivalent_acc[patterns] = []
+            self.equivalent_acc[patterns].append(zeile)
                     
 #            print(self.ukto)
             if self.ukto == None:
@@ -375,6 +382,84 @@ class CSV (object):
             self.kto_text.append(line)
 
 #******************************************************************************
+
+    def assign_contra_accounts (self):
+    
+        used_numbers1    = []
+        used_numbers2    = []
+        self.check_cache = {}
+
+        for patterns in self.equivalent_acc:   #  run through all patterns, these
+                                               #  define equivalence classes of accounts
+
+            kto1 = ""
+            kto2 = ""
+            
+            for zeile in self.equivalent_acc[patterns]:
+            
+                m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                if m:
+                    kto1 = m.group(3)
+                    if kto2 == "" or kto2 == m.group(4):
+                        kto2 = m.group(4)
+                    else:
+                        kto2 = ""
+                        print("Ambiguous pattern in lines:")
+                        print(zeile0)
+                        print(zeile)
+                        break
+                zeile0 = zeile
+                
+            for nr1 in self.kto_text:
+                if nr1 in used_numbers1:
+                    continue
+                x = self.check_patterns(patterns,kto1,kto2,self.kto_text[nr1])
+                if x: 
+                    self.kto_text[nr1] = x
+                    used_numbers1.append(nr1)
+                    
+            nr2 = 0
+            while nr2 < len(self.new_lines):                
+                if nr2 in used_numbers2:
+                    continue
+                x = self.check_patterns(patterns,kto1,kto2,self.new_lines[nr2])
+                if x: 
+                    self.new_lines[nr2] = x
+                    
+#******************************************************************************
+
+    def check_patterns (self,patterns,ktoa,ktob,zeile)
+                            
+        if not zeile in self.check_cache:
+            m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+            if m:
+                erg = [ m.group(1),m.group(2),m.group(3),m.group(4),m.group(5),m.group(6)]
+                self.check_cache[zeile] = erg   #  Caching, can be disabled by disabling this line
+            else:
+                return(None)
+        else:
+            erg = self.check_cache[zeile]
+            
+        datum   = m.group(1)
+        betrag  = m.group(2)
+        kto1    = m.group(3)
+        kto2    = m.group(4)
+        remark  = m.group(4)
+        remark1 = remark.replace("#","",9999)
+        
+        for pattern in patterns.split(","):
+            m = re.search("^(.*?)"+pattern+"(.*)$",zeile)
+            if not m:
+                return(None)
+            remark1 = m.group(2)
+            
+        zeile = datum + "  " + betrag + "  " + ktoa + "  " + ktob + "  0.00  " + remark
+        
+        return(zeile)
+            
+
+#******************************************************************************
+
 
 
     def csv (self,multiline,ktotext,texts,gegenkonto,datumsfeld,betragsfeld,*bemerkungsfelder):
