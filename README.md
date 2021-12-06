@@ -101,3 +101,7 @@ because the are lacking or not consistent anymore for some reason, do the follow
 
 
 
+Draft:
+
+
+python3 -m konto.parser.csv:     parse csv-files from bank

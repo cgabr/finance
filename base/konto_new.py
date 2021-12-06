@@ -15,6 +15,9 @@ class Konto ():
         self.max_months = 4   #  10^max_months Monate erlaubt in einem sum-file, 10^4/12 = 800 Jahre
                               #      (das sollte reichen)
 
+        self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
+
+
 #**********************************************************************************
 
     def mark (self,remark=""):
@@ -26,19 +29,298 @@ class Konto ():
 
 #**********************************************************************************
 
-    def add (self,sortieren=0,file="result"):
+    def extract_account_lines (self,base_dir,search_pattern,extracted_acc,formatted_acc,par_file):
+    
+#    This function extracts the matching lines of a request into a file
 
-#       Diese Funktion teilt die Buchungssaetze in einer Transaktionsdatei auf die
-#       einzelnen Teildateien auf
+        search_pattern1                                        = re.sub(r"\^"," ",search_pattern,9999)
+        (grep_pattern,egrep,interval_long,interval_short,mode) = self.parse_pattern(search_pattern1)
 
-        if not os.path.isfile(file+".orig"):
-            print("No result file.")
+#        self.mark("A. Compute query for transaction file " + pattern1 + " " + str(interval)[0:40] + " ...")
+        base_dir = re.sub(r"//$","/",base_dir + "/")
+        if interval_long:
+            if grep_pattern == "":
+                os.system(egrep + "grep -h -i ^" + interval_long + " " + base_dir + "*.acc > " + extracted_acc)
+            else:
+                os.system(egrep + "grep -h -i ^" + interval_long + " " + base_dir + "*.acc | grep -h -i '" + grep_pattern + "' > " + extracted_acc)
+        else:
+            if grep_pattern == "":
+                os.system("less " + base_dir + "*.acc > " + extracted_acc)
+            else:
+                os.system(egrep + "grep -h -i '" + grep_pattern + "' " + base_dir + "*.acc > " + extracted_acc)
+
+        os.system("sort " + extracted_acc + " > " + extracted_acc + ".tmp")
+        os.system("mv " + extracted_acc + ".tmp " + extracted_acc)
+        
+        metadaten = [search_pattern,grep_pattern,egrep,interval_long,interval_short,mode]
+        
+        open(par_file,"w").write(",".join(metadaten)+"\n")
+
+        self.mark("B. Transaction file generated.")
+
+        if len(glob.glob(base_dir+"*.acc")) == len(base_dir+glob.glob("*.sum")):
+            self.format_kto(metadaten,extracted_acc,formatted_acc)
+           self.mark("C. ... and formatted.")
+        
+        return(metadaten)
+
+#**********************************************************************************
+        
+    def subtract_account_lines (self,pars,file="result"): 
+
+#   This function deletes accounting lines from the acc-files due to a pattern
+
+        startdate = pars[0]
+        enddate   = pars[1]
+        pattern   = pars[2]
+        interval  = pars[3]
+        egrep     = pars[4]
+
+        pattern1  = re.sub(r"\^"," ",pattern,9999)
+
+        for ktofile in glob.glob(base_dir+"*.acc") :
+
+            m = re.search(r"^(\d+)\.acc",ktofile)
+            if not m:
+                continue
+            zeitraum = m.group(1)
+            if zeitraum < startdate[0:len(zeitraum)]:
+                continue
+            if zeitraum > enddate[0:len(zeitraum)]:
+                continue
+
+            if interval:
+                if pattern1 == "":
+                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
+                else:
+                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
+                    os.system(egrep + "grep -i ^" + interval + " " + ktofile + " | grep -i -v '" + pattern1 + "' >> __" + ktofile)
+            else:
+                if pattern1 == "":
+                    os.system(" > __" + ktofile)
+                else:
+                    os.system(egrep + "grep -i -v '" + pattern1 + "' " + ktofile + " > __" + ktofile)
+                    
+            os.system("mv __" + ktofile + " " + ktofile)
+
+        self.mark("D. Clear acc files.")
+                
+#**********************************************************************************
+
+    def parse_pattern (self,pattern):    #   parse the pattern
+
+        interval_long    = ""
+        interval_short   = ""
+        egrep            = ""
+        mode             = ""
+        grep_pattern     = pattern
+        m                = re.search(r"^(.*)([\.\:])(.*)$",pattern)
+            
+        if m:
+
+            grep_pattern   = m.group(1)
+            mode           = m.group(2)
+            interval_long  = "20" + m.group(3)[0:2]
+            months         = m.group(3)[2:]
+            interval_short = m.group(3)
+            
+            print(interval_short,months)
+            if   months == "A":
+                months = "10"
+            elif months == "B":
+                months = "11"
+            elif months == "C":
+                months = "12"
+            elif months == "I":
+                months = "0[123]"
+            elif months == "J":
+                months = "0[456]"
+            elif months == "K":
+                months = "0[789]"
+            elif months == "L":
+                months = "1[012]"
+            elif months == "M":
+                months = "0[123456]"
+            elif months == "N":
+                months = "\\(07\\|08\\|09\\|10\\|11\\|12\\)" # "[01][789012]"
+                egrep  = "e"
+            elif months == "P":
+                months = ""
+            elif not months == "":
+                months = "0" + months
+        
+            if mode == ":":
+                intervals = []
+                jahr      = "2000"
+                while (0 == 0):
+                    intervals.append(jahr)
+                    jahr = str(int(jahr)+1)
+                    if jahr == interval_long:
+                        break
+                if months == "12":
+                    intervals.append(jahr)
+                else:
+                    month = "01"
+                    while (0 == 0):
+                        intervals.append(jahr+month)
+                        if month in (months,"12"):
+                            break
+                        month = "%02u" % (int(month) + 1)
+                interval_long = "\\(" + "\\|".join(intervals) + "\\)"
+                egrep    = "e"
+            else:
+                interval_long = interval_long + months
+
+        return(grep_pattern,egrep,interval_long,interval_short,mode)            
+                
+#**********************************************************************************
+
+    def replace_accountings (self,extracted_acc,formatted_acc,processed_acc,base_dir):
+    
+#       If an extraction of account entries is made in the file  extracted_acc , and there is
+#       a line-by-line corresponding formatted file  formatted_acc , and additionally a copy
+#       of that file  processed_acc , which might have been changed by the user, then this function
+#       resembles the differences back into the *.acc-files in base_dir, and upüdates the *.sum-files.
+#
+
+        if not os.path.isfile(extracted_acc):
+            print("No extraction accounts file.")
             return()
 
-        self.mark("A. Close transaction.")
+        if not os.path.isfile(formatted_acc):
+            print("No original formatted accounts file.")
+            return()
 
+        if not os.path.isfile(processed_acc):
+            print("No processed formatted accounts file.")
+            return()
+
+        self.mark("A. Finish transaction.")
+
+#       Application of the changes in  processed_acc  to extracted_acc :
+
+        extracted_lines =  open(extracted_acc).read().split("\n") 
+        formatted_lines =  open(formatted_acc).read().split("\n") 
+        processed_lines =  open(processed_acc).read().split("\n") 
+
+        new_extracted_lines, dates_of_deleted_lines = change_extracted_acc_file_due_to_changes (self,extracted_lines,formatted_lines,processed_lines)
+
+        if new_extracted_lines == None:
+            return("no changes.")
+
+        open(extracted_acc,"w").write( "\n".join(new_text) + "\n" )
+
+#**********************************************************************************
+
+    def change_extracted_lines_due_to_changes (self,extracted_lines,formatted_lines,processed_lines):
+    
+#   Here we create the array add_lines (lines which are added in processed_acc), del_lines (lines which
+#   are deleted in processed_acc), line_numbers_of_deleted (the line numbers in the array of the original
+#   formatted_acc which have been deleted in  processed_acc).
+
+        add_lines, del_lines, line_numbers_of_deleted = self.differences_to_consider(formatted_lines,processed_lines)
+
+        if len(add_lines) + len(del_lines) == 0:
+            return(None)
+        
+#   Now we apply these changes to the original raw file  extracted_acc :
+
+        changed_extracted_lines = add_lines[:]  #  new version of the text of  extracted_acc. We start with the added lines
+
+#   Deleted lines:
+#   Because the line-by-line correspondency of  extracted_acc  and formatted_acc  we can apply the numbers in  line_numbers_of_deleted
+#   directly to extracted_acc (by considering an offset of 2 because of the both additional header lines made from the formatting)
+
+        dates_of_deleted_lines     = []            #  we collect all months of all lines which have been deleted
+
+        zaehler = 2  #  offset in formatted_acc
+        for zeile in extracted_lines:
+            if (len(changed_extracted_acc_text) + 2) in line_numbers_of_deleted:
+                if not zeile[0:6] in dates_of_deleted_lines:
+                    dates_of_deleted_lines.append(zeile[0:6])
+                else:
+                    changed_extracted_lines.append(zeile)
+                    
+        changed_extracted_lines.sort()
+        return(changed_extracted_lines,dates_of_deleted_lines)
+        
+#**********************************************************************************
+
+    def differences_to_consider (self,formatted_lines,processed_lines):
+    
+        set_of_formatted_acc  = set( formatted_lines )
+        set_of_processed_acc  = set( processed_lines )
+
+#       Firstly we determine the vice versa differences of the sets of lines in formatted_acc and processed_acc:
+
+        set_of_added_lines    = set_of_processed_acc.difference(set_of_formatted_lines)
+        set_of_deleted_lines  = set_of_formatted_acc.difference(set_of_deleted_lines)
+
+#       Changes which may consist simply by changing spaces or the sum in the fith column of an account set
+#       should be skipped. So we calculate now all these normalisations and map it to the original line.
+#       Also lines which are not an account entry should be skipped.
+
+#       (Actually, we could do it one-step by normalize all the lines in formatted_acc and processed_acc. But it is
+#       costly to normalize all this lines, even, if these are not affected by changes. So it is waste of ressources.
+#       Hence, it makes sense firstly make a raw difference  set_of_added_lines  and  set_of_deleted_lines  which
+#       afterwards can be reduced by normalization.)
+
+        set_of_normalized_added_lines,   dict_of_normalized_added_lines_to_orig_added_lines       = self.normalize_acc_line_set(set_of_added_lines)
+        set_of_normalized_deleted_lines, dict_of_normalized_processed_lines_to_orig_deleted_lines = self.normalize_acc_line_set(set_of_processed_lines)
+        
+#       The sets of the normalized added and deleted reduced lines sets are calculated by deleted elements common to both of this sets
+
+        reduced_set_of_normalized_added_lines    = set_of_normalized_added_lines.difference(set_of_normalized_added_lines)
+        reduced_set_of_normalized_deleted_lines  = set_of_normalized_added_lines.difference(set_of_normalized_deleted_lines)
+
+#       As a last step, we find back the original lines by the both dictionaries:
+
+        add_lines               = []
+        for normalized_line in reduced_set_of_normalized_added_lines:
+            orig_zeile = dict_of_normalized_added_lines_to_orig_added_lines[ normalized_line ]
+            add_lines.append( orig_zeile )
+
+        del_lines               = []
+        line_numbers_of_deleted = []
+        for normalized_line in reduced_set_of_normalized_deleted_lines:
+            orig_zeile = dict_of_normalized_deleted_lines_to_orig_deleted_lines[ normalized_line ]
+            del_lines.append( orig_zeile )
+            line_numbers_of_deleted.append( formatted_lines.index( orig_zeile ) )
+
+        return( add_lines, del_lines, line_numbers_of_deleted )
+
+
+#********************************************************************************************        
+
+    def normalize_acc_line_set (self,line_set):
+        
+        normalized_lines                    = []
+        dict_normalized_lines_to_orig_lines = {}
+        
+        for zeile in line_set:          #  ueber Aequivalenzbeziehung weitere uebereinstimmende zeilen herausfinden
+            m = self.acc_line_parser.search(zeile)
+            if m:
+                zeile1 = m.group(1) + m.group(2) + m.group(3) + "  " + ("%3.2f"%eval(m.group(4))) + "  " + m.group(5) + "  " + m.group(6) + "  0.00  " + m.group(8)
+            else:
+                continue      #  nur Buchungszeilen sind zu beruecksichtigen
+            normalized_lines.append(zeile1)
+            dict_normalized_lines_to_orig_lines[zeile1] = zeile
+        
+        return(set(normalized_lines),dict_normalized_lines_to_orig_lines)
+        
+        
+#********************************************************************************************        
+        
+    def test_extract_lines (self,basedir,pattern):
+    
+        metadaten = self.extract_account_lines(basedir,pattern,"extracted.kto","formatted.kto","parfile.par")
+        
+        
+    def ggg (self):
+        
         diff_salden              = {}
         dates_of_deleted_entries = []  #  das wird eine Liste aus Monaten, in denen gar keine Buchungen mehr stehen
+
 
 #   ----  1.  Vergleich zwischen dem originalen result.format und result.kto
 
@@ -462,68 +744,6 @@ class Konto ():
             os.system("mv __" + ktofile + " " + ktofile)
 
         self.mark("D. Clear acc files.")
-                
-#**********************************************************************************
-
-    def parse_pattern (self,pattern=""):    #   parse the pattern
-
-        interval  = None
-        interval0 = None
-        egrep     = ""
-        m         = re.search(r"^(.*)([\.\:])(.*)$",pattern)
-            
-        if m:
-
-            pattern       = m.group(1)
-            mode          = m.group(2)
-            interval      = "20" + m.group(3)[0:2]
-            months        = m.group(3)[2:]
-            interval0     = mode + m.group(3)[0:2]
-            
-            if   months == "A":
-                months = "10"
-            elif months == "B":
-                months = "11"
-            elif months == "C":
-                months = "12"
-            elif months == "I":
-                months = "0[123]"
-            elif months == "J":
-                months = "0[456]"
-            elif months == "K":
-                months = "0[789]"
-            elif months == "L":
-                months = "1[012]"
-            elif months == "M":
-                months = "0[123456]"
-            elif months == "N":
-                months = "\\(07\\|08\\|09\\|10\\|11\\|12\\)" # "[01][789012]"
-                egrep  = "e"
-            elif months == "P":
-                months = ""
-            elif not months == "":
-                months = "0" + months
-        
-            if mode == ":":
-                intervals = []
-                jahr      = "2000"
-                while (0 == 0):
-                    intervals.append(jahr)
-                    jahr = str(int(jahr)+1)
-                    if jahr == interval:
-                        break
-                month = "01"
-                while (0 == 0):
-                    intervals.append(jahr+month)
-                    if month in (months,"12"):
-                        break
-                    month = "%02u" % (int(month) + 1)
-                interval = "\\(" + "\\|".join(intervals) + "\\)"
-                egrep    = "e"
-            else:
-                interval = interval + months
-
-        return(pattern,interval,egrep,interval0)            
                 
 #**********************************************************************************
 
@@ -1108,4 +1328,4 @@ class Konto ():
 if __name__ == "__main__":
         
 #    Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
-    Konto.__dict__["kto"](Konto(),*sys.argv[1:])
+    Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])

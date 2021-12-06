@@ -11,6 +11,7 @@ class CSV (object):
     def __init__ (self,dir="."):
         self.dir            = dir
         self.csv_doublettes = {}  #  to avoid to have double entries from csv-files
+        self.check_cache    = {}
     
 #*********************************************************************************
 
@@ -75,12 +76,11 @@ class CSV (object):
             print(erg)
             return()
 
-
         self.assign_contra_accounts()
 
         self.combine_ktofile()
 
-        open(ktofile[0]+"1","w").write(  "\n".join(self.kto_text) + "\n")
+        open(ktofile[0],"w").write(  "\n".join(self.kto_text) + "\n")
 
 
 
@@ -97,7 +97,7 @@ class CSV (object):
         self.undef_acc        = []
 
 
-        ktotext1              = self.kto_text
+        ktotext1              = self.kto_text[:]
         ktotext1.sort()
         
         zaehler = -1
@@ -119,9 +119,26 @@ class CSV (object):
 
             patterns = self.extract_patterns_from_remark(remark)
 
-            if not patterns in self.equivalent_acc:
-                self.equivalent_acc[patterns] = []
-            self.equivalent_acc[patterns].append(zeile)
+            if not patterns == "":
+                if not patterns in self.equivalent_acc:
+                    self.equivalent_acc[patterns] = []
+                self.equivalent_acc[patterns].append(zeile)
+                
+                if kto2 == config.STANDARD_CONTRA_ACCOUNT:
+                    zaehler1 = zaehler
+                    while zaehler1 > 0:
+                        zaehler1 = zaehler1 - 1
+                        zeile1   = self.kto_text[zaehler1]
+                        erg      = self.check_patterns(patterns,"","",zeile1)
+                        if erg:
+                            m1 = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile1)
+                            if m1:
+                                kto02 = m1.group(4)
+                                if not kto02 == config.STANDARD_CONTRA_ACCOUNT:
+                                    self.equivalent_acc[patterns][-1] = zeile1
+                                    break
+                    
+                
                     
 #            print(self.ukto)
             if self.ukto == None:
@@ -176,8 +193,6 @@ class CSV (object):
                 break
             patterns.append(m.group(2))
             remark = m.group(3)
-            if len(patterns) == 0:
-                continue
         patterns = ",".join(patterns)
         return(patterns)
 
@@ -188,6 +203,7 @@ class CSV (object):
         self.csvline = {}
 
         for zeile in csv_text.split("\n"):
+#            print(zeile)
             bed = 1
             for ausschlusspattern in config.EXCLUDE_CSV_LINES.split(","):
                 if ausschlusspattern.upper() == ausschlusspattern and ausschlusspattern.lower() in zeile.lower() or ausschlusspattern in zeile:
@@ -234,8 +250,9 @@ class CSV (object):
                             if pattern == "":
                                 continue
 #                            print(self.no_umlaute(pattern))
-                            anzahl_ziel   = 0
-                            anzahl_zeilen = 0
+                            anzahl_ziel    = 0
+                            anzahl_zeilen  = 0
+                            matching_entry = self.ktolines[datum][absbetrag][0]
                             for entry in self.ktolines[datum][absbetrag]:
 #                                print("WW",pattern)
 #                                print("VV",entry['REMARK'])
@@ -256,29 +273,23 @@ class CSV (object):
                                     break
 
                         if anzahl_zeilen > 1:
-                            print("hier")
                             return("More than one matching line found for " + entry['ZEILE'] + ".")
 
-
-                        if anzahl_zeilen == 0:   #  no matching line found, hence add it
-                            pass
-#                            self.append_to_konto(erg)
-                        
-                        if anzahl_zeilen == 1:    #  double check with matching line
-                            remark_orig = matching_entry['REMARK']
-                            remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
-                            remark1     = re.sub(r"\#","",remark1)
-#                            print(remark)
-#                            print("    ",remark1)
-                            if not remark == remark1:                  #  only if the remark is changed
-                                zaehler = matching_entry['ZAEHLER']    #  we replace it by the CSV
-                                zeile1  = matching_entry['ZEILE']
-                                m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
-                                if m:
-                                    patterns_orig = self.extract_patterns_from_remark(remark_orig)
-                                    for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
-                                        remark.replace(pattern,"#"+pattern+"#")
-                                    self.kto_text[zaehler] = m.group(1) + remark
+                        remark_orig = matching_entry['REMARK']
+                        remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
+                        remark1     = remark1.replace("#","",9999)
+#                        print(remark)
+#                        print(datum,"    ",remark1)
+                        if not remark.replace("#","",9999) == remark1:           #  only if the remark is changed
+#                            print(12345)
+                            zaehler = matching_entry['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
+                            zeile1  = matching_entry['ZEILE']
+                            m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
+                            if m:
+                                patterns_orig = self.extract_patterns_from_remark(remark_orig)
+                                for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
+                                    remark.replace(pattern,"#"+pattern+"#")
+                                self.kto_text[zaehler] = m.group(1) + remark
                                 
                         
         return("")
@@ -340,7 +351,7 @@ class CSV (object):
             
         betrag = soll + betrag
         if len(patterns) < 2:
-            patterns.append("xyz123")
+            patterns.append("xxx")
         remark = ";".join(patterns)
 
 #        print(betrag)
@@ -370,15 +381,10 @@ class CSV (object):
 
 #******************************************************************************
 
-    def assign_contra_accounts (self):
-    
-        return("")
-
-#******************************************************************************
-
     def combine_ktofile (self):
     
         for line in self.new_lines:
+            print(line)
             self.kto_text.append(line)
 
 #******************************************************************************
@@ -392,11 +398,13 @@ class CSV (object):
         for patterns in self.equivalent_acc:   #  run through all patterns, these
                                                #  define equivalence classes of accounts
 
+            print(patterns)
             kto1 = ""
             kto2 = ""
             
             for zeile in self.equivalent_acc[patterns]:
             
+                print(zeile)
                 m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
                 if m:
                     kto1 = m.group(3)
@@ -410,7 +418,7 @@ class CSV (object):
                         break
                 zeile0 = zeile
                 
-            for nr1 in self.kto_text:
+            for nr1 in self.undef_acc:
                 if nr1 in used_numbers1:
                     continue
                 x = self.check_patterns(patterns,kto1,kto2,self.kto_text[nr1])
@@ -425,10 +433,11 @@ class CSV (object):
                 x = self.check_patterns(patterns,kto1,kto2,self.new_lines[nr2])
                 if x: 
                     self.new_lines[nr2] = x
+                nr2 = nr2 + 1
                     
 #******************************************************************************
 
-    def check_patterns (self,patterns,ktoa,ktob,zeile)
+    def check_patterns (self,patterns,ktoa,ktob,zeile):
                             
         if not zeile in self.check_cache:
             m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
@@ -440,11 +449,11 @@ class CSV (object):
         else:
             erg = self.check_cache[zeile]
             
-        datum   = m.group(1)
-        betrag  = m.group(2)
-        kto1    = m.group(3)
-        kto2    = m.group(4)
-        remark  = m.group(4)
+        datum   = erg[0]
+        betrag  = erg[1]
+        kto1    = erg[2]
+        kto2    = erg[3]
+        remark  = erg[5]
         remark1 = remark.replace("#","",9999)
         
         for pattern in patterns.split(","):
@@ -460,9 +469,7 @@ class CSV (object):
 
 #******************************************************************************
 
-
-
-    def csv (self,multiline,ktotext,texts,gegenkonto,datumsfeld,betragsfeld,*bemerkungsfelder):
+    def xxcsv (self,multiline,ktotext,texts,gegenkonto,datumsfeld,betragsfeld,*bemerkungsfelder):
         
         self.is_einnahmenkonto = 0
         if gegenkonto[0] == "-":
@@ -596,7 +603,7 @@ class CSV (object):
 
 #****************************************************************************
 
-    def abschreibung (self,ktotext,abschreibungskonto,weitere_abschreibungskonten={}):
+    def xxabschreibung (self,ktotext,abschreibungskonto,weitere_abschreibungskonten={}):
 
         text         = []
         inventarlist = {}
@@ -676,7 +683,7 @@ class CSV (object):
 
 #*********************************************************************************
 
-    def connect_to_accounting (self,ktotext):   #   ,buchhaltung=""):
+    def xxconnect_to_accounting (self,ktotext):   #   ,buchhaltung=""):
     
         ktotext1 = ""
         zeilen   = {}
@@ -727,7 +734,7 @@ class CSV (object):
 
 #*********************************************************************************
 
-    def consors (self,ktotext,texts,gegenkonto):
+    def xxconsors (self,ktotext,texts,gegenkonto):
         
         zeilencsv = []
         self.csv_ist_fuehrend  = False
@@ -801,7 +808,7 @@ class CSV (object):
 
 #******************************************************************************
 
-    def kto_parser (self,zeilencsv,ktotext,intervals,gegenkonto):
+    def xxkto_parser (self,zeilencsv,ktotext,intervals,gegenkonto):
 
 #   Wir haben jetzt in zeilencsv alle Eintraege aus den csv-Dateien als Arrays der Form: Datum,Betrag,Bemerkung
 
@@ -965,7 +972,7 @@ class CSV (object):
 
 #******************************************************************************
 
-    def fixpoint (self,ktotext,patterns):
+    def xxfixpoint (self,ktotext,patterns):
 
         compiled_patterns = {}
         for pattern in patterns:
@@ -1028,7 +1035,7 @@ class CSV (object):
                                 
 #*********************************************************************************
 
-    def assign_ausgaben (self,ktotext,tmpkto,idbuch0):    #   Ordnet Ausgabenkonten automatisch zu
+    def xxassign_ausgaben (self,ktotext,tmpkto,idbuch0):    #   Ordnet Ausgabenkonten automatisch zu
     
 
         buchgrp = {}  #  Hier werden die Buchhaltungsgruppen gehalten
@@ -1198,7 +1205,7 @@ class CSV (object):
 
 #*********************************************************************************
 
-    def compare (self,file1,file2,mode):
+    def xxcompare (self,file1,file2,mode):
     
         text1 = None
         text2 = None
@@ -1211,7 +1218,7 @@ class CSV (object):
             
 #*********************************************************************************
 
-    def usteuer (self,ktotext,ust_kto,mode="-"):
+    def xxusteuer (self,ktotext,ust_kto,mode="-"):
 
         text = []
         ul   = len(ust_kto)
@@ -1343,7 +1350,7 @@ class CSV (object):
         
 #*************************************************************************
 
-    def parse_ktoauszug1 (self,ktotext,files,kknr,kk):  #  not ktosafe
+    def xxparse_ktoauszug1 (self,ktotext,files,kknr,kk):  #  not ktosafe
 
         ktotext = self.parse_ktoauszug(ktotext,files,kknr,kk)
         
@@ -1358,7 +1365,7 @@ class CSV (object):
 
 #*************************************************************************
 
-    def parse_ktoauszug (self,ktotext,files,kknr,kk):  #  not ktosafe
+    def xxparse_ktoauszug (self,ktotext,files,kknr,kk):  #  not ktosafe
 
         if len(files) == 0:
             return(ktotext)
@@ -1592,7 +1599,7 @@ class CSV (object):
             
 #*************************************************************************
 
-    def finanzamt_zahlungen (self,ktotext,text,zkto,fkto):  #  not ktosafe
+    def xxfinanzamt_zahlungen (self,ktotext,text,zkto,fkto):  #  not ktosafe
 
         text1 = []
         for zeile in ktotext.split("\n"):
@@ -1629,7 +1636,7 @@ class CSV (object):
             
 #*************************************************************************
 
-    def parse_krankmeldung (self,ktotext,files):
+    def xxparse_krankmeldung (self,ktotext,files):
 
 
         kkdatum            = {}
@@ -1767,7 +1774,7 @@ class CSV (object):
 
 #*************************************************************************
 
-    def parse_quittungen (self,ktotext,gegenkonto):  #  not ktosafe
+    def xxparse_quittungen (self,ktotext,gegenkonto):  #  not ktosafe
 
 
         text       = []
@@ -1811,7 +1818,7 @@ class CSV (object):
 
 #*************************************************************************
 
-    def parse_finanzamt (self,ktotext,files,gegenkonto0,gegenkonto1):
+    def xxparse_finanzamt (self,ktotext,files,gegenkonto0,gegenkonto1):
 
         if len(files) == 0:
             return(ktotext)
@@ -2221,7 +2228,7 @@ class CSV (object):
             
 #********************************************************************************
 
-    def parse_beitragsnachweise1 (self,ktotext,files,kknr,kk,st=1.0):
+    def xxparse_beitragsnachweise1 (self,ktotext,files,kknr,kk,st=1.0):
 
         ktotext = self.parse_beitragsnachweise(ktotext,files,kknr,kk,st)
         
@@ -2233,7 +2240,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def parse_beitragsnachweise2 (self,ktotext,files,kknr,kk,st=1.0):
+    def xxparse_beitragsnachweise2 (self,ktotext,files,kknr,kk,st=1.0):
 
         ktotext = self.parse_beitragsnachweise(ktotext,files,kknr,kk,st)
 
@@ -2245,7 +2252,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def parse_beitragsnachweise (self,ktotext,files,kknr,kk,st=1.0):
+    def xxparse_beitragsnachweise (self,ktotext,files,kknr,kk,st=1.0):
 
         kkdatum = {}
         self.betriebsnr_kk = {}
@@ -2414,7 +2421,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def normalize_text (self,text,extended=""):
+    def xxnormalize_text (self,text,extended=""):
     
         text = re.sub(r"ä",   "ae",text,99999999)
         text = re.sub(r"ö",   "oe",text,99999999)
@@ -2442,7 +2449,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def idem_kto (self,ktotext,grenze=0.99,maxdiff=99999999,group_matrix0={}):
+    def xxidem_kto (self,ktotext,grenze=0.99,maxdiff=99999999,group_matrix0={}):
 
 
 
@@ -2572,7 +2579,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def quittungen_reverse (self,ktotext):
+    def xxquittungen_reverse (self,ktotext):
     
         text = []
         for zeile in ktotext.split("\n"):
@@ -2592,7 +2599,7 @@ class CSV (object):
                 
 #********************************************************************************
             
-    def next_pointer (self,pointer,maxlen):
+    def xxnext_pointer (self,pointer,maxlen):
     
         if len(pointer) > maxlen:   #   hier ist nichts mehr zu machen, es gibt keinen hoeheren Index
             return(None)
@@ -2620,7 +2627,7 @@ class CSV (object):
         
 #********************************************************************************
 
-    def assign_quittungen (self,daydiff1=9999999,ktotext="",valid_konten=None):
+    def xxassign_quittungen (self,daydiff1=9999999,ktotext="",valid_konten=None):
 
         text  = ""
         text5 = ""
@@ -2796,7 +2803,7 @@ class CSV (object):
         
 #********************************************************************************
 
-    def days_since_1970 (self,datum):
+    def xxdays_since_1970 (self,datum):
 
         day0 = datetime.datetime.strptime("19700101","%Y%m%d")
         if not len(datum) == 8:
@@ -2816,7 +2823,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def rechnungen2018a (self,ktotext,company,dir="."):
+    def xxrechnungen2018a (self,ktotext,company,dir="."):
     
         ktotext = self.rechnungen2018(ktotext,company)
         ktotext = re.sub(r" 12-8400"," 12-D1a-4400",ktotext)
@@ -2824,7 +2831,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def rechnungen2013a (self,ktotext,company,dir="."):
+    def xxrechnungen2013a (self,ktotext,company,dir="."):
     
         ktotext = self.rechnungen2013(ktotext,company)
         ktotext = re.sub(r" 12-8400"," 12-D1a-4400",ktotext)
@@ -2832,7 +2839,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def rechnungen2013 (self,ktotext,company,dir="."):
+    def xxrechnungen2013 (self,ktotext,company,dir="."):
 
         text      = []
         buchungen = {}
@@ -2915,7 +2922,7 @@ class CSV (object):
         
 #**********************************************************************            
 
-    def rechnungen2018 (self,ktotext,company,dir="."):
+    def xxrechnungen2018 (self,ktotext,company,dir="."):
 
         text      = []
         buchungen = {}
@@ -3010,7 +3017,7 @@ class CSV (object):
 
 #******************************************************************************
 
-    def plan (self,ktotext,vars,templates):
+    def xxplan (self,ktotext,vars,templates):
     
         templates = re.sub(r"\.\.\.",".  .  .  .  .",templates+"\n",99999999)
         text = ""
@@ -3100,7 +3107,7 @@ class CSV (object):
 
 #******************************************************************************
 
-    def add_month (self,jm0):
+    def xxadd_month (self,jm0):
     
         jahr  = int(jm0[0][0:2])
         monat = int(jm0[0][2:4])
@@ -3122,7 +3129,7 @@ class CSV (object):
 
 #******************************************************************************
 
-    def analyze (self,beleg):
+    def xxanalyze (self,beleg):
     
         belegfile = re.sub(r"^(.*)\.pdf$","\\1",beleg)
         try:
@@ -3259,7 +3266,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def jahressteuer (self,ktotext,einnahmen_ausgaben,ks,ks_sz,gw,aus,qs,qs_sz,ueberschuss,gesell_form=2):
+    def xxjahressteuer (self,ktotext,einnahmen_ausgaben,ks,ks_sz,gw,aus,qs,qs_sz,ueberschuss,gesell_form=2):
     
         steuersatz = {
     
@@ -3420,7 +3427,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def ausschuettung (self,ktotext,qs,qs_sz,qs_ki):
+    def xxausschuettung (self,ktotext,qs,qs_sz,qs_ki):
     
         text = ""
 
@@ -3505,7 +3512,7 @@ class CSV (object):
 
 #********************************************************************************
 
-    def ukto_from_betrag (self,betrag):
+    def xxukto_from_betrag (self,betrag):
 
         id = re.sub(r"^\-","",str(betrag))
         id = re.sub("\.","",id)
