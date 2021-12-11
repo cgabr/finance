@@ -37,7 +37,7 @@ class CSV (object):
             bed    = 0
             for zeile in text.split("\n"):    #  erase additional line breaks
                 zeile = zeile.strip()
-                if re.search(r"^\"\d\d\.\d\d\.\d\d\d\d\"",zeile):
+                if re.search(r"^\"?\d\d\.\d\d\.\d\d\d\d\"?",zeile):
                     text1  = text1 + zeile0 + "\n"
 #                    buchungen.append(text1.strip().split(";"))
                     zeile0 = zeile
@@ -76,6 +76,7 @@ class CSV (object):
             print(erg)
             return()
 
+        print("123")
         self.assign_contra_accounts()
 
         self.combine_ktofile()

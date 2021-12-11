@@ -1,5 +1,5 @@
-#  coding:  utf
-import os,sys,re,glob,time,base64,hashlib,random,functools
+#  coding:  utf                     
+import os,sys,re,glob,time,base64,hashlib,random,functools,hashlib
 
 #******************************************************************************
 
@@ -29,102 +29,59 @@ class Konto ():
 
 #**********************************************************************************
 
-    def extract_account_lines (self,base_dir,search_pattern,extracted_acc,formatted_acc,par_file):
-    
-#    This function extracts the matching lines of a request into a file
+    def actualize_konto (self,base_dir,search_pattern,ktofile):  #  Updates an actual konto
+        pass    
 
-        search_pattern1                                        = re.sub(r"\^"," ",search_pattern,9999)
-        (grep_pattern,egrep,interval_long,interval_short,mode) = self.parse_pattern(search_pattern1)
+#**********************************************************************************
+
+    def extract_account_lines (self,base_dir,search_pattern,salden_expand="(-[^- ]+){0,99},"):
+    
+#    This function extracts the matching lines of a request into a sorted array
+
+        self.parse_pattern(search_pattern)
+        self.base_dir      = re.sub(r"//$","/",base_dir + "/")
+        self.salden_expand = salden_expand
 
 #        self.mark("A. Compute query for transaction file " + pattern1 + " " + str(interval)[0:40] + " ...")
-        base_dir = re.sub(r"//$","/",base_dir + "/")
-        if interval_long:
-            if grep_pattern == "":
-                os.system(egrep + "grep -h -i ^" + interval_long + " " + base_dir + "*.acc > " + extracted_acc)
+        if not self.interval_long == "":
+            if self.grep_pattern == "":
+                self.extracted_text = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc").read().split("\n")
             else:
-                os.system(egrep + "grep -h -i ^" + interval_long + " " + base_dir + "*.acc | grep -h -i '" + grep_pattern + "' > " + extracted_acc)
+                self.extracted_text = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc | grep -h -i '" + self.grep_pattern + "'").read().split("\n")
         else:
-            if grep_pattern == "":
-                os.system("less " + base_dir + "*.acc > " + extracted_acc)
+            if self.grep_pattern == "":
+                self.extracted_text = os.popen("less " + self.base_dir + "*.acc").read().split("\n")
             else:
-                os.system(egrep + "grep -h -i '" + grep_pattern + "' " + base_dir + "*.acc > " + extracted_acc)
+                self.extracted_text = os.popen(self.egrep + "grep -h -i '" + self.grep_pattern + "' " + self.base_dir + "*.acc").read().split("\n")
 
-        os.system("sort " + extracted_acc + " > " + extracted_acc + ".tmp")
-        os.system("mv " + extracted_acc + ".tmp " + extracted_acc)
-        
-        metadaten = [search_pattern,grep_pattern,egrep,interval_long,interval_short,mode]
-        
-        open(par_file,"w").write(",".join(metadaten)+"\n")
+        self.extracted_text.sort()        
 
         self.mark("B. Transaction file generated.")
 
-        if len(glob.glob(base_dir+"*.acc")) == len(base_dir+glob.glob("*.sum")):
-            self.format_kto(metadaten,extracted_acc,formatted_acc)
-           self.mark("C. ... and formatted.")
-        
-        return(metadaten)
+        if len(glob.glob(base_dir+"*.acc")) == len(glob.glob(base_dir+"*.sum")):
+            self.format_kto()
+            self.mark("C. ... and formatted.")
 
 #**********************************************************************************
-        
-    def subtract_account_lines (self,pars,file="result"): 
 
-#   This function deletes accounting lines from the acc-files due to a pattern
+    def parse_pattern (self,pattern0):    #   parse the pattern
 
-        startdate = pars[0]
-        enddate   = pars[1]
-        pattern   = pars[2]
-        interval  = pars[3]
-        egrep     = pars[4]
 
-        pattern1  = re.sub(r"\^"," ",pattern,9999)
-
-        for ktofile in glob.glob(base_dir+"*.acc") :
-
-            m = re.search(r"^(\d+)\.acc",ktofile)
-            if not m:
-                continue
-            zeitraum = m.group(1)
-            if zeitraum < startdate[0:len(zeitraum)]:
-                continue
-            if zeitraum > enddate[0:len(zeitraum)]:
-                continue
-
-            if interval:
-                if pattern1 == "":
-                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
-                else:
-                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
-                    os.system(egrep + "grep -i ^" + interval + " " + ktofile + " | grep -i -v '" + pattern1 + "' >> __" + ktofile)
-            else:
-                if pattern1 == "":
-                    os.system(" > __" + ktofile)
-                else:
-                    os.system(egrep + "grep -i -v '" + pattern1 + "' " + ktofile + " > __" + ktofile)
-                    
-            os.system("mv __" + ktofile + " " + ktofile)
-
-        self.mark("D. Clear acc files.")
-                
-#**********************************************************************************
-
-    def parse_pattern (self,pattern):    #   parse the pattern
-
-        interval_long    = ""
-        interval_short   = ""
-        egrep            = ""
-        mode             = ""
-        grep_pattern     = pattern
-        m                = re.search(r"^(.*)([\.\:])(.*)$",pattern)
+        self.grep_pattern     = re.sub(r"\^"," ",pattern0,9999)
+        self.interval_long    = ""
+        self.interval_short   = ""
+        self.egrep            = ""
+        self.mode             = ""
+        m                     = re.search(r"^(.*)([\.\:])(.*)$",self.grep_pattern)
             
         if m:
 
-            grep_pattern   = m.group(1)
-            mode           = m.group(2)
-            interval_long  = "20" + m.group(3)[0:2]
-            months         = m.group(3)[2:]
-            interval_short = m.group(3)
+            self.grep_pattern   = m.group(1)
+            self.mode           = m.group(2)
+            self.interval_long  = "20" + m.group(3)[0:2]
+            months              = m.group(3)[2:]
+            self.interval_short = m.group(3)
             
-            print(interval_short,months)
             if   months == "A":
                 months = "10"
             elif months == "B":
@@ -166,12 +123,402 @@ class Konto ():
                         if month in (months,"12"):
                             break
                         month = "%02u" % (int(month) + 1)
-                interval_long = "\\(" + "\\|".join(intervals) + "\\)"
-                egrep    = "e"
+                self.interval_long = "\\(" + "\\|".join(intervals) + "\\)"
+                self.egrep    = "e"
             else:
-                interval_long = interval_long + months
+                self.interval_long = self.interval_long + months
+                
+#**********************************************************************************
 
-        return(grep_pattern,egrep,interval_long,interval_short,mode)            
+    def format_kto (self):
+        
+        self.parse_ktotext()
+                
+#   ktotext:   datum  betrag   kto1   kto2   saldo   bemerkung   original_line
+                
+#        print("UKTO: " + ukto)
+        if self.ukto == "":
+            self.buchungen.sort(key=lambda x:x[0]+str(x[1])+x[3]+x[4])
+        else:
+#            ktotext.sort(key=lambda x:str(x[5]+1)+x[0])
+            self.buchungen.sort(key=lambda x:x[0]+str(x[5]+1)+x[2]+x[3]+x[4])
+
+        gesamt               = 0.00
+        self.startdatum      = "00000000"
+        dbl_marks            = {}
+        self.formatted_text  = []
+        self.extracted_text  = []   #  das orig-File muss in der neuen Sortierung auch neu geschrieben werden,
+                                    #  damit man am Ende den Patch auf das formatierte Konto-File anwenden kann.
+
+        has_doublettes = 0
+        for zeile in self.buchungen:   #   step through all accounting lines
+                
+            ust = ""
+            if "v.H." in zeile[4]:
+                ust = "   "
+
+            ktoa   = zeile[2]
+            ktob   = zeile[3]
+            datum  = zeile[0]
+            
+#            print(ukto,zeile)
+            betrag = float(zeile[1])
+            if self.ukto == "":
+                gesamt = gesamt + betrag
+                saldo  = "%13.2f" % gesamt
+            elif self.ukto == "" or zeile[5] == 0:
+                saldo = "         ...."
+#                saldo  = "%13.2f" % gesamt
+            elif self.maxsaldo == 0 or zeile[5] == 1:
+#                print("hier")
+                gesamt = gesamt + betrag
+                saldo  = "%13.2f" % gesamt
+            elif zeile[5] == 2:
+#                saldo = "         ----"
+                saldo  = "%13.2f" % gesamt
+
+            dbl_z    = datum + " " + ("%13.2f" % betrag) + "  " + (self.format_maxa % ktoa) + "  " + (self.format_maxb % ktob)
+            rem_z    = ust + re.sub(r" +"," ",zeile[4],9999)
+            zeile1   = dbl_z + " " + saldo + "  " + rem_z
+
+            dbl_mark = dbl_z + rem_z   #  wenn Doubletten gefunden werden, diese eindeutig markieren
+            if not dbl_mark in dbl_marks:
+                dbl_marks[dbl_mark] = 0
+            else:
+                dbl_marks[dbl_mark] = dbl_marks[dbl_mark] + 1
+                zeile1 = zeile1 + " DOUBLETTE " + str(dbl_marks[dbl_mark])
+                has_doublettes = 1
+            
+#            print(zeile1)
+
+            self.extracted_text.append(zeile[6])
+            self.formatted_text.append(zeile1)
+            if self.startdatum == "00000000":
+                self.startdatum = datum
+
+        self.enddatum = datum
+
+        if self.ukto == "":
+            self.ukto = "-> " + self.grep_pattern
+            
+        self.hkey   = "\n".join(self.formatted_text) + "\n"
+        self.hkey   = hashlib.md5(self.hkey.encode("utf-8")).hexdigest()[0:12]
+        self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+"."+self.interval_short))) + " " + self.hkey + " " + ("%13.2f"%gesamt)
+        
+        self.format_salden()
+        
+        if has_doublettes:
+            print("Attention: Doublettes!")
+
+#        exit()
+
+#**********************************************************************************
+   
+    def parse_ktotext (self):
+
+        self.buchungen      = []
+        unique_strings      = {}
+        self.maxa           = 10
+        self.maxb           = 10
+        self.maxc           = 0
+        self.maxd           = 0
+        self.maxsaldo       = 0
+        self.ukto           = ""
+        ukto0               = ""
+        pattern             = self.grep_pattern.strip().upper()
+        
+        if len(pattern) > 0 and pattern[-1] == "-":
+            pattern = pattern[:-1]
+
+        if pattern == "":
+            ukto = None
+            
+        zaehler = -1
+        vvv = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
+        for zeile in self.extracted_text:
+
+            mm = vvv.search(zeile)
+            if not mm:   #   Einlesen der Kontobezeichnungen
+#                    self.buchungen.append(["00000000",zeile,"","","",-1])
+                continue
+
+            if mm.group(2) == "MM":
+                monate = ["01","02","03","04","05","06","07","08","09","10","11","12"]
+            else:
+                monate = [mm.group(2)]
+
+            for monat in monate:
+
+                datum  = mm.group(1) + monat + mm.group(3)
+                try:
+                    betrag = "%3.2f" % eval(mm.group(4))
+                except:
+                    print(mm.group(4))
+                    exit()
+
+                remark = mm.group(8)
+                uniqu  = []
+                ktoa   = "^" + mm.group(5)
+                ktob   = "^" + mm.group(6)
+
+#                    ktoa = self.parse_ktotext_compute_kto(m.group(5),self.ukto,uniqu)
+#                    ktob = self.parse_ktotext_compute_kto(m.group(6),self.ukto,uniqu)
+
+                if ktoa > ktob:
+                    o      = ktoa    #  um Eindeutigkeit zu schaffen. Sonst kann es durch
+                    ktoa   = ktob    #  Hin- und Herschwingen zu Endlos-Loops kommen
+                    ktob   = o
+                    betrag = re.sub(r"^--","","-"+betrag)
+
+                if not ktoa[1] == "-" and not ktoa.upper().startswith(pattern) and pattern in ktob.upper():
+                    o      = ktoa    #  um das gefundene Konto an den Anfang zu stellen
+                    ktoa   = ktob
+                    ktob   = o
+                    betrag = re.sub(r"^--","","-"+betrag)
+
+                saldo = 0
+                if not self.ukto == None:
+                    
+                    if self.ukto == "":
+                        if pattern in ktoa.upper() and not ktoa[1] == "-":
+                            self.ukto = ktoa
+                    for kto in (ktoa,ktob):
+                        if pattern in kto.upper() and not kto[1] == "-":
+                            while (0 == 0):
+                                if kto.startswith(self.ukto):
+                                    break
+                                m = re.search(r"^(.*)\-(.*)$",self.ukto)
+                                if m:
+                                    self.ukto = m.group(1)
+                                else:
+                                    self.ukto = ""
+                                print("           fit ukto: " + self.ukto.replace("^",""))
+                            if not pattern in self.ukto.upper():
+                                self.ukto = None
+                                print("No ukto found.")
+                                salden = None
+                            break
+
+                if self.ukto:
+                    while (0 == 0):
+                        m = re.search(r"^(.*)\-(.*)$",self.ukto)
+                        if not m or not pattern in m.group(1).upper():
+                            break
+                        self.ukto  = m.group(1)
+                        ukto0 = re.sub(r"\^","",self.ukto)
+                
+
+                if self.ukto or ktoa[1] == "-":
+                    saldo = ( int( self.ukto and ktoa.startswith(self.ukto) or ktoa[1] == "-") +
+                              int( self.ukto and ktob.startswith(self.ukto) or ktob[1] == "-") )
+                    
+                if uniqu == []:
+                    uniqu = [ktoa,ktob]
+
+                self.maxsaldo = max(self.maxsaldo,saldo)
+                uniqu1  = []
+                for k in uniqu:
+                    uniqu1.append(re.sub(r"\-\d\d\d\d\d$","-BETRAG",k))
+                uniqu   = uniqu1
+
+                betrag1 = re.sub("\-","",betrag) + ","
+                remark1 = "," + re.sub(r"[\+\- ]","",remark,9999)
+                uniqu   = betrag1 + ",".join(uniqu) + remark1
+
+#                if datum in unique_strings:  #  to avoid double entries
+#                    if uniqu in unique_strings[datum]:
+#                        continue  #  der Eintrag mit diesem unique-String existiert schon, daher nicht nochmal nehmen
+#                    else:
+#                        unique_strings[datum].append(uniqu)
+#                else:
+#                    unique_strings[datum] = [uniqu]
+
+                ktoa = ktoa.replace("^","")
+                ktob = ktob.replace("^","")
+
+                if ktoa[0] == "-":
+                    self.maxc = max(self.maxc,len(ktoa))
+                else:
+                    self.maxa = max(self.maxa,len(ktoa))
+
+                if ktob[0] == "-":
+                    self.maxd = max(self.maxd,len(ktob))
+                else:
+                    self.maxb = max(self.maxb,len(ktob))
+
+                self.buchungen.append([datum,betrag,ktoa,ktob,remark,saldo,zeile])
+
+        if self.ukto == None:
+            ukto = ""
+        self.ukto = self.ukto.replace("^","")
+
+        if self.maxc > 0:
+            self.maxa = max(self.maxa,len(self.ukto)+self.maxc)
+        if self.maxd > 0:
+            self.maxb = max(self.maxb,len(self.ukto)+self.maxd)
+
+        self.format_maxa = "%-" + str(self.maxa) + "s"
+        self.format_maxb = "%-" + str(self.maxb) + "s"
+        self.maxsaldo    = str(self.maxsaldo)
+
+#*******************************************************************************************
+
+    def format_salden (self):
+
+        faktor = 1
+        kto    = self.ukto
+        if not self.ukto == None and not self.ukto == "" and self.ukto[0] == "-":
+            faktor = -1
+            kto    = kto0[1:]
+
+#        if int(start_datum) == 0:
+#            start_datum = datum
+#        if int(start_datum) == 1:
+#            start_datum = "00000000"
+            
+        ktoparse = "^" + self.ukto + self.salden_expand
+            
+#        print(kto,datum,start_datum,ktoparse)
+
+        self.enddatum   = (self.enddatum   + "99999999")[0:6]
+        self.startdatum = (self.startdatum + "00000000")[0:6]
+
+        print(self.startdatum,self.enddatum)
+        
+        if self.enddatum[4:6] > "12":
+            self.enddatum = self.enddatum[0:4] + "12" 
+
+        ktofiles1 = glob.glob(self.base_dir+"*.sum")
+        ktofiles1.sort()
+        ktofiles  = []
+
+        for ktofile in ktofiles1:
+            m = re.search(r"(.*)\.sum$",ktofile)
+            if len(ktofiles) < 2:
+                if (m.group(1) + "000000")[0:6] < self.startdatum:
+                    ktofiles = []
+            if (m.group(1) + "000000")[0:6] > self.enddatum:
+                break
+            else:
+                ktofiles.append(ktofile)
+
+#        print(ktofiles)
+        ktotexts = []
+        for ktofile in ktofiles:  #  alle relevanten Zeilen in den Salden-Files werden per grep gefunden:
+            ktotexts.append([])
+#            print("grep -P '" + ktoparse + "' " + ktofile)
+            for zeile in os.popen("grep -P '" + ktoparse + "' " + ktofile).read().split("\n")[:-1]:
+#                print(zeile)
+                ktotexts[-1].append(zeile.split(","))
+
+        self.salden_aktuell = []
+        
+        kto0 = " "
+        while (0 == 0):   #   alle konten-Salden gleichzeitig nach vorne schieben, dabei auf luecken achten
+            kto = None
+            for ktotext in ktotexts:
+                if len(ktotext) == 0:
+                    continue
+                if kto == None:
+                    kto = ktotext[0][0]
+                else:
+                    kto = min(ktotext[0][0],kto)
+            if kto == None:
+                break
+                
+            betrag = 0.00
+            nr     = 0
+
+#            if kto[0:2] == "13":
+#                print("KTO",kto)
+            if len(ktotexts[0]) > 0 and kto == ktotexts[0][0][0]:   #  im ersten Salden-File die genaue Monatsspalte finden
+                zeile  = ktotexts[0][0][1:]  #  nicht entfernen!
+                datum0 = zeile.pop(0)
+                if self.startdatum >= datum0:
+                    datpos = 12*( int(self.startdatum[0:4]) - int(datum0[0:4]) ) + int(self.startdatum[4:6]) - int(datum0[4:6]) - 1
+                    if datpos < 0:
+                        betrag = 0.00
+                        nr     = 0
+                    elif datpos >= len(zeile):
+                        betrag = betrag - float(zeile[-1][:-self.max_months])
+                        nr     = nr     - int(zeile[-1][-self.max_months:])
+                    else:
+                        betrag = betrag - float(zeile[datpos][:-self.max_months])
+                        nr     = nr     - int(zeile[datpos][-self.max_months:])
+#                    if kto == "13":
+#                        print("DATPOS1",zeile[datpos],datum,datpos,kto,betrag,nr)
+#                        print(zeile)
+                
+            if len(ktotexts[-1]) > 0 and kto == ktotexts[-1][0][0]:   #  im letzten Salden-File die genaue Monatsspalte finden
+#                zeile  = ktotexts[-1][0][1:]  #  nicht entfernen!
+                zeile  = ktotexts[-1].pop(0)[1:]
+                datum0 = zeile.pop(0)
+#                print(datum,datum0)
+                if self.enddatum >= datum0:
+                    datpos = 12*( int(self.enddatum[0:4]) - int(datum0[0:4]) ) + int(self.enddatum[4:6]) - int(datum0[4:6])
+                    if datpos >= len(zeile):
+                        betrag = betrag + float(zeile[-1][:-self.max_months])
+                        nr     = nr     + int(zeile[-1][-self.max_months:])
+                    else:
+                        betrag = betrag + float(zeile[datpos][:-self.max_months])
+                        nr     = nr     + int(zeile[datpos][-self.max_months:])
+
+#                    if kto == "13":
+#                        print("DATPOS2",zeile[datpos],start_datum,datpos,kto,betrag,nr)
+
+                
+            for ktotext in ktotexts[:-1]:   #  nur bei sum-up Werten relevant
+                if len(ktotext) > 0 and ktotext[0][0] == kto:
+                    zeile  = ktotext.pop(0)
+                    betrag = betrag + float(zeile[-1][:-self.max_months])
+                    nr     = nr     + int(zeile[-1][-self.max_months:])
+
+            if nr > 0:
+                kto_ordnung = max(0,len(re.sub("[^\-]","",kto)))
+                kto_ordnung = "%-" + ("%2u"%(20+kto_ordnung*4)) + "s"
+                self.salden_aktuell.append( (kto_ordnung % kto) + "  " + ("%13.2f" % (faktor*betrag) ) )
+
+#*************************************************************************
+#**********************************************************************************
+        
+    def subtract_account_lines (self,pars,file="result"): 
+
+#   This function deletes accounting lines from the acc-files due to a pattern
+
+        startdate = pars[0]
+        enddate   = pars[1]
+        pattern   = pars[2]
+        interval  = pars[3]
+        egrep     = pars[4]
+
+        pattern1  = re.sub(r"\^"," ",pattern,9999)
+
+        for ktofile in glob.glob(base_dir+"*.acc") :
+
+            m = re.search(r"^(\d+)\.acc",ktofile)
+            if not m:
+                continue
+            zeitraum = m.group(1)
+            if zeitraum < startdate[0:len(zeitraum)]:
+                continue
+            if zeitraum > enddate[0:len(zeitraum)]:
+                continue
+
+            if interval:
+                if pattern1 == "":
+                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
+                else:
+                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
+                    os.system(egrep + "grep -i ^" + interval + " " + ktofile + " | grep -i -v '" + pattern1 + "' >> __" + ktofile)
+            else:
+                if pattern1 == "":
+                    os.system(" > __" + ktofile)
+                else:
+                    os.system(egrep + "grep -i -v '" + pattern1 + "' " + ktofile + " > __" + ktofile)
+                    
+            os.system("mv __" + ktofile + " " + ktofile)
+
+        self.mark("D. Clear acc files.")
                 
 #**********************************************************************************
 
@@ -308,13 +655,16 @@ class Konto ():
         
         return(set(normalized_lines),dict_normalized_lines_to_orig_lines)
         
-        
 #********************************************************************************************        
+
         
     def test_extract_lines (self,basedir,pattern):
     
-        metadaten = self.extract_account_lines(basedir,pattern,"extracted.kto","formatted.kto","parfile.par")
+        self.extract_account_lines(basedir,pattern)
+#        print("\n".join(self.formatted_text)+"\n")
+        print("\n".join(self.salden_aktuell)+"\n")
         
+#*************************************************************************
         
     def ggg (self):
         
@@ -747,7 +1097,7 @@ class Konto ():
                 
 #**********************************************************************************
 
-    def format_kto (self,pattern,interval,pattern0,file="result"):
+    def xxformat_kto (self,pattern,interval,pattern0,file="result"):
 
         if interval:
             interval = interval
@@ -764,7 +1114,7 @@ class Konto ():
         if not result:
             return(None)
                 
-        (ktotext,format_maxa,format_maxb,maxsaldo,ukto) = result
+        (ktotext,self.format_maxa,self.format_maxb,self.maxsaldo,ukto) = result
                 
 #        print("UKTO: " + ukto)
         if False and ukto == "":
@@ -801,7 +1151,7 @@ class Konto ():
             if ukto == "" or zeile[5] == 0:
                 saldo = "         ...."
 #                saldo  = "%13.2f" % gesamt
-            elif maxsaldo == 0 or zeile[5] == 1:
+            elif self.maxsaldo == 0 or zeile[5] == 1:
 #                print("hier")
                 gesamt = gesamt + betrag
                 saldo  = "%13.2f" % gesamt
@@ -809,7 +1159,7 @@ class Konto ():
 #                saldo = "         ----"
                 saldo  = "%13.2f" % gesamt
 
-            dbl_z    = datum + " " + ("%13.2f" % betrag) + "  " + (format_maxa % ktoa) + "  " + (format_maxb % ktob)
+            dbl_z    = datum + " " + ("%13.2f" % betrag) + "  " + (self.format_maxa % ktoa) + "  " + (self.format_maxb % ktob)
             rem_z    = ust + re.sub(r" +"," ",zeile[4],9999)
             zeile1   = dbl_z + " " + saldo + "  " + rem_z
 
@@ -848,156 +1198,6 @@ class Konto ():
 
 #        exit()
 
-#**********************************************************************************
-
-    def parse_ktotext (self,ktotext,pattern):
-
-        buchungen      = []
-        unique_strings = {}
-        pattern        = pattern.strip().upper()
-        if len(pattern) > 0 and pattern[-1] == "-":
-            pattern = pattern[:-1]
-        maxa           = 10
-        maxb           = 10
-        maxc           = 0
-        maxd           = 0
-        maxsaldo       = 0
-
-        ukto  = ""
-        ukto0 = ""
-        if pattern == "":
-            ukto = None
-            
-        zaehler = -1
-        vvv = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
-        for zeile in ktotext:
-
-            mm = vvv.search(zeile)
-            if not mm:   #   Einlesen der Kontobezeichnungen
-#                    buchungen.append(["00000000",zeile,"","","",-1])
-                continue
-
-            if mm.group(2) == "MM":
-                monate = ["01","02","03","04","05","06","07","08","09","10","11","12"]
-            else:
-                monate = [mm.group(2)]
-
-            for monat in monate:
-
-                datum  = mm.group(1) + monat + mm.group(3)
-                try:
-                    betrag = "%3.2f" % eval(mm.group(4))
-                except:
-                    print(mm.group(4))
-                    exit()
-
-                remark = mm.group(8)
-                uniqu  = []
-                ktoa   = "^" + mm.group(5)
-                ktob   = "^" + mm.group(6)
-
-#                    ktoa = self.parse_ktotext_compute_kto(m.group(5),self.ukto,uniqu)
-#                    ktob = self.parse_ktotext_compute_kto(m.group(6),self.ukto,uniqu)
-
-                if ktoa > ktob:
-                    o      = ktoa    #  um Eindeutigkeit zu schaffen. Sonst kann es durch
-                    ktoa   = ktob    #  Hin- und Herschwingen zu Endlos-Loops kommen
-                    ktob   = o
-                    betrag = re.sub(r"^--","","-"+betrag)
-
-                if not ktoa[1] == "-" and not ktoa.upper().startswith(pattern) and pattern in ktob.upper():
-                    o      = ktoa    #  um das gefundene Konto an den Anfang zu stellen
-                    ktoa   = ktob
-                    ktob   = o
-                    betrag = re.sub(r"^--","","-"+betrag)
-
-                saldo = 0
-                if not ukto == None:
-                    
-                    if ukto == "":
-                        if pattern in ktoa.upper() and not ktoa[1] == "-":
-                            ukto = ktoa
-                    for kto in (ktoa,ktob):
-                        if pattern in kto.upper() and not kto[1] == "-":
-                            while (0 == 0):
-                                if kto.startswith(ukto):
-                                    break
-                                m = re.search(r"^(.*)\-(.*)$",ukto)
-                                if m:
-                                    ukto = m.group(1)
-                                else:
-                                    ukto = ""
-                                print("           fit ukto: " + ukto.replace("^",""))
-                            if not pattern in ukto.upper():
-                                ukto = None
-                                print("No ukto found.")
-                                salden = None
-                            break
-
-                if ukto:
-                    while (0 == 0):
-                        m = re.search(r"^(.*)\-(.*)$",ukto)
-                        if not m or not pattern in m.group(1).upper():
-                            break
-                        ukto  = m.group(1)
-                        ukto0 = re.sub(r"\^","",ukto)
-                
-
-                if ukto or ktoa[1] == "-":
-                    saldo = ( int( ukto and ktoa.startswith(ukto) or ktoa[1] == "-") +
-                              int( ukto and ktob.startswith(ukto) or ktob[1] == "-") )
-                    
-                if uniqu == []:
-                    uniqu = [ktoa,ktob]
-
-                maxsaldo = max(maxsaldo,saldo)
-                uniqu1  = []
-                for k in uniqu:
-                    uniqu1.append(re.sub(r"\-\d\d\d\d\d$","-BETRAG",k))
-                uniqu   = uniqu1
-
-                betrag1 = re.sub("\-","",betrag) + ","
-                remark1 = "," + re.sub(r"[\+\- ]","",remark,9999)
-                uniqu   = betrag1 + ",".join(uniqu) + remark1
-
-#                if datum in unique_strings:  #  to avoid double entries
-#                    if uniqu in unique_strings[datum]:
-#                        continue  #  der Eintrag mit diesem unique-String existiert schon, daher nicht nochmal nehmen
-#                    else:
-#                        unique_strings[datum].append(uniqu)
-#                else:
-#                    unique_strings[datum] = [uniqu]
-
-                ktoa = ktoa.replace("^","")
-                ktob = ktob.replace("^","")
-
-                if ktoa[0] == "-":
-                    maxc = max(maxc,len(ktoa))
-                else:
-                    maxa = max(maxa,len(ktoa))
-
-                if ktob[0] == "-":
-                    maxd = max(maxd,len(ktob))
-                else:
-                    maxb = max(maxb,len(ktob))
-
-                buchungen.append([datum,betrag,ktoa,ktob,remark,saldo,zeile])
-
-        if ukto == None:
-            ukto = ""
-        ukto = ukto.replace("^","")
-
-        if maxc > 0:
-            maxa = max(maxa,len(ukto)+maxc)
-        if maxd > 0:
-            maxb = max(maxb,len(ukto)+maxd)
-
-        format_maxa = "%-" + str(maxa) + "s"
-        format_maxb = "%-" + str(maxb) + "s"
-
-        return(buchungen,format_maxa,format_maxb,str(maxsaldo),ukto)
-
-#*************************************************************************
 
     def xxapply_patch (self,file,patch,offset=0):  #  verbessern! Kann der patch Befehl auch direkt auf result.txt angewendet werden?
 
@@ -1062,122 +1262,6 @@ class Konto ():
         return(dates_of_deleted_entries)   #  die Monate, in denen jetzt gar keine Buchungen mehr sind, werden zurueckgegeben
         
 
-#**********************************************************************************
-
-    def format_salden (self,kto0,datum,start_datum="00000000",ktoparse="^[^- ]+-[^- ]+ "):
-
-        faktor = 1
-        kto    = kto0
-        if kto0 and kto0[0] == "-":
-            faktor = -1
-            kto    = kto0[1:]
-
-        if int(start_datum) == 0:
-            start_datum = datum
-        if int(start_datum) == 1:
-            start_datum = "00000000"
-            
-#        print(kto,datum,start_datum,ktoparse)
-
-        datum       = (datum      +"99999999")[0:6]
-        start_datum = (start_datum+"00000000")[0:6]
-        
-        if datum[4:6] > "12":
-            datum = datum[0:4] + "12" 
-
-        ktofiles1 = glob.glob("*.sum")
-        ktofiles1.sort()
-        ktofiles  = []
-
-        for ktofile in ktofiles1:
-            m = re.search(r"(.*)\.sum$",ktofile)
-            if len(ktofiles) < 2:
-                if (m.group(1) + "000000")[0:6] < start_datum:
-                    ktofiles = []
-            if (m.group(1) + "000000")[0:6] > datum:
-                break
-            else:
-                ktofiles.append(ktofile)
-
-#        print(ktofiles)
-        ktotexts = []
-        for ktofile in ktofiles:  #  alle relevanten Zeilen in den Salden-Files werden per grep gefunden:
-            ktotexts.append([])
-#            print("grep -P '" + ktoparse + "' " + ktofile)
-            for zeile in os.popen("grep -P '" + ktoparse + "' " + ktofile).read().split("\n")[:-1]:
-#                print(zeile)
-                ktotexts[-1].append(zeile.split(","))
-
-        salden_aktuell = []
-        
-        kto0 = " "
-        while (0 == 0):   #   alle konten-Salden gleichzeitig nach vorne schieben, dabei auf luecken achten
-            kto = None
-            for ktotext in ktotexts:
-                if len(ktotext) == 0:
-                    continue
-                if kto == None:
-                    kto = ktotext[0][0]
-                else:
-                    kto = min(ktotext[0][0],kto)
-            if kto == None:
-                break
-                
-            betrag = 0.00
-            nr     = 0
-
-#            if kto[0:2] == "13":
-#                print("KTO",kto)
-            if len(ktotexts[0]) > 0 and kto == ktotexts[0][0][0]:   #  im ersten Salden-File die genaue Monatsspalte finden
-                zeile  = ktotexts[0][0][1:]  #  nicht entfernen!
-                datum0 = zeile.pop(0)
-                if start_datum >= datum0:
-                    datpos = 12*( int(start_datum[0:4]) - int(datum0[0:4]) ) + int(start_datum[4:6]) - int(datum0[4:6]) - 1
-                    if datpos < 0:
-                        betrag = 0.00
-                        nr     = 0
-                    elif datpos >= len(zeile):
-                        betrag = betrag - float(zeile[-1][:-self.max_months])
-                        nr     = nr     - int(zeile[-1][-self.max_months:])
-                    else:
-                        betrag = betrag - float(zeile[datpos][:-self.max_months])
-                        nr     = nr     - int(zeile[datpos][-self.max_months:])
-#                    if kto == "13":
-#                        print("DATPOS1",zeile[datpos],datum,datpos,kto,betrag,nr)
-#                        print(zeile)
-                
-            if len(ktotexts[-1]) > 0 and kto == ktotexts[-1][0][0]:   #  im letzten Salden-File die genaue Monatsspalte finden
-#                zeile  = ktotexts[-1][0][1:]  #  nicht entfernen!
-                zeile  = ktotexts[-1].pop(0)[1:]
-                datum0 = zeile.pop(0)
-#                print(datum,datum0)
-                if datum >= datum0:
-                    datpos = 12*( int(datum[0:4]) - int(datum0[0:4]) ) + int(datum[4:6]) - int(datum0[4:6])
-                    if datpos >= len(zeile):
-                        betrag = betrag + float(zeile[-1][:-self.max_months])
-                        nr     = nr     + int(zeile[-1][-self.max_months:])
-                    else:
-                        betrag = betrag + float(zeile[datpos][:-self.max_months])
-                        nr     = nr     + int(zeile[datpos][-self.max_months:])
-
-#                    if kto == "13":
-#                        print("DATPOS2",zeile[datpos],start_datum,datpos,kto,betrag,nr)
-
-                
-            for ktotext in ktotexts[:-1]:   #  nur bei sum-up Werten relevant
-                if len(ktotext) > 0 and ktotext[0][0] == kto:
-                    zeile  = ktotext.pop(0)
-                    betrag = betrag + float(zeile[-1][:-self.max_months])
-                    nr     = nr     + int(zeile[-1][-self.max_months:])
-
-            if nr > 0:
-                kto_ordnung = max(0,len(re.sub("[^\-]","",kto)))
-                kto_ordnung = "%-" + ("%2u"%(20+kto_ordnung*4)) + "s"
-                salden_aktuell.append( (kto_ordnung % kto) + "  " + ("%13.2f" % (faktor*betrag) ) )
-
-        return(salden_aktuell)
-
-#**********************************************************************************
 
     def kto (self,pattern=""):
 
