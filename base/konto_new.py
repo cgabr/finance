@@ -12,8 +12,9 @@ class Konto ():
 
 
         self.t0         = 0
-        self.max_months = 4   #  10^max_months months allowed in a sum-file, 10^4/12 = 800 years
-                              #      (ought to be sufficient)
+        self.digits     = 3
+        self.dformat    = "03u" 
+                            
         self.len_hkey   = 12
 
         self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
@@ -485,11 +486,21 @@ class Konto ():
                         betrag = 0.00
                         nr     = 0
                     elif datpos >= len(zeile):
-                        betrag = betrag - float(zeile[-1][:-self.max_months])
-                        nr     = nr     - int(zeile[-1][-self.max_months:])
+                        if zeile[-1][-self.digits-1] == "/":
+                            betrag = betrag - float(zeile[-1][:-self-digits-1])
+                            nr     = nr     - int(zeile[-1][-self.digits:])
+                        else:
+                            ind    = zeile[-1].index("/")
+                            betrag = betrag - float(zeile[-1][:index-1])
+                            nr     = nr     - int(zeile[-1][index:])
                     else:
-                        betrag = betrag - float(zeile[datpos][:-self.max_months])
-                        nr     = nr     - int(zeile[datpos][-self.max_months:])
+                        if zeile[datpos][-self.digits-1] == "/":
+                            betrag = betrag - float(zeile[datpos][:-self-digits-1])
+                            nr     = nr     - int(zeile[datpos][-self.digits:])
+                        else:
+                            ind    = zeile[datpos].index("/")
+                            betrag = betrag - float(zeile[datpos][:index-1])
+                            nr     = nr     - int(zeile[datpos][index:])
 #                    if kto == "13":
 #                        print("DATPOS1",zeile[datpos],datum,datpos,kto,betrag,nr)
 #                        print(zeile)
@@ -501,12 +512,23 @@ class Konto ():
 #                print(datum,datum0)
                 if self.enddatum >= datum0:
                     datpos = 12*( int(self.enddatum[0:4]) - int(datum0[0:4]) ) + int(self.enddatum[4:6]) - int(datum0[4:6])
+
                     if datpos >= len(zeile):
-                        betrag = betrag + float(zeile[-1][:-self.max_months])
-                        nr     = nr     + int(zeile[-1][-self.max_months:])
+                        if zeile[-1][-self.digits-1] == "/":
+                            betrag = betrag + float(zeile[-1][:-self-digits-1])
+                            nr     = nr     + int(zeile[-1][-self.digits:])
+                        else:
+                            ind    = zeile[-1].index("/")
+                            betrag = betrag + float(zeile[-1][:index-1])
+                            nr     = nr     + int(zeile[-1][index:])
                     else:
-                        betrag = betrag + float(zeile[datpos][:-self.max_months])
-                        nr     = nr     + int(zeile[datpos][-self.max_months:])
+                        if zeile[datpos][-self.digits-1] == "/":
+                            betrag = betrag + float(zeile[datpos][:-self-digits-1])
+                            nr     = nr     + int(zeile[datpos][-self.digits:])
+                        else:
+                            ind    = zeile[datpos].index("/")
+                            betrag = betrag + float(zeile[datpos][:index-1])
+                            nr     = nr     + int(zeile[datpos][index:])
 
 #                    if kto == "13":
 #                        print("DATPOS2",zeile[datpos],start_datum,datpos,kto,betrag,nr)
@@ -515,9 +537,15 @@ class Konto ():
             for ktotext in ktotexts[:-1]:   #  nur bei sum-up Werten relevant
                 if len(ktotext) > 0 and ktotext[0][0] == kto:
                     zeile  = ktotext.pop(0)
-                    betrag = betrag + float(zeile[-1][:-self.max_months])
-                    nr     = nr     + int(zeile[-1][-self.max_months:])
-
+                    
+                    if zeile[-1][-self.digits-1] == "/":
+                        betrag = betrag + float(zeile[-1][:-self-digits-1])
+                        nr     = nr     + int(zeile[-1][-self.digits:])
+                    else:
+                        ind    = zeile[-1].index("/")
+                        betrag = betrag + float(zeile[-1][:index-1])
+                        nr     = nr     + int(zeile[-1][index:])
+                    
             if nr > 0:
                 kto_ordnung = max(0,len(re.sub("[^\-]","",kto)))
                 kto_ordnung = "%-" + ("%2u"%(20+kto_ordnung*4)) + "s"
@@ -717,10 +745,12 @@ class Konto ():
                         betrag = eval(m.group(3))
                         ktoa   = m.group(4)
                         ktob   = m.group(5)
+                        add_buchung = 1
                         if m.group(1).startswith("."):
-                            betrag = -betrag
-                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktoa, betrag,datum) 
-                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktob,-betrag,datum)
+                            betrag      = -betrag
+                            add_buchung = -1
+                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktoa, betrag,add_buchung,datum) 
+                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktob,-betrag,add_buchung,datum)
 
 
             salden_text.sort()
@@ -766,16 +796,18 @@ class Konto ():
                         betrag0 = 0.00
                         nr0     = 0
                         for betrag in werte:
-                            nr     = int(betrag[-self.max_months:])
-                            betrag = float(betrag[:-self.max_months])
-                            if not monat in diff_salden[kto]:
-                                diff_salden[kto][monat] = 0.00
-                                buchung_im_lfd_monat[kto][monat]  = 0
-                            diff_salden[kto][monat] = diff_salden[kto][monat] + betrag - betrag0
-                            if monat in self.dates_of_deleted_entries:
-                                buchung_im_lfd_monat[kto][monat]  = 0
+                            if betrag[-self.digits-1] == "/":
+                                nr     = int(betrag[-self.digits:])
+                                betrag = float(betrag[:-self.digits-1])
                             else:
-                                buchung_im_lfd_monat[kto][monat]  = 1
+                                ind    = betrag.index("/")
+                                betrag = int(m.group(1))
+                                nr     = float(m.group(2))
+                            if not monat in diff_salden[kto]:
+                                diff_salden[kto][monat]           = 0.00
+                                buchung_im_lfd_monat[kto][monat]  = 0
+                            diff_salden[kto][monat]          = diff_salden[kto][monat]          + betrag - betrag0
+                            buchung_im_lfd_monat[kto][monat] = buchung_im_lfd_monat[kto][monat] + nr     - nr0
                             betrag0 = betrag
                             nr0     = nr
                             monat   = monat + 1
@@ -792,8 +824,8 @@ class Konto ():
                 while (0 == 0):
                     if monat in diff_salden[kto]:
                         sum = sum + diff_salden[kto][monat]
-                        nr  = nr  + buchung_im_lfd_monat[kto][monat]
-                    betraege.append(("%3.2f"%sum)+("%04u"%nr))
+                        nr  = buchung_im_lfd_monat[kto][monat]
+                    betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
                     monat   = monat + 1
                     if str(monat)[4:6] == "13":
                         monat = int(str(int(str(monat)[0:4]) + 1) + "01")
@@ -806,7 +838,7 @@ class Konto ():
                         break
                     betraege.pop()
                 zeile = zeile + ",".join(betraege)
-                if len(betraege) == 1 and float(betraege[0][:-self.max_months]) == 0.00:
+                if len(betraege) == 1 and abs(float(betraege[0][0: betraege[0].index("/")-1 ])) < 0.00001:
                     if interval9 > -1:
                         salden_text[interval9] = "---DELETE---"   #  loesche die Zeile
                     else:
@@ -831,17 +863,18 @@ class Konto ():
 
 #**********************************************************************************
 
-    def compute_salden (self,salden,buchung,ukto,betrag,datum):   #  Splits the accounting entry and
-                                                                  #  and computes the cahnges for every
-        monat = int(datum[0:6])                                   #  sub-account
+    def compute_salden (self,salden,buchung,ukto,betrag,add_buchung,datum):   #  Splits the accounting entry and
+                                                                              #  and computes the cahnges for every
+        monat = int(datum[0:6])                                               #  sub-account
         while (0 == 0):
             if not ukto in salden:
                 salden[ukto]  = {}
                 buchung[ukto] = {}
             if not monat in salden[ukto]:
                 salden[ukto][monat]  = 0.00
-            salden[ukto][monat]  = salden[ukto][monat] + betrag
-            buchung[ukto][monat] = 1
+                buchung[ukto][monat] = 0
+            salden[ukto][monat]  = salden[ukto][monat]  + betrag
+            buchung[ukto][monat] = buchung[ukto][monat] + add_buchung
             m = re.search(r"^(.*)\-(.+)$",ukto)
             if m:
                 ukto = m.group(1)

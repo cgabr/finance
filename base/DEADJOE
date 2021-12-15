@@ -1177,3 +1177,6 @@ Processing '/etc/joe/joerc'...
 Processing '/etc/joe/ftyperc'...
 Finished processing /etc/joe/ftyperc
 Finished processing /etc/joe/joerc
+
+*** These modified files were found in JOE when it aborted on Wed Dec 15 04:14:25 2021
+*** JOE was aborted by UNIX signal 15
