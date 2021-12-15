@@ -12,8 +12,9 @@ class Konto ():
 
 
         self.t0         = 0
-        self.max_months = 4   #  10^max_months Monate erlaubt in einem sum-file, 10^4/12 = 800 Jahre
-                              #      (das sollte reichen)
+        self.max_months = 4   #  10^max_months months allowed in a sum-file, 10^4/12 = 800 years
+                              #      (ought to be sufficient)
+        self.len_hkey   = 12
 
         self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
 
@@ -29,45 +30,94 @@ class Konto ():
 
 #**********************************************************************************
 
-    def actualize_konto (self,base_dir,search_pattern,ktofile):  #  Updates an actual konto
-        pass    
+    def update_konto (self,base_dir,search_pattern,salden_expand="(-[^- ]+){0,99},"):  #  Updates an actual konto
+
+        self.search_pattern = search_pattern
+        self.base_dir      = re.sub(r"//$","/",base_dir + "/")
+        self.salden_expand = salden_expand
+
+        self.parse_pattern()
+        
+#        self.list_of_sum_files = glob.glob(base_dir+".*sum)
+#
+#        if not len(self.list_of_acc_files) == len(self.list_of_sum_files):
+#            print("Kto database not proper.")
+#            return("Error 207.")
+
+
+        self.extract_account_lines()   #   Prepare formatted konto and salden
+        
+        konto_files_found = glob.glob("*.kto")
+        
+        if len(konto_files_found) > 1:
+            print("More than one kto file found.")
+            return("Error 120.")
+            
+        self.format_kto()
+
+        kto_file = None
+
+        if len(konto_files_found) == 1:
+        
+            kto_file           = konto_files_found[0]
+            text               = open(kto_file).read())
+            self.processed_acc = text.split("\n")
+            m                  = re.search(" ^([0123456789abcdef]{"+self.len_hkey+"}) ",self.existing_acc[0])
+        
+            if m and m.group(1) == self.hkey:   #  the key which is found in the existing kto-file allows to change the result of the computed sub account
+                                                #  so we take the chance
+                m           = re.search("^(.*?)\n *\n(.*?\n) *\n",text)
+                actual_hkey = hashlib.md5(m.group(2).encode("utf-8")).hexdigest()[0:12]
+                if actual_hkey == self.hkey:
+                    return("No change.")        #  Nothing changed at all in the account lines, so do not do anything.
+                
+                self.replace_accountings()      #  the diffs between formatted_acc and processed_acc will be applied to extracted_acc.
+                self.format_kto()               #  make a new formatted_acc from the extracted_acc again.
+      
+                self.list_of_acc_files = glob.glob(self.base_dir+".*acc)
+                self.list_of_acc_files.sort()
+                
+                self.subtract_account_lines()   #  delete the former lines of the search
+                self.add_account_lines()        #  add the new ones
+                self.update_sum_files()         #  also update the sumfiles
+      
+        if len(konto_files_found) == 0 or re.search(r"([0123456789abcdef]{"+self.len_hkey+"})\.kto",kto_file):
+            kto_file = self.hkey + ".kto"
+            
+        open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" + "\n".join(salden_aktuell) + "\n" )
+        
+        if len(konto_files_found) == 1 and not kto_file == konto_files_found[0]:
+            os.unlink(konto_files_found[0])
+                    
 
 #**********************************************************************************
 
-    def extract_account_lines (self,base_dir,search_pattern,salden_expand="(-[^- ]+){0,99},"):
+    def extract_account_lines (self):
     
 #    This function extracts the matching lines of a request into a sorted array
-
-        self.parse_pattern(search_pattern)
-        self.base_dir      = re.sub(r"//$","/",base_dir + "/")
-        self.salden_expand = salden_expand
 
 #        self.mark("A. Compute query for transaction file " + pattern1 + " " + str(interval)[0:40] + " ...")
         if not self.interval_long == "":
             if self.grep_pattern == "":
-                self.extracted_text = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc").read().split("\n")
+                self.extracted_acc = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc").read().split("\n")
             else:
-                self.extracted_text = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc | grep -h -i '" + self.grep_pattern + "'").read().split("\n")
+                self.extracted_acc = os.popen(self.egrep + "grep -h -i ^" + self.interval_long + " " + self.base_dir + "*.acc | grep -h -i '" + self.grep_pattern + "'").read().split("\n")
         else:
             if self.grep_pattern == "":
-                self.extracted_text = os.popen("less " + self.base_dir + "*.acc").read().split("\n")
+                self.extracted_acc = os.popen("less " + self.base_dir + "*.acc").read().split("\n")
             else:
-                self.extracted_text = os.popen(self.egrep + "grep -h -i '" + self.grep_pattern + "' " + self.base_dir + "*.acc").read().split("\n")
+                self.extracted_acc = os.popen(self.egrep + "grep -h -i '" + self.grep_pattern + "' " + self.base_dir + "*.acc").read().split("\n")
 
-        self.extracted_text.sort()        
+        self.extracted_acc.sort()        
 
         self.mark("B. Transaction file generated.")
 
-        if len(glob.glob(base_dir+"*.acc")) == len(glob.glob(base_dir+"*.sum")):
-            self.format_kto()
-            self.mark("C. ... and formatted.")
-
+        
 #**********************************************************************************
 
-    def parse_pattern (self,pattern0):    #   parse the pattern
+    def parse_pattern (self):    #   parse the search pattern
 
-
-        self.grep_pattern     = re.sub(r"\^"," ",pattern0,9999)
+        self.grep_pattern     = re.sub(r"\^"," ",self.search_pattern,9999)
         self.interval_long    = ""
         self.interval_short   = ""
         self.egrep            = ""
@@ -146,8 +196,8 @@ class Konto ():
         gesamt               = 0.00
         self.startdatum      = "00000000"
         dbl_marks            = {}
-        self.formatted_text  = []
-        self.extracted_text  = []   #  das orig-File muss in der neuen Sortierung auch neu geschrieben werden,
+        self.formatted_acc  = []
+        self.extracted_acc  = []    #  das orig-File muss in der neuen Sortierung auch neu geschrieben werden,
                                     #  damit man am Ende den Patch auf das formatierte Konto-File anwenden kann.
 
         has_doublettes = 0
@@ -170,7 +220,6 @@ class Konto ():
                 saldo = "         ...."
 #                saldo  = "%13.2f" % gesamt
             elif self.maxsaldo == 0 or zeile[5] == 1:
-#                print("hier")
                 gesamt = gesamt + betrag
                 saldo  = "%13.2f" % gesamt
             elif zeile[5] == 2:
@@ -189,19 +238,17 @@ class Konto ():
                 zeile1 = zeile1 + " DOUBLETTE " + str(dbl_marks[dbl_mark])
                 has_doublettes = 1
             
-#            print(zeile1)
-
-            self.extracted_text.append(zeile[6])
-            self.formatted_text.append(zeile1)
+            self.extracted_acc.append(zeile[6])
+            self.formatted_acc.append(zeile1)
             if self.startdatum == "00000000":
                 self.startdatum = datum
 
         self.enddatum = datum
 
         if self.ukto == "":
-            self.ukto = "-> " + self.grep_pattern
+            self.ukto = "-> " + self.search_pattern
             
-        self.hkey   = "\n".join(self.formatted_text) + "\n"
+        self.hkey   = "\n".join(self.formatted_acc) + "\n"
         self.hkey   = hashlib.md5(self.hkey.encode("utf-8")).hexdigest()[0:12]
         self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+"."+self.interval_short))) + " " + self.hkey + " " + ("%13.2f"%gesamt)
         
@@ -209,8 +256,6 @@ class Konto ():
         
         if has_doublettes:
             print("Attention: Doublettes!")
-
-#        exit()
 
 #**********************************************************************************
    
@@ -235,7 +280,7 @@ class Konto ():
             
         zaehler = -1
         vvv = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
-        for zeile in self.extracted_text:
+        for zeile in self.extracted_acc:
 
             mm = vvv.search(zeile)
             if not mm:   #   Einlesen der Kontobezeichnungen
@@ -478,127 +523,49 @@ class Konto ():
                 kto_ordnung = "%-" + ("%2u"%(20+kto_ordnung*4)) + "s"
                 self.salden_aktuell.append( (kto_ordnung % kto) + "  " + ("%13.2f" % (faktor*betrag) ) )
 
-#*************************************************************************
-#**********************************************************************************
-        
-    def subtract_account_lines (self,pars,file="result"): 
-
-#   This function deletes accounting lines from the acc-files due to a pattern
-
-        startdate = pars[0]
-        enddate   = pars[1]
-        pattern   = pars[2]
-        interval  = pars[3]
-        egrep     = pars[4]
-
-        pattern1  = re.sub(r"\^"," ",pattern,9999)
-
-        for ktofile in glob.glob(base_dir+"*.acc") :
-
-            m = re.search(r"^(\d+)\.acc",ktofile)
-            if not m:
-                continue
-            zeitraum = m.group(1)
-            if zeitraum < startdate[0:len(zeitraum)]:
-                continue
-            if zeitraum > enddate[0:len(zeitraum)]:
-                continue
-
-            if interval:
-                if pattern1 == "":
-                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
-                else:
-                    os.system(egrep + "grep -i -v ^" + interval + " " + ktofile + " > __" + ktofile)
-                    os.system(egrep + "grep -i ^" + interval + " " + ktofile + " | grep -i -v '" + pattern1 + "' >> __" + ktofile)
-            else:
-                if pattern1 == "":
-                    os.system(" > __" + ktofile)
-                else:
-                    os.system(egrep + "grep -i -v '" + pattern1 + "' " + ktofile + " > __" + ktofile)
-                    
-            os.system("mv __" + ktofile + " " + ktofile)
-
-        self.mark("D. Clear acc files.")
-                
 #**********************************************************************************
 
-    def replace_accountings (self,extracted_acc,formatted_acc,processed_acc,base_dir):
-    
-#       If an extraction of account entries is made in the file  extracted_acc , and there is
-#       a line-by-line corresponding formatted file  formatted_acc , and additionally a copy
-#       of that file  processed_acc , which might have been changed by the user, then this function
-#       resembles the differences back into the *.acc-files in base_dir, and upüdates the *.sum-files.
-#
-
-        if not os.path.isfile(extracted_acc):
-            print("No extraction accounts file.")
-            return()
-
-        if not os.path.isfile(formatted_acc):
-            print("No original formatted accounts file.")
-            return()
-
-        if not os.path.isfile(processed_acc):
-            print("No processed formatted accounts file.")
-            return()
-
-        self.mark("A. Finish transaction.")
-
-#       Application of the changes in  processed_acc  to extracted_acc :
-
-        extracted_lines =  open(extracted_acc).read().split("\n") 
-        formatted_lines =  open(formatted_acc).read().split("\n") 
-        processed_lines =  open(processed_acc).read().split("\n") 
-
-        new_extracted_lines, dates_of_deleted_lines = change_extracted_acc_file_due_to_changes (self,extracted_lines,formatted_lines,processed_lines)
-
-        if new_extracted_lines == None:
-            return("no changes.")
-
-        open(extracted_acc,"w").write( "\n".join(new_text) + "\n" )
-
-#**********************************************************************************
-
-    def change_extracted_lines_due_to_changes (self,extracted_lines,formatted_lines,processed_lines):
+    def replace_accountings (self,extracted_lines,formatted_lines,processed_lines):
     
 #   Here we create the array add_lines (lines which are added in processed_acc), del_lines (lines which
 #   are deleted in processed_acc), line_numbers_of_deleted (the line numbers in the array of the original
 #   formatted_acc which have been deleted in  processed_acc).
 
-        add_lines, del_lines, line_numbers_of_deleted = self.differences_to_consider(formatted_lines,processed_lines)
+        self.differences_to_consider()
 
-        if len(add_lines) + len(del_lines) == 0:
+        if len(self.add_lines) + len(self.del_lines) == 0:
             return(None)
         
 #   Now we apply these changes to the original raw file  extracted_acc :
 
-        changed_extracted_lines = add_lines[:]  #  new version of the text of  extracted_acc. We start with the added lines
+        new_extracted_acc = self.add_lines     #  new version of the text of  extracted_acc. We start with the added lines
 
 #   Deleted lines:
 #   Because the line-by-line correspondency of  extracted_acc  and formatted_acc  we can apply the numbers in  line_numbers_of_deleted
 #   directly to extracted_acc (by considering an offset of 2 because of the both additional header lines made from the formatting)
 
-        dates_of_deleted_lines     = []            #  we collect all months of all lines which have been deleted
+        self.dates_of_deleted_lines     = []            #  we collect all months of all lines which have been deleted for later purposes
 
-        zaehler = 2  #  offset in formatted_acc
-        for zeile in extracted_lines:
-            if (len(changed_extracted_acc_text) + 2) in line_numbers_of_deleted:
-                if not zeile[0:6] in dates_of_deleted_lines:
-                    dates_of_deleted_lines.append(zeile[0:6])
-                else:
-                    changed_extracted_lines.append(zeile)
+        zaehler = 0 
+        for zeile in self.extracted_acc:
+            if (zaehler in self.line_numbers_of_deleted:
+                if not zeile[0:6] in self.dates_of_deleted_lines:
+                    self.dates_of_deleted_lines.append(zeile[0:6])
+            else:
+                new_extracted_acc.append(zeile)
+            zaehler = zaehler + 1
                     
-        changed_extracted_lines.sort()
-        return(changed_extracted_lines,dates_of_deleted_lines)
+        self.extracted_acc = new_extracted_acc
+        self.extracted_acc.sort()
         
 #**********************************************************************************
 
-    def differences_to_consider (self,formatted_lines,processed_lines):
+    def differences_to_consider (self):
     
-        set_of_formatted_acc  = set( formatted_lines )
-        set_of_processed_acc  = set( processed_lines )
+        set_of_formatted_acc  = set( self.formatted_acc )
+        set_of_processed_acc  = set( self.processed_acc )
 
-#       Firstly we determine the vice versa differences of the sets of lines in formatted_acc and processed_acc:
+#       First, we determine the vice versa differences of the sets of lines in formatted_acc and processed_acc:
 
         set_of_added_lines    = set_of_processed_acc.difference(set_of_formatted_lines)
         set_of_deleted_lines  = set_of_formatted_acc.difference(set_of_deleted_lines)
@@ -622,20 +589,17 @@ class Konto ():
 
 #       As a last step, we find back the original lines by the both dictionaries:
 
-        add_lines               = []
+        self.add_lines               = []
         for normalized_line in reduced_set_of_normalized_added_lines:
             orig_zeile = dict_of_normalized_added_lines_to_orig_added_lines[ normalized_line ]
-            add_lines.append( orig_zeile )
+            self.add_lines.append( orig_zeile )
 
-        del_lines               = []
-        line_numbers_of_deleted = []
+        self.del_lines               = []
+        self.line_numbers_of_deleted = []
         for normalized_line in reduced_set_of_normalized_deleted_lines:
             orig_zeile = dict_of_normalized_deleted_lines_to_orig_deleted_lines[ normalized_line ]
-            del_lines.append( orig_zeile )
-            line_numbers_of_deleted.append( formatted_lines.index( orig_zeile ) )
-
-        return( add_lines, del_lines, line_numbers_of_deleted )
-
+            self.del_lines.append("-" +  orig_zeile )
+            self.line_numbers_of_deleted.append( formatted_lines.index( orig_zeile ) )
 
 #********************************************************************************************        
 
@@ -655,13 +619,241 @@ class Konto ():
         
         return(set(normalized_lines),dict_normalized_lines_to_orig_lines)
         
+#*******************************************************************************************
+
+    def impacts_ktofile(self,ktofile):
+
+        m = re.search(r"(\D|^)(\d+)\.acc",ktofile)
+        if not m:
+            return(False)
+        zeitraum = m.group(2)
+        if zeitraum < self.startdatum[0:len(zeitraum)]:
+            return(False)
+        if zeitraum > self.enddatum[0:len(zeitraum)]:
+            return(False)
+
+        return(zeitraum)
+
+#*******************************************************************************************
+        
+    def subtract_account_lines (self): 
+
+#   This function deletes accounting lines from the acc-files due to a pattern
+
+        for ktofile in self.list_of_acc_files:
+
+            if not self.impacts_ktofile(ktofile):
+                continue
+
+            if not self.interval_long == "":
+                if pattern1 == "":
+                    os.system(self.egrep + "grep -i -v ^" + self.interval_long + " " + self.base_dir + ktofile + " > " + self.base_dir + "__" + ktofile)
+                else:
+                    os.system(self.egrep + "grep -i -v ^" + self.interval_long + " " + self.base_dir + ktofile + " > " + self.base_dir + "__" + ktofile)
+                    os.system(self.egrep + "grep -i ^" + self.interval_long + " " + self.base_dir + ktofile + " | grep -i -v '" + self.grep_pattern + "' >> " + self.base_dir + "__" + ktofile)
+            else:
+                if pattern1 == "":
+                    os.system(" > __" + self.base_dir + ktofile)
+                else:
+                    os.system(self.egrep + "grep -i -v '" + self.grep_pattern + "' " + self.base_dir + ktofile + " > " + self.base_dir + "__" + ktofile)
+                    
+            os.system("mv " + self.base_dir + "__" + ktofile + " " + self.base_dir + "__" + ktofile)
+
+        self.mark("D. Subtract old accounting entries from acc files.")
+                
 #********************************************************************************************        
 
+    def add_account_lines (self):
+
+        for ktofile in self.list_of_acc_files:
+
+            if not self.impacts_ktofile(ktofile):
+                continue
+
+            os.system("grep ^" + zeitraum + " " + file + ".orig >> " + ktofile)
+            if sortieren == 1:    #   hier die acc-Files wieder sortieren
+                file_text = re.sub(r"\n+$","",open(ktofile).read()).split("\n")
+                file_text.sort()
+                open(ktofile,"w").write("\n".join(file_text) + "\n")
+                self.mark("C. " + ktofile + " sorted.")
+#                os.system("sort " + ktofile + " > " + "__" + ktofile)
+#                os.system("mv __" + ktofile + " " + ktofile)
+                
+#*************************************************************************
+
+    def update_salden(self):
+    
+        salden_files = []
+        
+        list_of_changed_lines = self.add_lines + self.del_lines
+
+        for ktofile in self.list_of_acc_files:
+
+            abschnitt = self.impacts_ktofile(ktofile)
+            if not abschnitt:
+                continue
+
+            diff_salden          = {}
+            buchung_im_lfd_monat = {}
+
+            salden_file  = ktofile[0:-4] + ".sum"
+            salden_files.append(salden_file) 
+            if not os.path.isfile(salden_file):    #  if a sum file is missing, add all its acc-lines to the changes account entries
+                list_of_changed_lines = list_of_changes_lines + open(ktofile).read().split("\n")
+
+            salden_text = []
+            if os.path.isfile(salden_file):    
+                salden_text = open(salden_file).read().strip().split("\n")   #  update der salden_files
+
+            update_salden = 0
+            for diff_buchung in ( list_of_changed_lines ):
+                m = re.search("^(\.?)(\d\d\d\d\d\d\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\.+)",diff_buchung)
+                if m:
+                    if update_salden == 0:
+                        update_salden = 1
+                        self.mark("D. Update " + ktofile + ".")
+                    datum  = m.group(2)
+                    if datum.startswith(abschnitt):
+                        betrag = eval(m.group(3))
+                        ktoa   = m.group(4)
+                        ktob   = m.group(5)
+                        if m.group(1).startswith("."):
+                            betrag = -betrag
+                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktoa, betrag,datum) 
+                        self.compute_salden(diff_salden,buchung_im_lfd_monat,ktob,-betrag,datum)
+
+
+            salden_text.sort()
+            salden_text1  = []
+            del_element   = []
+            update_salden = 0
+            for kto in list(diff_salden.keys()):
+
+#                if tt == 1:
+#                    print(kto)
+                if update_salden == 0:
+                    update_salden = 1
+                    self.mark("E. Diff salden computed.")
+                    
+                interval0 = 0   # suchen, ob es schon eine gueltige Zeile gibt
+                interval1 = len(salden_text) - 1
+                while (0 == 0):
+                    if interval0 > interval1:
+                        interval9 = -1
+                        break
+                    interval9 = interval0 + int((interval1 - interval0)/2)
+#                    if tt == 1:
+#                        print(interval0,interval9,interval1,kto)
+#                    if tt == 1:
+#                        print("    ",salden_text[interval9])
+#                    print(kto)
+                    if salden_text[interval9].startswith(kto+","):
+                        break
+                    if (kto + ",") > salden_text[interval9]:
+                        interval0 = interval9 + 1
+                    else:
+                        interval1 = interval9 - 1
+                                    
+                if interval9 > -1:   #   wenn es schon eine Konto-Zeile im Salden-File gibt, diese integrieren
+#                    if tt == 1:
+#                        print(salden_text[interval9])
+                    werte = salden_text[interval9].split(",")
+#                    if tt == 1:
+#                        print(werte)
+                    werte.pop(0)
+                    if len(werte) > 0:
+                        monat   = int(werte.pop(0))
+                        betrag0 = 0.00
+                        nr0     = 0
+                        for betrag in werte:
+                            nr     = int(betrag[-self.max_months:])
+                            betrag = float(betrag[:-self.max_months])
+                            if not monat in diff_salden[kto]:
+                                diff_salden[kto][monat] = 0.00
+                                buchung_im_lfd_monat[kto][monat]  = 0
+                            diff_salden[kto][monat] = diff_salden[kto][monat] + betrag - betrag0
+                            if monat in self.dates_of_deleted_entries:
+                                buchung_im_lfd_monat[kto][monat]  = 0
+                            else:
+                                buchung_im_lfd_monat[kto][monat]  = 1
+                            betrag0 = betrag
+                            nr0     = nr
+                            monat   = monat + 1
+                            if str(monat)[4:6] == "13":
+                                monat = int(str(int(str(monat)[0:4]) + 1) + "01")
+                            
+                monate   = list(diff_salden[kto].keys())
+                monat    = min(monate)
+                mmax     = max(monate)
+                zeile    = kto + "," + str(monat) + ","
+                betraege = []
+                sum      = 0.00
+                nr       = 0
+                while (0 == 0):
+                    if monat in diff_salden[kto]:
+                        sum = sum + diff_salden[kto][monat]
+                        nr  = nr  + buchung_im_lfd_monat[kto][monat]
+                    betraege.append(("%3.2f"%sum)+("%04u"%nr))
+                    monat   = monat + 1
+                    if str(monat)[4:6] == "13":
+                        monat = int(str(int(str(monat)[0:4]) + 1) + "01")
+                    if monat > mmax:
+                        break
+                while (0 == 0):
+                    if len(betraege) < 2:
+                        break
+                    if not betraege[-1] == betraege[-2]:
+                        break
+                    betraege.pop()
+                zeile = zeile + ",".join(betraege)
+                if len(betraege) == 1 and float(betraege[0][:-self.max_months]) == 0.00:
+                    if interval9 > -1:
+                        salden_text[interval9] = "---DELETE---"   #  loesche die Zeile
+                    else:
+                        pass                                      #  Zeile ist Null, gar nicht erst eintragen
+                else:
+                    if interval9 > -1:
+                        salden_text[interval9] = zeile   #  Zeile updaten
+                    else:
+                        salden_text1.append(zeile)       #  Zeile existierte nicht, also eintragen
+                
+            if update_salden == 1:
+                self.mark("F. Salden list updated.")
+     
+#            while len(del_element) > 0:
+#                salden_text.pop( del_element.pop() )
+
+            salden_text = salden_text + salden_text1
+            salden_text.sort()
+            salden_text = "\n".join(salden_text) + "\n"
+            salden_text = re.sub(r"---DELETE---\n","",salden_text,99999999)
+            open(salden_file,"w").write(salden_text)   #  update der salden_files
+
+#**********************************************************************************
+
+    def compute_salden (self,salden,buchung,ukto,betrag,datum):   #  Splits the accounting entry and
+                                                                  #  and computes the cahnges for every
+        monat = int(datum[0:6])                                   #  sub-account
+        while (0 == 0):
+            if not ukto in salden:
+                salden[ukto]  = {}
+                buchung[ukto] = {}
+            if not monat in salden[ukto]:
+                salden[ukto][monat]  = 0.00
+            salden[ukto][monat]  = salden[ukto][monat] + betrag
+            buchung[ukto][monat] = 1
+            m = re.search(r"^(.*)\-(.+)$",ukto)
+            if m:
+                ukto = m.group(1)
+            else:
+                return()
+
+#*************************************************************************
         
     def test_extract_lines (self,basedir,pattern):
     
         self.extract_account_lines(basedir,pattern)
-#        print("\n".join(self.formatted_text)+"\n")
+#        print("\n".join(self.formatted_acc)+"\n")
         print("\n".join(self.salden_aktuell)+"\n")
         
 #*************************************************************************
@@ -954,25 +1146,6 @@ class Konto ():
 
         os.system("mv " + file + ".orig " + file + ".old")
         self.mark("G. ... closed.")
-
-#**********************************************************************************
-
-    def compute_salden (self,salden,buchung,ukto,betrag,datum):
-
-        monat = int(datum[0:6])
-        while (0 == 0):
-            if not ukto in salden:
-                salden[ukto]  = {}
-                buchung[ukto] = {}
-            if not monat in salden[ukto]:
-                salden[ukto][monat]  = 0.00
-            salden[ukto][monat]  = salden[ukto][monat] + betrag
-            buchung[ukto][monat] = 1
-            m = re.search(r"^(.*)\-(.+)$",ukto)
-            if m:
-                ukto = m.group(1)
-            else:
-                return()
 
 #**********************************************************************************
 
