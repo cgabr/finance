@@ -21,6 +21,7 @@ class Konto ():
         self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
 
         self.sortieren    = 1
+        self.space_kto    = 25
 
 #**********************************************************************************
 
@@ -115,7 +116,7 @@ class Konto ():
         if change_acc_files:
 
             self.list_of_acc_files = glob.glob(self.base_dir+"*.acc")
-            print(self.list_of_acc_files)
+#            print(self.list_of_acc_files)
             self.list_of_acc_files.sort()
             
             self.subtract_account_lines()     #  delete the former lines of the search
@@ -221,7 +222,7 @@ class Konto ():
                 
 #   ktotext:   datum  betrag   kto1   kto2   saldo   bemerkung   original_line
                 
-#        print("UKTO: " + ukto)
+        print("UKTO: " + self.ukto)
         if self.ukto == "":
             self.buchungen.sort(key=lambda x:x[0]+str(x[1])+x[3]+x[4])
         else:
@@ -310,9 +311,6 @@ class Konto ():
         if len(pattern) > 0 and pattern[-1] == "-":
             pattern = pattern[:-1]
 
-        if pattern == "":
-            ukto = None
-            
         zaehler = -1
         vvv = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
         for zeile in self.extracted_acc:
@@ -491,7 +489,10 @@ class Konto ():
 #                print(zeile)
                 ktotexts[-1].append(zeile.split(","))
 
-        self.salden_aktuell = []
+        salden_liste    = []
+        max_offset      = 5
+        max_kto_ordnung = 0
+        len_ukto        = len(self.ukto) + 1
         
         kto0 = " "
         while (0 == 0):   #   alle konten-Salden gleichzeitig nach vorne schieben, dabei auf luecken achten
@@ -581,9 +582,28 @@ class Konto ():
                         nr     = nr     + int(zeile[-1][index:])
                     
             if nr > 0:
-                kto_ordnung = max(0,len(re.sub("[^\-]","",kto)))
-                kto_ordnung = "%-" + ("%2u"%(20+kto_ordnung*4)) + "s"
-                self.salden_aktuell.append( (kto_ordnung % kto) + "  " + ("%13.2f" % (faktor*betrag) ) )
+                
+                betrag          = "%3.2f" % (faktor*betrag)
+                kto             = kto[len_ukto:]
+                kto_ordnung     = max(0,len(re.sub("[^\-]","",kto)))
+                if kto == "":
+                    kto_ordnung = -1
+                max_offset      = max(max_offset,len(kto) + len(betrag) - 4*kto_ordnung)
+                max_kto_ordnung = max(max_kto_ordnung,kto_ordnung)
+                salden_liste.append([kto,kto_ordnung,betrag])
+                
+        self.salden_aktuell = []
+        
+        for salden_zeile in salden_liste:
+        
+            kto         = salden_zeile[0]
+            kto_ordnung = salden_zeile[1]
+            betrag      = salden_zeile[2]
+            kto_spacing = "%-" + ("%2u"%(max_offset+kto_ordnung*4-len(betrag)+1)) + "s"
+            if kto_ordnung == 0 and max_kto_ordnung > 1:   #   additional spacing
+                self.salden_aktuell.append("")
+            self.salden_aktuell.append( (kto_spacing%kto) + betrag )
+                            
 
 #**********************************************************************************
 
@@ -644,8 +664,8 @@ class Konto ():
         set_of_normalized_added_lines,   dict_of_normalized_added_lines_to_orig_added_lines     = self.normalize_acc_line_set(set_of_added_lines)
         set_of_normalized_deleted_lines, dict_of_normalized_deleted_lines_to_orig_deleted_lines = self.normalize_acc_line_set(set_of_deleted_lines)
         
-        print(dict_of_normalized_added_lines_to_orig_added_lines)
-        print(dict_of_normalized_deleted_lines_to_orig_deleted_lines)
+#        print(dict_of_normalized_added_lines_to_orig_added_lines)
+#        print(dict_of_normalized_deleted_lines_to_orig_deleted_lines)
 
 
 #       The sets of the normalized added and deleted reduced lines sets are calculated by deleted elements common to both of this sets
@@ -711,7 +731,6 @@ class Konto ():
 #   This function deletes accounting lines from the acc-files due to a pattern
 
         for ktofile in self.list_of_acc_files:
-            print(ktofile)
 
             if not self.impacts_acc_file(ktofile):
                 continue
@@ -841,7 +860,6 @@ class Konto ():
                     if len(werte) > 0:
                         monat   = int(werte.pop(0))
                         betrag0 = 0.00
-                        nr0     = 0
                         for betrag in werte:
                             if betrag[-self.digits-1] == "/":
                                 nr     = int(betrag[-self.digits:])
@@ -854,9 +872,8 @@ class Konto ():
                                 diff_salden[kto][monat]           = 0.00
                                 buchung_im_lfd_monat[kto][monat]  = 0
                             diff_salden[kto][monat]          = diff_salden[kto][monat]          + betrag - betrag0
-                            buchung_im_lfd_monat[kto][monat] = buchung_im_lfd_monat[kto][monat] + nr     - nr0
+                            buchung_im_lfd_monat[kto][monat] = buchung_im_lfd_monat[kto][monat] + nr
                             betrag0 = betrag
-                            nr0     = nr
                             monat   = monat + 1
                             if str(monat)[4:6] == "13":
                                 monat = int(str(int(str(monat)[0:4]) + 1) + "01")
