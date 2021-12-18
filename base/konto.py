@@ -22,6 +22,7 @@ class Konto ():
 
         self.sortieren       = 1
         self.space_kto       = 25
+        self.max_offset      = 20
 
         self.salden_expand   = "(-[^- ]+){0,99},"
 
@@ -78,7 +79,7 @@ class Konto ():
         if ktofile:
             ktodir   = re.sub(r"^(.*[\\\/])(.*).kto$","\\1",os.path.abspath(ktofile))
             ktotext  = open(ktodir+"/"+ktofile).read()
-            m        = re.search(r"^(\-\> +|)(\S+)",ktotext)
+            m        = re.search(r"^(\.|)(\S+)",ktotext)
             if m:
                 if len(m.group(1)) > 0:
                     pattern0 = m.group(2)
@@ -97,6 +98,11 @@ class Konto ():
             if pattern == None:
                 pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
             else:
+
+#                if pattern[0] == ".":
+#                    pattern = pattern[1:]
+#                elif pattern[0] == "-":
+#                    pattern = "^" + pattern
 
                 m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
                 if m:
@@ -120,29 +126,25 @@ class Konto ():
 
                 if not i1:
                     i1 = i0
+                    m1 = m0
+                    
                 if not i1:
                     i1 = ""
-                if p1 in p0:
-                    p1 = ""
-
-                p2 = re.sub(r"-$","",p0 + "-" + p1)   #  compute sub-account
-
-                if p0 == "" or not p2[1:] in ktotext:
-                    p2 = p1
+                    m1 = ""
                     
-                if len(p0) > 0 and p2.startswith(p0):
-                    udir = ktodir + "/" + p1
-#                    p2   = "^" + p2
-                    print("UDIR",udir)
+
+                self.udir = ""
+                if p1 and len(p1) > 0 and p1[0] == "-":
+                    self.udir = re.sub(r"\:","..",p1[1:] + m1 + i1)
+                    p1 = p0 + p1
+                    print("UDIR",self.udir)
                     try:
-                        os.mkdir(udir)
+                        os.mkdir(self.udir)
+                        os.chdir(self.udir)
                     except:
                         pass
 
-                if m0 == m1:
-                    if not m1:
-                        m1 = ""
-                    pattern = p2 + m1 + i1
+                pattern = p1 + m1 + i1
                 pattern = re.sub(r"\.$","",pattern)
 
         print("PATTERN",pattern)
@@ -219,6 +221,11 @@ class Konto ():
             change_acc_files = 1
             break
       
+        self.format_salden()
+#        print(self.salden_aktuell)
+
+        self.mark("I. Compute salden.")
+                    
         if len(konto_files_found) == 0 or re.search(r"([0123456789abcdef]{"+self.len_hkey_str+"})\.kto",kto_file):
             kto_file = self.hkey + ".kto"
             
@@ -227,7 +234,7 @@ class Konto ():
         if len(konto_files_found) == 1 and not kto_file == konto_files_found[0]:
             os.unlink(konto_files_found[0])
 
-        self.mark("I. Write result file.")
+        self.mark("J. Write result file.")
                     
 
         if change_acc_files:
@@ -237,11 +244,11 @@ class Konto ():
             self.list_of_acc_files.sort()
             
             self.subtract_account_lines()     #  delete the former lines of the search
-            self.mark("J. Delete former accounting lines.")
+            self.mark("K. Delete former accounting lines.")
             self.add_account_lines(kto_file)  #  add the new ones
-            self.mark("K. Add changed accounting lines.")
+            self.mark("L. Add changed accounting lines.")
             self.update_sum_files()           #  also update the sumfiles
-            self.mark("L. Update sum files.")
+            self.mark("M. Update sum files.")
 
 
 #**********************************************************************************
@@ -276,6 +283,7 @@ class Konto ():
         self.interval_short   = ""
         self.egrep            = ""
         self.mode             = ""
+#        self.search_full      = True   #  not self.search_pattern[0] == "^"
         m                     = re.search(r"^(.*)([\.\:])(.*)$",self.grep_pattern)
             
         if m:
@@ -328,10 +336,16 @@ class Konto ():
                             break
                         month = "%02u" % (int(month) + 1)
                 self.interval_long = "\\(" + "\\|".join(intervals) + "\\)"
-                self.egrep    = "e"
+                self.egrep = "e"
             else:
                 self.interval_long = self.interval_long + months
                 
+#        if self.search_pattern[0] == "^":
+#            self.start_kto    = re.sub(r"[\^ ]",""self.grep_pattern,9999)
+#        else:
+#            self.start_kto    = None
+
+
 #**********************************************************************************
 
     def format_kto (self):
@@ -363,24 +377,32 @@ class Konto ():
             if "v.H." in zeile[4]:
                 ust = "   "
 
+            betrag = zeile[1]
             ktoa   = zeile[2]
             ktob   = zeile[3]
             datum  = zeile[0]
             
+            if not ktoa.startswith(self.ukto):
+                o      = ktoa   
+                ktoa   = ktob   
+                ktob   = o
+                betrag = re.sub(r"^--","","-"+betrag)
+            
 #            print(ukto,zeile)
-            betrag = float(zeile[1])
+            betrag = float(betrag)
+
             if self.ukto == "":
                 gesamt = gesamt + betrag
                 saldo  = "%13.2f" % gesamt
-            elif self.ukto == "" or zeile[5] == 0:
-                saldo = "         ...."
-#                saldo  = "%13.2f" % gesamt
-            elif self.maxsaldo == 0 or zeile[5] == 1:
-                gesamt = gesamt + betrag
-                saldo  = "%13.2f" % gesamt
-            elif zeile[5] == 2:
-#                saldo = "         ----"
-                saldo  = "%13.2f" % gesamt
+            else:
+                if zeile[5] == 0:            #  zeile[5]: the number of matching ukto in ktoa or ktob
+                    saldo = "         ...."
+#                    saldo  = "%13.2f" % gesamt
+                elif self.maxsaldo == 0 or zeile[5] == 1:
+                    gesamt = gesamt + betrag
+                    saldo  = "%13.2f" % gesamt
+                elif zeile[5] == 2:
+                    saldo  = "%13.2f" % gesamt
 
             dbl_z    = datum + " " + ("%13.2f" % betrag) + "  " + (self.format_maxa % ktoa) + "  " + (self.format_maxb % ktob)
             rem_z    = ust + re.sub(r" +"," ",zeile[4],9999)
@@ -403,7 +425,7 @@ class Konto ():
             self.enddatum = datum
 
         if self.ukto == "":
-            self.ukto = "-> " + self.search_pattern
+            self.ukto = "." + self.search_pattern
             interval  = ""
         else:
             interval  = self.mode + self.interval_short
@@ -411,8 +433,6 @@ class Konto ():
         self.hkey   = "\n".join(self.formatted_acc) + "\n"
         self.hkey   = hashlib.md5(self.hkey.encode("utf-8")).hexdigest()[0:12]
         self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+interval))) + " " + self.hkey + "       " + ("%13.2f"%gesamt)
-        
-        self.format_salden()
         
         if has_doublettes:
             print("Attention: Doublettes!")
@@ -432,6 +452,8 @@ class Konto ():
         ukto0               = ""
         pattern             = self.grep_pattern.strip().upper()
         
+        
+        
         if len(pattern) > 0 and pattern[-1] == "-":
             pattern = pattern[:-1]
 
@@ -443,6 +465,13 @@ class Konto ():
             if not mm:   #   Einlesen der Kontobezeichnungen
 #                    self.buchungen.append(["00000000",zeile,"","","",-1])
                 continue
+
+#            if self.start_kto:
+#                if mm.group(5).startswith(self.start_kto) or mm.group(6).startswith(self.start_kto) ):
+#                    new_extracted_acc.append(zeile)
+#                else:
+#                    self.remaining_acc.append(zeile)
+#                    continue
 
             if mm.group(2) == "MM":
                 monate = ["01","02","03","04","05","06","07","08","09","10","11","12"]
@@ -458,23 +487,25 @@ class Konto ():
                     print(mm.group(4))
                     exit()
 
-                remark = mm.group(8)
-                uniqu  = []
-                ktoa   = "^" + mm.group(5)
-                ktob   = "^" + mm.group(6)
+                remark   = mm.group(8)
+                uniqu    = []
+                ktoa     = mm.group(5)
+                ktob     = mm.group(6)
+                turn_kto = 0
 
 #                    ktoa = self.parse_ktotext_compute_kto(m.group(5),self.ukto,uniqu)
 #                    ktob = self.parse_ktotext_compute_kto(m.group(6),self.ukto,uniqu)
 
-                if ktoa > ktob:
-                    o      = ktoa    #  um Eindeutigkeit zu schaffen. Sonst kann es durch
-                    ktoa   = ktob    #  Hin- und Herschwingen zu Endlos-Loops kommen
+                if ktoa > ktob:     #  to avoid swing back anf forth
+                    o      = ktoa   
+                    ktoa   = ktob   
                     ktob   = o
                     betrag = re.sub(r"^--","","-"+betrag)
-
-                if not ktoa[1] == "-" and not ktoa.upper().startswith(pattern) and pattern in ktob.upper():
-                    o      = ktoa    #  um das gefundene Konto an den Anfang zu stellen
-                    ktoa   = ktob
+                    turn_kto = 1 - turn_kto
+                    
+                if not pattern in ktoa.upper():
+                    o      = ktoa   
+                    ktoa   = ktob   
                     ktob   = o
                     betrag = re.sub(r"^--","","-"+betrag)
 
@@ -482,11 +513,14 @@ class Konto ():
                 if not self.ukto == None:
                     
                     if self.ukto == "":
-                        if pattern in ktoa.upper() and not ktoa[1] == "-":
+                        if pattern in ktoa.upper():
                             self.ukto = ktoa
+                            
                     for kto in (ktoa,ktob):
-                        if pattern in kto.upper() and not kto[1] == "-":
+                        if pattern in kto.upper():
                             while (0 == 0):
+                                if not pattern in self.ukto:
+                                    break
                                 if kto.startswith(self.ukto):
                                     break
                                 m = re.search(r"^(.*)\-(.*)$",self.ukto)
@@ -510,9 +544,9 @@ class Konto ():
                         ukto0 = re.sub(r"\^","",self.ukto)
                 
 
-                if self.ukto or ktoa[1] == "-":
-                    saldo = ( int( self.ukto and ktoa.startswith(self.ukto) or ktoa[1] == "-") +
-                              int( self.ukto and ktob.startswith(self.ukto) or ktob[1] == "-") )
+                if self.ukto:
+                    saldo = ( int( self.ukto and ktoa.startswith(self.ukto)) +
+                              int( self.ukto and ktob.startswith(self.ukto)) )
                     
                 if uniqu == []:
                     uniqu = [ktoa,ktob]
@@ -563,6 +597,7 @@ class Konto ():
         self.format_maxb = "%-" + str(self.maxb) + "s"
         self.maxsaldo    = str(self.maxsaldo)
 
+
 #*******************************************************************************************
 
     def format_salden (self):
@@ -606,7 +641,7 @@ class Konto ():
                 ktotexts[-1].append(zeile.split(","))
 
         salden_liste    = []
-        max_offset      = 5
+        max_offset      = self.max_offset
         max_kto_ordnung = 0
         len_ukto        = len(self.ukto) + 1
         
@@ -708,7 +743,8 @@ class Konto ():
             if kto_ordnung == 0 and max_kto_ordnung > 1:   #   additional spacing
                 self.salden_aktuell.append("")
             self.salden_aktuell.append( (kto_spacing%kto) + betrag )
-                            
+            if kto_ordnung == -1 and max_kto_ordnung < 2:
+                self.salden_aktuell.append("")
 
 #**********************************************************************************
 
