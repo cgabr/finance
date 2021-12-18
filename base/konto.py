@@ -44,7 +44,6 @@ class Konto ():
         base_dir = ""   #  Search for a base directory with acc and sum files
         while (0 == 0):   #  check if we are in a directory with acc files
             acc_files = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc")
-            print(acc_files)
             if len(acc_files) > 0:
 #                sum_files = glob.glob("2*.sum") + glob.glob("base/*.sum") + glob.glob(".base/*.sum")
                 m = re.search(r"^(.*[\\\/])(.*)$",os.path.abspath(acc_files[0]))
@@ -221,7 +220,7 @@ class Konto ():
             change_acc_files = 1
             break
       
-        self.format_salden()
+#        self.format_salden()
 #        print(self.salden_aktuell)
 
         self.mark("I. Compute salden.")
@@ -229,13 +228,14 @@ class Konto ():
         if len(konto_files_found) == 0 or re.search(r"([0123456789abcdef]{"+self.len_hkey_str+"})\.kto",kto_file):
             kto_file = self.hkey + ".kto"
             
-        open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" + "\n".join(self.salden_aktuell) + "\n" )
         
         if len(konto_files_found) == 1 and not kto_file == konto_files_found[0]:
             os.unlink(konto_files_found[0])
 
         self.mark("J. Write result file.")
                     
+        fh = open(kto_file,"w")
+        fh.write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
 
         if change_acc_files:
 
@@ -249,6 +249,11 @@ class Konto ():
             self.mark("L. Add changed accounting lines.")
             self.update_sum_files()           #  also update the sumfiles
             self.mark("M. Update sum files.")
+
+
+        self.format_salden()
+        fh.write( "\n".join(self.salden_aktuell) + "\n" )
+
 
 
 #**********************************************************************************
@@ -484,7 +489,6 @@ class Konto ():
                 try:
                     betrag = "%3.2f" % eval(mm.group(4))
                 except:
-                    print(mm.group(4))
                     exit()
 
                 remark   = mm.group(8)
@@ -620,19 +624,24 @@ class Konto ():
         if self.enddatum[4:6] > "12":
             self.enddatum = self.enddatum[0:4] + "12" 
 
-        ktofiles1 = glob.glob(self.base_dir+"*.sum")
+        ktofiles1 = glob.glob(self.base_dir+"*.acc")
         ktofiles1.sort()
         ktofiles  = []
 
         for ktofile in ktofiles1:
-            m = re.search(r"(\d+)\.sum$",ktofile)
+
+            ktofile_sum = ktofile[:-4] + ".sum"
+            if not os.path.isfile(ktofile_sum):
+                self.update_sum_files(ktofile)
+            
+            m = re.search(r"(\d+)\.acc$",ktofile)
             if len(ktofiles) < 2:
                 if (m.group(1) + "000000")[0:6] < self.startdatum:
                     ktofiles = []
             if (m.group(1) + "000000")[0:6] > self.enddatum:
                 break
             else:
-                ktofiles.append(ktofile)
+                ktofiles.append(ktofile_sum)
 
         ktotexts = []
         for ktofile in ktofiles:  #  retrieving of the relevant lines via grep
@@ -852,12 +861,16 @@ class Konto ():
         
 #*******************************************************************************************
 
-    def impacts_acc_file(self,ktofile):
+    def impacts_acc_file(self,ktofile,mode=0):
 
         m = re.search(r"(\D|^)(\d+)\.acc",ktofile)
         if not m:
             return(False)
         zeitraum = m.group(2)
+
+        if mode == 1:
+            return(zeitraum)
+
         if zeitraum < self.startdatum[0:len(zeitraum)]:
             return(False)
         if zeitraum > self.enddatum[0:len(zeitraum)]:
@@ -912,16 +925,23 @@ class Konto ():
                 
 #*************************************************************************
 
-    def update_sum_files (self):
+    def update_sum_files (self,acc_file=None):
     
         salden_files = []
         
-        list_of_changed_lines = self.add_lines + self.del_lines
+        if acc_file:
+            list_of_changed_lines = open(acc_file).read().split("\n")
+            mode                  = 1
+            list_of_acc_files     = [acc_file]
+        else:
+            list_of_changed_lines = self.add_lines + self.del_lines
+            mode                  = 0
+            list_of_acc_files     = self.list_of_acc_files
 #        print("\n".join(list_of_changed_lines))
 
-        for acc_file in self.list_of_acc_files:
+        for acc_file in list_of_acc_files:
 
-            abschnitt = self.impacts_acc_file(acc_file)
+            abschnitt = self.impacts_acc_file(acc_file,mode)
             if not abschnitt:
                 continue
 
@@ -930,17 +950,13 @@ class Konto ():
 
             salden_file  = acc_file[0:-4] + ".sum"
             salden_files.append(salden_file)
-            if not os.path.isfile(salden_file):    #  if a sum file is missing, add all its acc-lines to the changes account entries
-                list_of_changed_lines1 = list_of_changed_lines + open(acc_file).read().split("\n")
-            else:
-                list_of_changed_lines1 = list_of_changed_lines 
 
             salden_text = []
             if os.path.isfile(salden_file):    
                 salden_text = open(salden_file).read().strip().split("\n")   #  update der salden_files
 
             update_salden = 0
-            for diff_buchung in ( list_of_changed_lines1 ):
+            for diff_buchung in ( list_of_changed_lines ):
 #                print("DD",diff_buchung)
                 m = re.search("^(\-?)(\d\d\d\d\d\d\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\.+)",diff_buchung)
                 if m:
@@ -964,7 +980,14 @@ class Konto ():
             salden_text1  = []
             del_element   = []
             update_salden = 0
+
+
+
             for kto in list(diff_salden.keys()):
+
+#                if "1126" in kto:
+#                    print(kto,diff_salden[kto])
+
 
 #                if tt == 1:
 #                    print(kto)
