@@ -1,14 +1,10 @@
-
-*** These modified files were found in JOE when it aborted on Mon Nov  1 20:14:37 2021
-*** JOE was aborted by UNIX signal 15
-
-*** File 'konto.py'
 #  coding:  utf
 import os,sys,re,glob,time,base64,hashlib,random,functools
 
 #******************************************************************************
 
 class Konto ():
+
 
 #******************************************************************************
 
@@ -30,177 +26,10 @@ class Konto ():
 
 #**********************************************************************************
 
-    def kto (self,pattern=""):
+    def add (self,sortieren=0,file="result"):
 
-        if pattern == "SORT":
-            self.sort_base_files()
-            return()
-
-
-        erg = self.read_actual_kto_file()
-        if not erg == "":  #  after that we have  self.ktodir, self.ktofile,
-            print(erg)     #  self.ktotext and self.ktopattern
-            return()
-            
-        self.change_to_base_directory()   #  now we change to the base directory
-
-#        result.orig is the "raw" file by filtering the account entries with grep.
-#        If a result.orig file exists, then we know that account system is in expanded mode
-#        (expanded by the query in result.par). The formatted version of the exported file
-#        is result.kto
-
-        if self.ktofile:                                            # if we have a proper ktofile and its content ktotext
-            hkey = os.popen("md5sum result.kto").read()[0:8]        # then we overwrite result.kto with its content 
-            if hkey + ".kto" == ktofile or hkey in ktotext[0:200]:  # but only if we have the allowance by a hash-key
-                open("result.kto","w").write(ktotext)               # generated from the original result.kto content
-                self.add()
-
-
-        pattern = self.compute_pattern()   #  we need a decision which pattern to take
-
-
-#**********************************************************************************
-
-    def self.read_actual_ktofile (self):
-
-        self.ktodir = os.path.abspath(".")
-        ktofiles    = []
-        for kfile in glob.glob("*.kto"):
-            if not ".db." in kfile and "result.kto" not in kfile:
-                ktofiles.append(kfile)
-        
-        if len(ktofiles) > 1:
-            return("More than one ktofile.")
-
-        if len(ktofiles) == 1:
-            self.ktofile = ktofile[0]
-        else:
-            self.ktofile = None
-
-        self.ktodir = os.path.abspath(".")
-        if self.ktofile:
-            self.ktotext    = open(ktodir+"/"+ktofile).read()
-            self.ktopattern = re.sub(r"^(\S*) (.*)$","\\1",ktotext[0:50])
-        else:
-            self.ktotext    = ""
-            self.ktopattern = ""
-            
-#**********************************************************************************
-            
-    def change_to_base_directory (self):            
-
-        while (0 == 0):   #  check if we are in a directory with acc files
-            x = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc")
-            if len(x) > 0:
-                y = glob.glob("2*.sum") + glob.glob("base/*.sum") + glob.glob(".base/*.sum")
-                m = re.search(r"^(.*)[\\\/](.*)$",x[0])
-                if m:
-                    os.chdir(m.group(1))
-                break
-            os.chdir("..")
-            
-#**********************************************************************************
-
-    def sort_base_files (self)    #   Sorting of all acc and sum-files. Recommended before syncing with git.
-
-        for acc_file in glob.glob("*.acc") + glob.glob("*.sum"):
-            file_text = re.sub(r"\n+$","",open(acc_file).read()).split("\n")
-            file_text.sort()
-            open(acc_file,"w").write("\n".join(file_text) + "\n")
-
-#**********************************************************************************
-
-                    
-        udir = None
-        if ktofile:
-            udir = ktodir
-            if pattern == "":
-                pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
-            else:
-                m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
-                if m:
-                    p0 = m.group(1)
-                    m0 = m.group(2)
-                    i0 = m.group(3)
-                else:
-                    p0 = pattern0
-                    m0 = None
-                    i0 = None
-                m = re.search(r"^(.*)([\.\:])(.*)",pattern)
-                if m:
-                    p1 = m.group(1)
-                    m1 = m.group(2)
-                    i1 = m.group(3)
-                else:
-                    p1 = pattern
-                    m1 = None
-                    i1 = None
-                if not i1:
-                    i1 = i0
-                if not i1:
-                    i1 = ""
-                if p1 in p0:
-                    p1 = ""
-                p2 = re.sub(r"-$","",p0 + "-" + p1)
-                if p0 == "" or not p2[1:] in ktotext:
-                    p2 = p1
-                if len(p0) > 0 and p2.startswith(p0):
-                    udir = ktodir + "/" + p1
-#                    p2   = "^" + p2
-                    print("UDIR",udir)
-                    try:
-                        os.mkdir(udir)
-                    except:
-                        pass
-
-                if m0 == m1:
-                    pattern = p2 + m1 + i1
-                pattern = re.sub(r"\.$","",pattern)
-
-        print("PATTERN",pattern)
-
-        if os.path.isfile("result.orig"):
-            if pattern == "":
-                self.add(1)
-            else:
-                self.add()
-            if os.path.isfile("result.kto"):
-                os.unlink("result.kto")
-                
-        if pattern == "":
-            os.chdir(ktodir)
-            return()
-            
-
-        split_pars = self.split1(pattern)
-
-        if os.path.isfile(ktodir+"/result.orig"):
-            os.chdir(ktodir)
-            return()
-
-        if os.path.isfile("result.orig"):
-            
-            if udir:
-                for kfile in glob.glob(udir+"/*.kto"):
-                    os.unlink(kfile)
-            else:
-                udir = ktodir
-
-            hkey = os.popen("md5sum result.kto").read()[0:12]
-            
-            ktotext = open("result.kto").read()
-            ktotext = re.sub(r"^(\S+  )( +\S+)","\\1 " + hkey + "\\2",ktotext)
-            if ktofile == None or re.search(r"^[abcdef0123456789]{12}\.kto$",ktofile):
-                open(udir+"/"+hkey+".kto","w").write(ktotext)
-            else:
-                open(udir+"/"+ktofile,"w").write(ktotext)
-
-        os.chdir(ktodir)
-
-
-#**********************************************************************************
-
-    def add (self,sortieren=0,file="result"):    #  Reads the accounting entries and distributes it into the acc-files
+#       Diese Funktion teilt die Buchungssaetze in einer Transaktionsdatei auf die
+#       einzelnen Teildateien auf
 
         if not os.path.isfile(file+".orig"):
             print("No result file.")
@@ -1130,54 +959,153 @@ class Konto ():
 
 #**********************************************************************************
 
+    def kto (self,pattern=""):
+
+        ktodir = os.path.abspath(".")
+
+        if pattern == "SORT":     #   Sortieren aller acc und sum files. Dies ist sinnvoll fuer das syncen
+        
+            for acc_file in glob.glob("*.acc") + glob.glob("*.sum"):
+                file_text = re.sub(r"\n+$","",open(acc_file).read()).split("\n")
+                file_text.sort()
+                open(acc_file,"w").write("\n".join(file_text) + "\n")
+                return()
+
+        ktofile = []
+        for kfile in glob.glob("*.kto"):
+            if not ".db." in kfile and "result.kto" not in kfile:
+                ktofile.append(kfile)
+        
+        if len(ktofile) > 1:
+            print("More than one ktofile.")
+            return()
+
+        if len(ktofile) == 1:
+            ktofile = ktofile[0]
+        else:
+            ktofile = None
+
+        if ktofile:
+            ktodir   = re.sub(r"^(.*)[\\\/](.*).kto$","\\1",os.path.abspath(ktofile))
+            ktotext  = open(ktodir+"/"+ktofile).read()
+            pattern0 = "^" + re.sub(r"^(\S*) (.*)$","\\1",ktotext[0:50])
+        else:
+            ktotext  = ""
+            ktodir   = re.sub(r"[\\\/]$","",os.path.abspath("."))
+
+
+        while (0 == 0):   #  check if we are in a directory with acc files
+            x = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc")
+            if len(x) > 0:
+                y = glob.glob("2*.sum") + glob.glob("base/*.sum") + glob.glob(".base/*.sum")
+                m = re.search(r"^(.*)[\\\/](.*)$",x[0])
+                if m:
+                    os.chdir(m.group(1))
+                break
+            os.chdir("..")
+            
+#        os.system("ls")
+
+        if os.path.isfile("result.orig"):
+            hkey = os.popen("md5sum result.kto").read()[0:12]
+            if hkey + ".kto" == ktofile or hkey in ktotext[0:200]:
+                open("result.kto","w").write(ktotext)
+                    
+        udir = None
+        if ktofile:
+            udir = ktodir
+            if pattern == "":
+                pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
+            else:
+                m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
+                if m:
+                    p0 = m.group(1)
+                    m0 = m.group(2)
+                    i0 = m.group(3)
+                else:
+                    p0 = pattern0
+                    m0 = None
+                    i0 = None
+                m = re.search(r"^(.*)([\.\:])(.*)",pattern)
+                if m:
+                    p1 = m.group(1)
+                    m1 = m.group(2)
+                    i1 = m.group(3)
+                else:
+                    p1 = pattern
+                    m1 = None
+                    i1 = None
+                if not i1:
+                    i1 = i0
+                if not i1:
+                    i1 = ""
+                if p1 in p0:
+                    p1 = ""
+                p2 = re.sub(r"-$","",p0 + "-" + p1)
+                if p0 == "" or not p2[1:] in ktotext:
+                    p2 = p1
+                if len(p0) > 0 and p2.startswith(p0):
+                    udir = ktodir + "/" + p1
+#                    p2   = "^" + p2
+                    print("UDIR",udir)
+                    try:
+                        os.mkdir(udir)
+                    except:
+                        pass
+
+                if m0 == m1:
+                    if not m1:
+                        m1 = ""
+                    pattern = p2 + m1 + i1
+                pattern = re.sub(r"\.$","",pattern)
+
+        print("PATTERN",pattern)
+
+        if os.path.isfile("result.orig"):
+            if pattern == "":
+                self.add(1)
+            else:
+                self.add()
+            if os.path.isfile("result.kto"):
+                os.unlink("result.kto")
+                
+        if pattern == "":
+            os.chdir(ktodir)
+            return()
+            
+
+        split_pars = self.split1(pattern)
+
+        if os.path.isfile(ktodir+"/result.orig"):
+            os.chdir(ktodir)
+            return()
+
+        if os.path.isfile("result.orig"):
+            
+            if udir:
+                for kfile in glob.glob(udir+"/*.kto"):
+                    os.unlink(kfile)
+            else:
+                udir = ktodir
+
+            hkey = os.popen("md5sum result.kto").read()[0:12]
+            
+            ktotext = open("result.kto").read()
+            ktotext = re.sub(r"^(\S+  )( +\S+)","\\1 " + hkey + "\\2",ktotext)
+            if ktofile == None or re.search(r"^[abcdef0123456789]{12}\.kto$",ktofile):
+                open(udir+"/"+hkey+".kto","w").write(ktotext)
+            else:
+                open(udir+"/"+ktofile,"w").write(ktotext)
+
+        os.chdir(ktodir)
+
+
+#
+            
+            
+#**********************************************************************************
+
 if __name__ == "__main__":
         
 #    Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
     Konto.__dict__["kto"](Konto(),*sys.argv[1:])
-
-*** File '(Unnamed)'
-Jira
-self.el(
-self.dataset["meldung"]
-#****
-#    
-    def
-self.mark(
-neue_ust_
-.csvlines
-self.csvlines
-
-*** File '(Unnamed)'
-print(
-2480.00
-2480.0
-EE
-10-B22-1806
-10-B22-1806
-10-B22-1800
-10-B22-1806
-ddatum
-def kto
-
-*** File '(Unnamed)'
-vrbank_ift.kto
-vrbank_ift.kto
-202.sum
-201.sum
-201.sum
-201.sum
-201.sum
-konto.py
-konto.pyy
-konto.py
-konto.py
-
-*** File '* Startup Log *'
-Processing '/etc/joe/joerc'...
-Processing '/etc/joe/ftyperc'...
-Finished processing /etc/joe/ftyperc
-Finished processing /etc/joe/joerc
-
-*** These modified files were found in JOE when it aborted on Wed Dec 15 04:14:25 2021
-*** JOE was aborted by UNIX signal 15
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
