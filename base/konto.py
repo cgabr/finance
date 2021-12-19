@@ -301,28 +301,39 @@ class Konto ():
             
             if   months == "A":
                 months = "10"
+                last_m = "10"
             elif months == "B":
                 months = "11"
+                last_m = "11"
             elif months == "C":
                 months = "12"
+                last_m = "12"
             elif months == "I":
                 months = "0[123]"
+                last_m = "03"
             elif months == "J":
                 months = "0[456]"
+                last_m = "06"
             elif months == "K":
                 months = "0[789]"
+                last_m = "09"
             elif months == "L":
                 months = "1[012]"
+                last_m = "12"
             elif months == "M":
                 months = "0[123456]"
+                last_m = "06"
             elif months == "N":
                 months = "\\(07\\|08\\|09\\|10\\|11\\|12\\)" # "[01][789012]"
+                last_m = "12"
                 egrep  = "e"
-            elif months == "P":
+            elif months == "P" or months == "":
                 months = ""
+                last_m = "12"
             elif not months == "":
                 months = "0" + months
-        
+                last_m = months
+       
             if self.mode == ":":
                 intervals = []
                 jahr      = "2000"
@@ -331,13 +342,13 @@ class Konto ():
                     jahr = str(int(jahr)+1)
                     if jahr == self.interval_long:
                         break
-                if months == "12":
+                if last_m == "12":
                     intervals.append(jahr)
                 else:
                     month = "01"
                     while (0 == 0):
                         intervals.append(jahr+month)
-                        if month in (months,"12"):
+                        if month in (last_m,"12"):
                             break
                         month = "%02u" % (int(month) + 1)
                 self.interval_long = "\\(" + "\\|".join(intervals) + "\\)"
