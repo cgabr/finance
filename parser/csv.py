@@ -76,7 +76,6 @@ class CSV (object):
             print(erg)
             return()
 
-        print("123")
         self.assign_contra_accounts()
 
         self.combine_ktofile()
@@ -326,6 +325,10 @@ class CSV (object):
         soll     = ""
         patterns = []
 
+        m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",buchungstext)
+        if m:
+            return({ 'DATUM': m.group(1), 'BETRAG' : m.group(2), 'REMARK' : m.group(6), 'ZEILE' : buchungstext})
+
         buchungstext = re.sub(r"\"\"","\";\"",buchungstext,99999999)
 
         for pattern in buchungstext.split(";"):
@@ -375,7 +378,10 @@ class CSV (object):
         betrag = entry['BETRAG']
         remark = entry['REMARK']
 
+        print(datum,betrag,self.ukto)
         zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + config.STANDARD_CONTRA_ACCOUNT + "  0.00  " + remark
+
+
 #        print("XX",zeile)
 
         self.new_lines.append(zeile)

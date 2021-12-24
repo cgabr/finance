@@ -236,6 +236,7 @@ class Konto ():
                     
         fh = open(kto_file,"w")
         fh.write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
+        fh.close()
 
         if change_acc_files:
 
@@ -252,7 +253,7 @@ class Konto ():
 
 
         self.format_salden()
-        fh.write( "\n".join(self.salden_aktuell) + "\n" )
+        open(kto_file,"a").write( "\n".join(self.salden_aktuell) + "\n" )
 
 
 
@@ -760,11 +761,14 @@ class Konto ():
             kto_ordnung = salden_zeile[1]
             betrag      = salden_zeile[2]
             kto_spacing = "%-" + ("%2u"%(max_offset+kto_ordnung*4-len(betrag)+1)) + "s"
-            if kto_ordnung == 0 and max_kto_ordnung > 1:   #   additional spacing
+            if kto_ordnung == 0 and max_kto_ordnung > 0:   #   additional spacing
                 self.salden_aktuell.append("")
             self.salden_aktuell.append( (kto_spacing%kto) + betrag )
-            if kto_ordnung == -1 and max_kto_ordnung < 2:
+            if kto_ordnung == -1 and max_kto_ordnung < 1:
                 self.salden_aktuell.append("")
+                
+#        print(max_kto_ordnung)
+#        print(self.salden_aktuell)
 
 #**********************************************************************************
 
@@ -1036,6 +1040,7 @@ class Konto ():
                         monat   = int(werte.pop(0))
                         betrag0 = 0.00
                         for betrag in werte:
+                            print("----->",kto,betrag,self.digits+1,betrag[-self.digits-1])
                             if betrag[-self.digits-1] == "/":
                                 nr     = int(betrag[-self.digits:])
                                 betrag = float(betrag[:-self.digits-1])
@@ -1056,28 +1061,37 @@ class Konto ():
                 monate   = list(diff_salden[kto].keys())
                 monat    = min(monate)
                 mmax     = max(monate)
-                zeile    = kto + "," + str(monat) + ","
+                zeile    = kto + ","
                 betraege = []
-                sum      = 0.00
+                sum      = 0.00    #   @@@@
+
                 while (0 == 0):
                     nr = 0
                     if monat in diff_salden[kto]:
                         sum = sum + diff_salden[kto][monat]
                         nr  = buchung_im_lfd_monat[kto][monat]
-                    betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
+                    if len(betraege) == 0 and (abs(sum) > 0.000001 or nr > 0):    #  just start when something interesting started
+                        betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
+                        zeile = zeile + str(monat) + ","
+                    elif len(betraege) > 0:
+                        betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
                     monat   = monat + 1
                     if str(monat)[4:6] == "13":
                         monat = int(str(int(str(monat)[0:4]) + 1) + "01")
                     if monat > mmax:
                         break
-                while (0 == 0):
+
+                while (0 == 0):    #   truncate the tail if there is nothing interesting anymore
                     if len(betraege) < 2:
                         break
                     if not betraege[-1] == betraege[-2]:
                         break
                     betraege.pop()
+
                 zeile = zeile + ",".join(betraege)
-                if len(betraege) == 1 and abs(float(betraege[0][0: betraege[0].index("/")-1 ])) < 0.00001:
+                print(kto,betraege)
+                if len(betraege) == 0:   #   len(betraege) == 1 and abs(float(betraege[0][0: betraege[0].index("/") ])) < 0.000001 and :
+                    print("hier",betraege[0][0: betraege[0].index("/")-1 ])
                     if interval9 > -1:
                         salden_text[interval9] = "---DELETE---"   #  loesche die Zeile
                     else:
