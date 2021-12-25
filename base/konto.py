@@ -691,6 +691,7 @@ class Konto ():
                         betrag = 0.00
                         nr     = 0
                     elif datpos >= len(zeile):
+                        print(kto,zeile)
                         if zeile[-1][-self.digits-1] == "/":
                             betrag = betrag - float(zeile[-1][:-self.digits-1])
                             nr     = nr     - int(zeile[-1][-self.digits:])
@@ -991,60 +992,44 @@ class Konto ():
                         self.compute_salden(diff_salden,buchung_im_lfd_monat,ktob,-betrag,add_buchung,datum)
 
 
-            salden_text.sort()
-            salden_text1  = []
-            del_element   = []
+            kto_to_del    = []
             update_salden = 0
-
-
 
             for kto in list(diff_salden.keys()):
 
-#                if "1126" in kto:
-#                    print(kto,diff_salden[kto])
-
-
-#                if tt == 1:
-#                    print(kto)
                 if update_salden == 0:
                     update_salden = 1
                     self.mark("--> Diff salden computed.")
                     
-                interval0 = 0   # suchen, ob es schon eine gueltige Zeile gibt
-                interval1 = len(salden_text) - 1
+                interval0 = -1   # suchen, ob es schon eine gueltige Zeile gibt
+                interval1 = len(salden_text)
                 while (0 == 0):
-                    if interval0 > interval1:
+                    if interval0 + 1 == interval1:  #  not found
                         interval9 = -1
                         break
                     interval9 = interval0 + int((interval1 - interval0)/2)
-#                    if tt == 1:
-#                        print(interval0,interval9,interval1,kto)
-#                    if tt == 1:
-#                        print("    ",salden_text[interval9])
-#                    print(kto)
+#                    print(interval0,interval9,interval1,kto)
+#                    time.sleep(0.01)
                     if salden_text[interval9].startswith(kto+","):
                         break
                     if (kto + ",") > salden_text[interval9]:
-                        interval0 = interval9 + 1
+                        interval0 = interval9
                     else:
-                        interval1 = interval9 - 1
+                        interval1 = interval9
                                     
                 if interval9 > -1:   #   wenn es schon eine Konto-Zeile im Salden-File gibt, diese integrieren
-#                    if tt == 1:
-#                        print(salden_text[interval9])
+
                     werte = salden_text[interval9].split(",")
-#                    if tt == 1:
-#                        print(werte)
                     werte.pop(0)
                     if len(werte) > 0:
                         monat   = int(werte.pop(0))
                         betrag0 = 0.00
                         for betrag in werte:
-                            print("----->",kto,betrag,self.digits+1,betrag[-self.digits-1])
                             if betrag[-self.digits-1] == "/":
                                 nr     = int(betrag[-self.digits:])
                                 betrag = float(betrag[:-self.digits-1])
                             else:
+                                print(kto,betrag)
                                 ind    = betrag.index("/")
                                 betrag = int(m.group(1))
                                 nr     = float(m.group(2))
@@ -1070,11 +1055,11 @@ class Konto ():
                     if monat in diff_salden[kto]:
                         sum = sum + diff_salden[kto][monat]
                         nr  = buchung_im_lfd_monat[kto][monat]
-                    if len(betraege) == 0 and (abs(sum) > 0.000001 or nr > 0):    #  just start when something interesting started
+                    if len(betraege) > 0:
+                        betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
+                    elif abs(sum) > 0.000001 or nr > 0:    #  just start when something interesting started
                         betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
                         zeile = zeile + str(monat) + ","
-                    elif len(betraege) > 0:
-                        betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
                     monat   = monat + 1
                     if str(monat)[4:6] == "13":
                         monat = int(str(int(str(monat)[0:4]) + 1) + "01")
@@ -1088,31 +1073,31 @@ class Konto ():
                         break
                     betraege.pop()
 
-                zeile = zeile + ",".join(betraege)
-                print(kto,betraege)
-                if len(betraege) == 0:   #   len(betraege) == 1 and abs(float(betraege[0][0: betraege[0].index("/") ])) < 0.000001 and :
-                    print("hier",betraege[0][0: betraege[0].index("/")-1 ])
-                    if interval9 > -1:
-                        salden_text[interval9] = "---DELETE---"   #  loesche die Zeile
-                    else:
-                        pass                                      #  Zeile ist Null, gar nicht erst eintragen
+                if len(betraege) == 0:
+                    kto_to_del.append(kto)
                 else:
-                    if interval9 > -1:
-                        salden_text[interval9] = zeile   #  Zeile updaten
-                    else:
-                        salden_text1.append(zeile)       #  Zeile existierte nicht, also eintragen
+                    zeile = zeile + ",".join(betraege)
+                    if len(kto_to_del) > 0 and kto in kto_to_del:
+                        kto_to_del.remove(kto)
+
+                if interval9 > -1:
+                    salden_text[interval9] = zeile   #  update line
+                else:
+                    salden_text.insert(interval1,zeile)   #  line was not existing, so enter it
                 
             if update_salden == 1:
                 self.mark("F. Salden list updated.")
-     
-#            while len(del_element) > 0:
-#                salden_text.pop( del_element.pop() )
-
-            salden_text = salden_text + salden_text1
-            salden_text.sort()
-            salden_text = "\n".join(salden_text) + "\n"
-            salden_text = re.sub(r"---DELETE---\n","",salden_text,99999999)
-            open(salden_file,"w").write(salden_text)   #  update der salden_files
+                if len(kto_to_del) == 0:
+                    salden_text = "\n".join(salden_text) + "\n"
+                else:
+                    salden_text = "\n" + "\n".join(salden_text) + "\n"
+                    self.mark("   ---")
+                    for delkto in kto_to_del:
+                        ind         = salden_text.index("\n"+delkto+",")
+                        salden_text = salden_text[:ind] + salden_text[ind+len(delkto)+2:]
+                    salden_text = salden_text[1:]
+                    self.mark("   .... kto s deleted from sum-file:\n" + "\n".join(kto_to_del))
+                open(salden_file,"w").write(salden_text)   #  update der salden_files
 
 #**********************************************************************************
 
