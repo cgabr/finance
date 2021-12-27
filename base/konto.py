@@ -30,6 +30,7 @@ class Konto ():
         ktodir   = os.path.abspath(".")
         
         self.base_dir = ""   #  Search for a base directory with acc and sum files
+        pwd0          = ""
         while (0 == 0):   #  check if we are in a directory with acc files
             acc_files = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc") + glob.glob("??_ktobase/*.acc")
             if len(acc_files) > 0:
@@ -37,6 +38,10 @@ class Konto ():
                 if m:
                     self.base_dir = m.group(1) 
                 break
+            pwd = os.path.abspath(".")
+            if pwd0 == pwd:
+                break
+            pwd0 = pwd
             os.chdir("..")
 
         if not self.base_dir == "":
