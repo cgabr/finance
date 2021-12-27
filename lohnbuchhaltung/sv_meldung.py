@@ -11,11 +11,17 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
+from konto.base import konto
+
 #**********************************************************************************
 
 #  a geckodriver has to run
 
 class SV_Meldung():
+
+    def __init__ (self):
+    
+        self.base_dir = konto.Konto().base_dir
 
     def setup_method(self, method):
 
@@ -231,7 +237,7 @@ class SV_Meldung():
                     if m and not m.group(1).lower() in self.dataset:
                         self.dataset[ m.group(1).lower() ] = m.group(2)
         
-        gehaltsbescheinigungen = glob.glob("./gehalt*"+self.dataset["meldejahr"]+"*.md")
+        gehaltsbescheinigungen = glob.glob("./*/*gehalt*"+self.dataset["meldejahr"]+"*.md")
         gehaltsbescheinigungen.sort()
         m = re.search(r"Gehalt +[bB]rutto[: ]+\d+\.\d\d +(\d+\.\d\d)", open(gehaltsbescheinigungen[-1]).read())
         if m:
@@ -253,12 +259,16 @@ class SV_Meldung():
 
 if __name__ == "__main__":
 
-        r            = SV_Meldung().setup_method("")
-        config_data  = [ os.popen("python3 -m fibu.xlsmanager memory oa ./15*/*.csv aktuell").read() ]  #  personal data
-        for datei in (glob.glob("../*.data") + glob.glob("52*/sv.data") ):   #  config and company data
-            config_data.append(open(datei).read())
+    r            = SV_Meldung().setup_method("")
+    config_data  = [ os.popen("python3 -m fibu.xlsmanager memory oa ./15*/*.csv aktuell").read() ]  #  personal data
+    for datei in (glob.glob(konto.Konto().base_dir+"/*.data") + glob.glob("../*.data") + glob.glob("./sv.data") + glob.glob("*/sv.data") ):   #  config and company data
+        print(datei)
+        config_data.append(open(datei).read())
 
-        r.run(config_data)
+    for datei in (glob.glob("./15*/*.csv") ):   #  personel data
+        config_data.append(open(datei).read())
+
+    r.run(config_data)
 
 
 #*************************************************************************************

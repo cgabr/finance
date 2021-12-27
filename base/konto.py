@@ -21,10 +21,29 @@ class Konto ():
         self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
 
         self.sortieren       = 1
-        self.space_kto       = 25
-        self.max_offset      = 20
+        self.max_offset      = 5
 
         self.salden_expand   = "(-[^- ]+){0,99},"
+
+
+
+        ktodir   = os.path.abspath(".")
+        
+        self.base_dir = ""   #  Search for a base directory with acc and sum files
+        while (0 == 0):   #  check if we are in a directory with acc files
+            acc_files = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc") + glob.glob("??_ktobase/*.acc")
+            if len(acc_files) > 0:
+                m = re.search(r"^(.*[\\\/])(.*)$",os.path.abspath(acc_files[0]))
+                if m:
+                    self.base_dir = m.group(1) 
+                break
+            os.chdir("..")
+
+        if not self.base_dir == "":
+            self.base_dir = re.sub(r"//$","/",self.base_dir + "/")
+
+        os.chdir(ktodir)
+
 
 #**********************************************************************************
 
@@ -41,27 +60,13 @@ class Konto ():
 
         ktodir   = os.path.abspath(".")
 
-        base_dir = ""   #  Search for a base directory with acc and sum files
-        while (0 == 0):   #  check if we are in a directory with acc files
-            acc_files = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc")
-            if len(acc_files) > 0:
-#                sum_files = glob.glob("2*.sum") + glob.glob("base/*.sum") + glob.glob(".base/*.sum")
-                m = re.search(r"^(.*[\\\/])(.*)$",os.path.abspath(acc_files[0]))
-                if m:
-                    base_dir = m.group(1) 
-                break
-            os.chdir("..")
-            
-        os.chdir(ktodir)
-        
-        if base_dir == "":
+        if self.base_dir == "":
             print("No accounting base dir found.")
             return("Error 135")
-             
 
         if pattern == "SORT":     #   Sortieren aller acc und sum files. Dies ist sinnvoll fuer das syncen
         
-            for acc_file in glob.glob(base_dir+"*.acc") + glob.glob(base_dir+"*.sum"):
+            for acc_file in glob.glob(self.base_dir+"*.acc") + glob.glob(self.base_dir+"*.sum"):
                 file_text = re.sub(r"\n+$","",open(acc_file).read()).split("\n")
                 file_text.sort()
                 open(acc_file,"w").write("\n".join(file_text) + "\n")
@@ -148,15 +153,14 @@ class Konto ():
 
         print("PATTERN",pattern)
 
-        self.update_konto(base_dir,pattern)
+        self.update_konto(pattern)
 
 #**********************************************************************************
 
-    def update_konto (self,base_dir,search_pattern,salden_expand=None):  #  Updates an actual konto
+    def update_konto (self,search_pattern,salden_expand=None):  #  Updates an actual konto
         
         self.mark("---")
         self.search_pattern = search_pattern
-        self.base_dir       = re.sub(r"//$","/",base_dir + "/")
         if not salden_expand == None:
             self.salden_expand = salden_expand
 
@@ -200,10 +204,13 @@ class Konto ():
             if not m.group(1) == self.hkey:   #  the key which is found in the existing kto-file allows to change the result of the computed sub account
                 break                         #  so we take the chance
              
-            m = re.search("^(.*?)\n *\n(.*?\n) *\n",text,re.DOTALL)
+            m = re.search("^(.*?)\n *\n(.*\n\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ .*?\n)",text,re.DOTALL)   #  Check whether processed file has changed
+                
             self.mark("F. Processed ktofile hashkey.")
             if m:
-                actual_hkey = hashlib.md5(m.group(2).encode("utf-8")).hexdigest()[0:self.len_hkey_nr]
+                relevant_text_in_ktofile = m.group(2)
+#                print(relevant_text_in_ktofile)
+                actual_hkey = hashlib.md5(relevant_text_in_ktofile.encode("utf-8")).hexdigest()[0:self.len_hkey_nr]
                 if actual_hkey == self.hkey:
                     return("No change.")        #  Nothing changed at all in the account lines, so do not do anything.
             
@@ -234,9 +241,7 @@ class Konto ():
 
         self.mark("J. Write result file.")
                     
-        fh = open(kto_file,"w")
-        fh.write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
-        fh.close()
+        open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
 
         if change_acc_files:
 
@@ -250,7 +255,11 @@ class Konto ():
             self.mark("L. Add changed accounting lines.")
             self.update_sum_files()           #  also update the sumfiles
             self.mark("M. Update sum files.")
-
+            self.extract_account_lines()      #   Prepare formatted konto and salden
+            self.mark("N. Reload kto file.")
+            self.format_kto()
+            self.mark("O. ktofile formatted again.")
+            open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
 
         self.format_salden()
         open(kto_file,"a").write( "\n".join(self.salden_aktuell) + "\n" )
@@ -450,12 +459,12 @@ class Konto ():
         self.hkey   = "\n".join(self.formatted_acc) + "\n"
         self.hkey   = hashlib.md5(self.hkey.encode("utf-8")).hexdigest()[0:12]
         self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+interval))) + " " + self.hkey + "       " + ("%13.2f"%gesamt)
-        
+
         if has_doublettes:
             print("Attention: Doublettes!")
 
 #**********************************************************************************
-   
+
     def parse_ktotext (self):
 
         self.buchungen      = []
@@ -691,7 +700,7 @@ class Konto ():
                         betrag = 0.00
                         nr     = 0
                     elif datpos >= len(zeile):
-                        print(kto,zeile)
+#                        print(kto,zeile)
                         if zeile[-1][-self.digits-1] == "/":
                             betrag = betrag - float(zeile[-1][:-self.digits-1])
                             nr     = nr     - int(zeile[-1][-self.digits:])
@@ -753,6 +762,7 @@ class Konto ():
                 if kto == "":
                     kto_ordnung = -1
                 max_offset      = max(max_offset,len(kto) + len(betrag) - 4*kto_ordnung)
+                max_offset      = max(max_offset,len_ukto)
                 max_kto_ordnung = max(max_kto_ordnung,kto_ordnung)
                 salden_liste.append([kto,kto_ordnung,betrag])
                 
@@ -761,7 +771,7 @@ class Konto ():
             kto         = salden_zeile[0]
             kto_ordnung = salden_zeile[1]
             betrag      = salden_zeile[2]
-            kto_spacing = "%-" + ("%2u"%(max_offset+kto_ordnung*4-len(betrag)+1)) + "s"
+            kto_spacing = "%-" + ("%2u"% (max_offset+kto_ordnung*4-len(betrag)+2) ) + "s"
             if kto_ordnung == 0 and max_kto_ordnung > 0:   #   additional spacing
                 self.salden_aktuell.append("")
             self.salden_aktuell.append( (kto_spacing%kto) + betrag )
@@ -978,7 +988,7 @@ class Konto ():
                 if m:
                     if update_salden == 0:
                         update_salden = 1
-                        self.mark("--> Update " + acc_file + ".")
+                        self.mark("--> Check " + acc_file + ".")
                     datum  = m.group(2)
                     if datum.startswith(abschnitt):
                         betrag = eval(m.group(3))
@@ -1096,7 +1106,7 @@ class Konto ():
                         ind         = salden_text.index("\n"+delkto+",")
                         salden_text = salden_text[:ind] + salden_text[ind+len(delkto)+2:]
                     salden_text = salden_text[1:]
-                    self.mark("   .... kto s deleted from sum-file:\n" + "\n".join(kto_to_del))
+#                    self.mark("   .... kto s deleted from sum-file:\n" + "\n".join(kto_to_del))
                 open(salden_file,"w").write(salden_text)   #  update der salden_files
 
 #**********************************************************************************
