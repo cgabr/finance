@@ -38,6 +38,8 @@ if __name__ == "__main__":
     mk_gehalt.sort()
     pp = {}
 
+    os.system("rm -f _tmp_")
+    os.system("mkdir _tmp_")
     for zeile in mk_gehalt:
         m      = re.search(r"(\d\d\d\d)(\d\d).*?([a-z]+)-LOHN",zeile)
         if not m:
@@ -74,12 +76,13 @@ if __name__ == "__main__":
             m      = re.search(r"^(.*)[\\\/]\.[a-z]+$",x[0])
             ablage = m.group(1)  #  das ist das gefundene Verzeichnis, in das zu publizieren ist
 #            print( "ln -s " + os.path.abspath(p+"/52_sozialversicherungsmeldungen") + " " + ablage)
+#            print(glob.glob(p))
             if not os.path.isdir(ablage+"/Sozialversicherung"):
                 os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*sozialvers*")[0] ) + " " + ablage + "/Sozialversicherung")
             if m:
                 x = glob.glob(ablage+"/gehaltsbe*"+monat1+".pdf") + glob.glob(ablage+"/gehaltsbe*"+yy+".pdf")
                 if len(x) == 0 or new_gehalt == 1:
-                    os.system("cp " + p + "/gehaltsbe*"+monat1+"*md _tmp_; cd _tmp_; " +
+                    os.system("cp " + p + "/*/gehaltsbe*"+monat1+"*md _tmp_; cd _tmp_; " +
                               "python3 -m iftlib.md.gx md2svg *.md; cp *.pdf " + m.group(1))
                     os.system("rm _tmp_/gehalt*;")
                     time.sleep(0.1)

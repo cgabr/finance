@@ -402,7 +402,7 @@ class Lohn (object):
             mode       = "s"  #   Standard
             kinder     = lohndaten[jm]['KINDER']
 
-            print(merk,stkl)
+#            print(merk,stkl)
             if merk[0:4] == "1100" or merk[0:4] == "6500" and stkl == 0:
                 mode     = "g"   #   geringfuegig beschaeftigt
                 merk     = "1100" + merk[4:]
