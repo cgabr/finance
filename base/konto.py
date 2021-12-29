@@ -12,11 +12,11 @@ class Konto ():
 
 
         self.t0              = 0
-        self.digits          = 3
-        self.dformat         = "%03u" 
+        self.digits          = 5
+        self.dformat         = "%0" + str(self.digits) + "u" 
                             
         self.len_hkey_str    = "12"
-        self.len_hkey_nr     =  12
+        self.len_hkey_nr     = int(self.len_hkey_str)
 
         self.acc_line_parser = re.compile(r"^(\d\d\d\d)(..)(\d\d) +(\S+) +(\S+) +(\S+) +(\-?\d+\.\d\d|\-+|\.+) +(.*?) *$")
 
@@ -57,14 +57,14 @@ class Konto ():
         
             print(config_file)
             config1 = open(config_file).read()
-            print(config1)
+#            print(config1)
 
             try:
                 dataset  = json.loads(config1)
             except:
                 dataset = None
             
-            print(dataset)
+#            print(dataset)
             if dataset:   #   json files
                 for o in dataset.keys():
                     print(o)
@@ -112,6 +112,7 @@ class Konto ():
             
 
         pattern0 = None
+#        print(pattern,pattern0)
         if ktofile:
             ktodir   = re.sub(r"^(.*[\\\/])(.*).kto$","\\1",os.path.abspath(ktofile))
             ktotext  = open(ktodir+"/"+ktofile).read()
@@ -125,67 +126,111 @@ class Konto ():
             ktotext  = ""
             ktodir   = os.path.abspath(".")
 
+#        print(pattern,pattern0)
 
-        udir = None
-        if pattern0:
+        self.udir   = ""
+        self.stable = 0
 
-            udir = ktodir
-
-            if pattern == None:
-                pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
+        if pattern and len(pattern) > 0 and pattern[0] in ("-",":","."):
+            if len(pattern) > 1 and pattern[1] in ("-",":","."):
+                pattern = pattern[1:]
+                self.stable = 1
+            self.udir = pattern[1:]
+            if pattern[0] == ":":
+                self.udir = "__" + self.udir
+            elif pattern[0] == ".":
+                self.udir = "_" + self.udir
+            if pattern0:
+                pattern  = pattern0 + pattern
             else:
+                return()
 
-#                if pattern[0] == ".":
-#                    pattern = pattern[1:]
-#                elif pattern[0] == "-":
-#                    pattern = "^" + pattern
+        if not pattern:
+            pattern = pattern0
 
-                m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
-                if m:
-                    p0 = m.group(1)
-                    m0 = m.group(2)
-                    i0 = m.group(3)
-                else:
-                    p0 = pattern0
-                    m0 = None
-                    i0 = None
-                m = re.search(r"^(.*)([\.\:])(.*)",pattern)
+        if not self.udir == "":
 
-                if m:
-                    p1 = m.group(1)
-                    m1 = m.group(2)
-                    i1 = m.group(3)
-                else:
-                    p1 = pattern
-                    m1 = None
-                    i1 = None
+            print("UDIR",self.udir)
+            try:
+                os.mkdir(self.udir)
+            except:
+                pass
+            os.chdir(self.udir)
 
-                if not i1:
-                    i1 = i0
-                    m1 = m0
-                    
-                if not i1:
-                    i1 = ""
-                    m1 = ""
-                    
-
-                self.udir = ""
-                if p1 and len(p1) > 0 and p1[0] == "-":
-                    self.udir = re.sub(r"\:","..",p1[1:] + m1 + i1)
-                    p1 = p0 + p1
-                    print("UDIR",self.udir)
-                    try:
-                        os.mkdir(self.udir)
-                        os.chdir(self.udir)
-                    except:
-                        pass
-
-                pattern = p1 + m1 + i1
-                pattern = re.sub(r"\.$","",pattern)
+#        if False and pattern0 and self.udir == "":
+#
+#            udir = ktodir
+#
+#            if pattern == None:
+#                pattern = pattern0   #  wenn kein pattern angegeben, nimm das pattern aus dem ktofile
+#            else:
+#
+##                if pattern[0] == ".":
+##                    pattern = pattern[1:]
+##                elif pattern[0] == "-":
+##                    pattern = "^" + pattern
+#
+#                m = re.search(r"^(.*)([\.\:])(.*)",pattern0)
+#                if m:
+#                    p0 = m.group(1)
+#                    m0 = m.group(2)
+#                    i0 = m.group(3)
+#                else:
+#                    p0 = pattern0
+#                    m0 = None
+#                    i0 = None
+#
+#                m = re.search(r"^(.*)([\.\:])(.*)",pattern)
+#                if m:
+#                    p1 = m.group(1)
+#                    m1 = m.group(2)
+#                    i1 = m.group(3)
+#                else:
+#                    p1 = pattern
+#                    m1 = None
+#                    i1 = None
+#
+#                if not i1:
+#                    i1 = i0
+#                    m1 = m0
+#                    
+#                if not i1:
+#                    i1 = ""
+#                    m1 = ""
+#                    
+#
+#                self.udir = ""
+#
+#                print("PPP",p1,p0,i1,i0)
+#                exit()
+#                
+#                pattern = p1 + m1 + i1
+#                pattern = re.sub(r"\.$","",pattern)
 
         print("PATTERN",pattern)
+        
+        if not pattern:
+            return()
 
         self.update_konto(pattern)
+        
+        if not self.udir == "":
+            if not self.stable:
+                while (0 == 0):
+                    text1 = open( glob.glob("*.kto")[0] ).read()
+                    os.system("joe *.kto")
+                    text2 = open( glob.glob("*.kto")[0] ).read()
+                    if text1 == text2:
+                        for o in glob.glob("*.kto*"):
+                            os.unlink(o)
+                        os.chdir("..")
+                        try:
+                            os.rmdir(self.udir)
+                        except:
+                            pass
+                        return()
+                    self.update_konto(pattern)
+
 
 #**********************************************************************************
 
@@ -198,6 +243,9 @@ class Konto ():
 
         self.parse_pattern()
         
+        print(self.search_pattern,self.grep_pattern)
+
+
         self.mark("B. Pattern parsed.")
 
 #        self.list_of_sum_files = glob.glob(base_dir+".*sum)
@@ -209,6 +257,7 @@ class Konto ():
 
         kto_file = None
         konto_files_found = glob.glob("*.kto")
+        #print(konto_files_found,os.path.abspath("."))
         
         if len(konto_files_found) > 1:
             print("More than one kto file found.")
@@ -259,9 +308,6 @@ class Konto ():
             change_acc_files = 1
             break
       
-#        self.format_salden()
-#        print(self.salden_aktuell)
-
         self.mark("I. Compute salden.")
                     
         if len(konto_files_found) == 0 or re.search(r"([0123456789abcdef]{"+self.len_hkey_str+"})\.kto",kto_file):
@@ -295,8 +341,6 @@ class Konto ():
 
         self.format_salden()
         open(kto_file,"a").write( "\n".join(self.salden_aktuell) + "\n" )
-
-
 
 #**********************************************************************************
 
@@ -667,7 +711,29 @@ class Konto ():
 
         self.salden_aktuell = []
 
-        if not self.ukto == None and not self.ukto == "" and self.ukto[0] == "-":
+        ktofiles1 = glob.glob(self.base_dir+"*.acc")
+        ktofiles1.sort()
+        ktofiles  = []
+
+#        self.mark("A")
+        for ktofile in ktofiles1:
+
+            ktofile_sum = ktofile[:-4] + ".sum"
+            if not os.path.isfile(ktofile_sum):
+                self.mark("    " + ktofile + " not found, so retrieve it:")
+                self.update_sum_files(ktofile)
+            
+            m = re.search(r"(\d+)\.acc$",ktofile)
+            if len(ktofiles) < 2:
+                if (m.group(1) + "000000")[0:6] < self.startdatum:
+                    ktofiles = []
+            if (m.group(1) + "000000")[0:6] > self.enddatum:
+                break
+            else:
+                ktofiles.append(ktofile_sum)
+
+#        self.mark("B")
+        if not self.ukto == None and not self.ukto == "" and self.ukto[0] in ("-","."):
             return()
 #            faktor = -1
 #            kto    = kto0[1:]
@@ -680,30 +746,17 @@ class Konto ():
         if self.enddatum[4:6] > "12":
             self.enddatum = self.enddatum[0:4] + "12" 
 
-        ktofiles1 = glob.glob(self.base_dir+"*.acc")
-        ktofiles1.sort()
-        ktofiles  = []
-
-        for ktofile in ktofiles1:
-
-            ktofile_sum = ktofile[:-4] + ".sum"
-            if not os.path.isfile(ktofile_sum):
-                self.update_sum_files(ktofile)
-            
-            m = re.search(r"(\d+)\.acc$",ktofile)
-            if len(ktofiles) < 2:
-                if (m.group(1) + "000000")[0:6] < self.startdatum:
-                    ktofiles = []
-            if (m.group(1) + "000000")[0:6] > self.enddatum:
-                break
-            else:
-                ktofiles.append(ktofile_sum)
-
         ktotexts = []
+#        print("KTOPARSE",ktoparse)
         for ktofile in ktofiles:  #  retrieving of the relevant lines via grep
+#            print(ktofile)
             ktotexts.append([])
             for zeile in os.popen("grep -P '" + ktoparse + "' " + ktofile).read().split("\n")[:-1]:
                 ktotexts[-1].append(zeile.split(","))
+
+#        for o in ktotexts[0]:
+#            print(o)
+
 
         salden_liste    = []
         max_offset      = self.max_offset
@@ -726,11 +779,12 @@ class Konto ():
             betrag = 0.00
             nr     = 0
 
-            if len(ktotexts[0]) > 0 and kto == ktotexts[0][0][0]:   #  im ersten Salden-File die genaue Monatsspalte finden
+            if len(ktotexts[0]) > 0 and kto == ktotexts[0][0][0]:   #  in the first line there is the kto. Find in the first file the position
                 zeile  = ktotexts[0][0][1:]  #  nicht entfernen!
                 datum0 = zeile.pop(0)
                 if self.startdatum >= datum0:
                     datpos = 12*( int(self.startdatum[0:4]) - int(datum0[0:4]) ) + int(self.startdatum[4:6]) - int(datum0[4:6]) - 1
+#                    print("START",self.startdatum,datum0,kto,datpos)
                     if datpos < 0:
                         betrag = 0.00
                         nr     = 0
@@ -741,17 +795,19 @@ class Konto ():
                             nr     = nr     - int(zeile[-1][-self.digits:])
                         else:
                             ind    = zeile[-1].index("/")
-                            betrag = betrag - float(zeile[-1][:index-1])
-                            nr     = nr     - int(zeile[-1][index:])
+                            betrag = betrag - float(zeile[-1][:ind-1])
+                            nr     = nr     - int(zeile[-1][ind:])
                     else:
                         if zeile[datpos][-self.digits-1] == "/":
                             betrag = betrag - float(zeile[datpos][:-self.digits-1])
                             nr     = nr     - int(zeile[datpos][-self.digits:])
                         else:
                             ind    = zeile[datpos].index("/")
-                            betrag = betrag - float(zeile[datpos][:index-1])
-                            nr     = nr     - int(zeile[datpos][index:])
+                            betrag = betrag - float(zeile[datpos][:ind-1])
+                            nr     = nr     - int(zeile[datpos][ind:])
                 
+#            print("        ",kto,nr,datpos)
+
             if len(ktotexts[-1]) > 0 and kto == ktotexts[-1][0][0]:   #  im letzten Salden-File die genaue Monatsspalte finden
 #                zeile  = ktotexts[-1][0][1:]  #  nicht entfernen!
                 zeile  = ktotexts[-1].pop(0)[1:]
@@ -765,19 +821,20 @@ class Konto ():
                             nr     = nr     + int(zeile[-1][-self.digits:])
                         else:
                             ind    = zeile[-1].index("/")
-                            betrag = betrag + float(zeile[-1][:index-1])
-                            nr     = nr     + int(zeile[-1][index:])
+                            betrag = betrag + float(zeile[-1][:ind-1])
+                            nr     = nr     + int(zeile[-1][ind:])
                     else:
                         if zeile[datpos][-self.digits-1] == "/":
                             betrag = betrag + float(zeile[datpos][:-self.digits-1])
                             nr     = nr     + int(zeile[datpos][-self.digits:])
                         else:
                             ind    = zeile[datpos].index("/")
-                            betrag = betrag + float(zeile[datpos][:index-1])
-                            nr     = nr     + int(zeile[datpos][index:])
+                            betrag = betrag + float(zeile[datpos][:ind-1])
+                            nr     = nr     + int(zeile[datpos][ind:])
 
+#            print("        ",kto,nr,datpos)
                 
-            for ktotext in ktotexts[:-1]:   #  nur bei sum-up Werten relevant
+            for ktotext in ktotexts[:-1]:   #  nur bei sum-up Werten relevant (Zwischen-sum-Files)
                 if len(ktotext) > 0 and ktotext[0][0] == kto:
                     zeile  = ktotext.pop(0)
                     
@@ -786,8 +843,8 @@ class Konto ():
                         nr     = nr     + int(zeile[-1][-self.digits:])
                     else:
                         ind    = zeile[-1].index("/")
-                        betrag = betrag + float(zeile[-1][:index-1])
-                        nr     = nr     + int(zeile[-1][index:])
+                        betrag = betrag + float(zeile[-1][:ind-1])
+                        nr     = nr     + int(zeile[-1][ind:])
                     
             if nr > 0:
                 
@@ -1069,12 +1126,13 @@ class Konto ():
                     if len(werte) > 0:
                         monat   = int(werte.pop(0))
                         betrag0 = 0.00
+                        nr0     = 0
                         for betrag in werte:
                             if betrag[-self.digits-1] == "/":
                                 nr     = int(betrag[-self.digits:])
                                 betrag = float(betrag[:-self.digits-1])
                             else:
-                                print(kto,betrag)
+#                                print(kto,betrag)
                                 ind    = betrag.index("/")
                                 betrag = int(m.group(1))
                                 nr     = float(m.group(2))
@@ -1082,8 +1140,9 @@ class Konto ():
                                 diff_salden[kto][monat]           = 0.00
                                 buchung_im_lfd_monat[kto][monat]  = 0
                             diff_salden[kto][monat]          = diff_salden[kto][monat]          + betrag - betrag0
-                            buchung_im_lfd_monat[kto][monat] = buchung_im_lfd_monat[kto][monat] + nr
+                            buchung_im_lfd_monat[kto][monat] = buchung_im_lfd_monat[kto][monat] + nr     - nr0
                             betrag0 = betrag
+                            nr0     = nr
                             monat   = monat + 1
                             if str(monat)[4:6] == "13":
                                 monat = int(str(int(str(monat)[0:4]) + 1) + "01")
@@ -1094,12 +1153,13 @@ class Konto ():
                 zeile    = kto + ","
                 betraege = []
                 sum      = 0.00    #   @@@@
-
+                nr       = 0
+                
                 while (0 == 0):
-                    nr = 0
+#                    nr = 0
                     if monat in diff_salden[kto]:
                         sum = sum + diff_salden[kto][monat]
-                        nr  = buchung_im_lfd_monat[kto][monat]
+                        nr  = nr  + buchung_im_lfd_monat[kto][monat]
                     if len(betraege) > 0:
                         betraege.append(("%3.2f"%sum)+"/"+(self.dformat%nr))
                     elif abs(sum) > 0.000001 or nr > 0:    #  just start when something interesting started
@@ -1111,12 +1171,12 @@ class Konto ():
                     if monat > mmax:
                         break
 
-                while (0 == 0):    #   truncate the tail if there is nothing interesting anymore
-                    if len(betraege) < 2:
-                        break
-                    if not betraege[-1] == betraege[-2]:
-                        break
-                    betraege.pop()
+#                while (0 == 0):    #   truncate the tail if there is nothing interesting anymore
+#                    if len(betraege) < 2:
+#                        break
+#                    if not betraege[-1] == betraege[-2]:
+#                        break
+#                    betraege.pop()
 
                 if len(betraege) == 0:
                     kto_to_del.append(kto)

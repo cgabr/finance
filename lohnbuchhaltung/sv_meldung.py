@@ -100,7 +100,41 @@ class SV_Meldung():
         self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
         time.sleep(2)
 
+#   1.   Beginn, Ende, Jahresgehalt aus Gehaltsbscheinigungen
 
+        beginnmonat = 13
+        endmonat    =  0
+        
+
+        if not 'beginn' in self.dataset or not 'jahresgehalt' in self.dataset:
+
+            for gehaltsmeldung in glob.glob("*/gehalt*"+self.dataset["meldejahr"]+"*_*.md"):
+                m = re.search(r"_(\d\d\d\d)_(\d\d)",gehaltsmeldung)
+                if m:
+                    monat       = int(m.group(2))
+                    beginnmonat = min(beginnmonat,monat)
+                    if monat > endmonat:
+                        endmonat = monat
+                        text     = open(gehaltsmeldung).read()
+                        m = re.search(r"Gehalt +Brutto(.*?)(\d+\.\d\d) +(\d+\.\d\d)",text)
+                        if m:
+                            jahresgehalt = str(int(float(m.group(3))+0.5))
+                               
+            beginn = "01." + ("%02u"%beginnmonat)  + "." + self.dataset["meldejahr"]
+            ende   = "."   + ("%02u"%endmonat)     + "." + self.dataset["meldejahr"]
+            if endmonat in (1,3,5,7,8,10,12):
+                ende = "31" + ende
+            elif endmonat in (4,6,9,11):
+                ende = "30" + ende
+            elif int(self.dataset["meldejahr"]) % 4 == 0 and not int(self.dataset["meldejahr"]) % 100 == 0:
+                ende = "29" + ende
+            else:
+                ende = "28" + ende
+                
+            self.dataset['beginn']  = beginn
+            self.dataset['ende']    = ende
+            self.dataset['entgelt'] = jahresgehalt
+        
         if self.dataset["meldung"] == "10":
 
             self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
@@ -116,10 +150,15 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "50":
 
-            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.xp("//div[text()='Jahresmeldung']").click()
+            time.sleep(1)
+            self.el("[aria-labelledby='overviewViewm50Label']")    .click()
+
+#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
 
         if self.dataset["meldung"] == "92":
         
@@ -135,17 +174,18 @@ class SV_Meldung():
             self.el( "div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div").click()
             self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
 
+#        return()
         time.sleep(5)
         self.driver.switch_to.frame(1)
 
-        self.set_par("firmaBetriebsnummer",            "14993475")
-        self.set_par("firmaName1",                     "IfT Institut für")
-        self.set_par("firmaName2",                     "Technologietransfer GmbH")
-        self.set_par("firmaStrasse",                   "Nürnberger Str. 134")
-        self.set_par("firmaAnschriftenzusatz",         "")
-        self.set_par("firmaLand",                      "D")
-        self.set_par("firmaPostleitzahl",              "90762")
-        self.set_par("firmaOrt",                       "Fürth")
+        self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
+        self.set_par("firmaName1",                     ".firmaname1")
+        self.set_par("firmaName2",                     ".firmaname2")
+        self.set_par("firmaStrasse",                   ".firmastrasse")
+        self.set_par("firmaAnschriftenzusatz",         ".firmastrasse2")
+        self.set_par("firmaLand",                      ".firmaland")
+        self.set_par("firmaPostleitzahl",              ".firmaplz")
+        self.set_par("firmaOrt",                       ".firmastadt")
 
         self.set_par("betriebsnummerKrankenkasse",     ".kkbetrnr")
         self.set_par("beginn",                         ".beginn")
@@ -164,9 +204,10 @@ class SV_Meldung():
         self.set_par("personPostleitzahl",             ".plz")
         self.set_par("personOrt",                      ".stadt")
 
+
         if not self.dataset["meldung"] == "92": 
 
-            self.set_par("firmaRechtskreis",               "W")
+            self.set_par("firmaRechtskreis",               ".rechtskreis")
             self.set_par("personengruppe",                 ".persgruppe")
             self.set_par("taetigkeit",                     ".tschluessel")
             self.set_par("schulabschluss",                 ".schule")
@@ -253,6 +294,8 @@ if __name__ == "__main__":
     r.dataset = kto.dataset
 
     print(r.dataset)
+#    for o in r.dataset.keys():
+#        print(r.dataset[o])
 
     r.run()
 
