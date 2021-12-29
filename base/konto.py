@@ -1,5 +1,5 @@
 #  coding:  utf                     
-import os,sys,re,glob,time,base64,hashlib,random,functools,hashlib
+import os,sys,re,glob,time,base64,hashlib,random,functools,hashlib,json
 
 #******************************************************************************
 
@@ -25,13 +25,13 @@ class Konto ():
 
         self.salden_expand   = "(-[^- ]+){0,99},"
 
-
+        self.dataset         = {}
 
         ktodir   = os.path.abspath(".")
         
         self.base_dir = ""   #  Search for a base directory with acc and sum files
         pwd0          = ""
-        while (0 == 0):   #  check if we are in a directory with acc files
+        while (0 == 0):      #  check if we are in a directory with acc files
             acc_files = glob.glob("2*.acc") + glob.glob("base/*.acc") + glob.glob(".base/*.acc") + glob.glob("??_ktobase/*.acc")
             if len(acc_files) > 0:
                 m = re.search(r"^(.*[\\\/])(.*)$",os.path.abspath(acc_files[0]))
@@ -49,6 +49,33 @@ class Konto ():
 
         os.chdir(ktodir)
 
+#**********************************************************************************
+
+    def read_config (self,dir):
+
+        for config_file in glob.glob(dir):
+        
+            print(config_file)
+            config1 = open(config_file).read()
+            print(config1)
+
+            try:
+                dataset  = json.loads(config1)
+            except:
+                dataset = None
+            
+            print(dataset)
+            if dataset:   #   json files
+                for o in dataset.keys():
+                    print(o)
+                    self.dataset[ o.replace("-","").lower() ] = dataset[o]
+                    
+            else:         #   proprietary pseudo csv files
+                for zeile in config1.split("\n"):
+                    m = re.search(r"^(\S+)\: *(.*?)\"",zeile)
+                    if m and not m.group(1).lower() in self.dataset:
+                        self.dataset[ m.group(1).lower() ] = m.group(2)
+        
 
 #**********************************************************************************
 
@@ -226,7 +253,7 @@ class Konto ():
                 print("-> No action needed.")
                 break
             
-            self.format_kto()               #  make a new formatted_acc from the extracted_acc again.
+            self.format_kto(1)               #  make a new formatted_acc from the extracted_acc again.
             self.mark("H. Ktofile formatted again.")
   
             change_acc_files = 1
@@ -379,7 +406,7 @@ class Konto ():
 
 #**********************************************************************************
 
-    def format_kto (self):
+    def format_kto (self,mode=0):
         
         self.parse_ktotext()
                 
@@ -427,7 +454,10 @@ class Konto ():
                 saldo  = "%13.2f" % gesamt
             else:
                 if zeile[5] == 0:            #  zeile[5]: the number of matching ukto in ktoa or ktob
-                    saldo = "         ...."
+                    if mode == 0:
+                        saldo = "         ...."
+                    else:
+                        saldo = "         0.00"   #  for uploading into acc-files
 #                    saldo  = "%13.2f" % gesamt
                 elif self.maxsaldo == 0 or zeile[5] == 1:
                     gesamt = gesamt + betrag

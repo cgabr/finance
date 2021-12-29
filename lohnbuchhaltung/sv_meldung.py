@@ -219,23 +219,7 @@ class SV_Meldung():
 
 #**************************************************************************************
 
-    def run (self,config_data):
-        
-        for config1 in config_data:
-            try:
-                dataset  = json.loads(config1)
-            except:
-                dataset = None
-            
-            if dataset:   #   json files
-                for o in dataset.keys():
-                    self.dataset[ o.replace("-","").lower() ] = dataset[o]
-                    
-            else:         #   proprietary pseudo csv files
-                for zeile in config1.split("\n"):
-                    m = re.search(r"^(\S+)\: *(.*?)\"",zeile)
-                    if m and not m.group(1).lower() in self.dataset:
-                        self.dataset[ m.group(1).lower() ] = m.group(2)
+    def run (self):
         
         gehaltsbescheinigungen = glob.glob("./*/*gehalt*"+self.dataset["meldejahr"]+"*.md")
         gehaltsbescheinigungen.sort()
@@ -250,7 +234,6 @@ class SV_Meldung():
         if not 'hausnr' in self.dataset:
             self.dataset['hausnr']  = ""
 
-        print(self.dataset)
 
         self.run1() 
             
@@ -260,15 +243,18 @@ class SV_Meldung():
 if __name__ == "__main__":
 
     r            = SV_Meldung().setup_method("")
-    config_data  = [ os.popen("python3 -m fibu.xlsmanager memory oa ./15*/*.csv aktuell").read() ]  #  personal data
-    for datei in (glob.glob(konto.Konto().base_dir+"/*.data") + glob.glob("../*.data") + glob.glob("./sv.data") + glob.glob("*/sv.data") ):   #  config and company data
-        print(datei)
-        config_data.append(open(datei).read())
+#    config_data  = [ os.popen("python3 -m fibu.xlsmanager memory oa ./15*/*.csv aktuell").read() ]  #  personal data
+    kto          = konto.Konto()
+    kto.read_config(kto.base_dir+"/*.data")
+    kto.read_config("../*.data")
+    kto.read_config("./sv.data")
+    kto.read_config("*/sv.data")
+    kto.read_config("./15*/*.csv")
+    r.dataset = kto.dataset
 
-    for datei in (glob.glob("./15*/*.csv") ):   #  personel data
-        config_data.append(open(datei).read())
+    print(r.dataset)
 
-    r.run(config_data)
+    r.run()
 
 
 #*************************************************************************************
