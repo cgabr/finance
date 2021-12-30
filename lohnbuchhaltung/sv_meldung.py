@@ -102,13 +102,22 @@ class SV_Meldung():
 
 #   1.   Beginn, Ende, Jahresgehalt aus Gehaltsbscheinigungen
 
+        if not self.jahr == "":
+            self.dataset["meldejahr"] = self.jahr
+        if not self.meldung == "":
+            self.dataset["meldung"]   = self.meldung
+        if not self.person == "":
+            self.dataset["person"]    = self.person
+
+        print(self.dataset["meldejahr"])
+
         beginnmonat = 13
         endmonat    =  0
         
-
         if not 'beginn' in self.dataset or not 'jahresgehalt' in self.dataset:
 
             for gehaltsmeldung in glob.glob("*/gehalt*"+self.dataset["meldejahr"]+"*_*.md"):
+                print(gehaltsmeldung)
                 m = re.search(r"_(\d\d\d\d)_(\d\d)",gehaltsmeldung)
                 if m:
                     monat       = int(m.group(2))
@@ -119,6 +128,7 @@ class SV_Meldung():
                         m = re.search(r"Gehalt +Brutto(.*?)(\d+\.\d\d) +(\d+\.\d\d)",text)
                         if m:
                             jahresgehalt = str(int(float(m.group(3))+0.5))
+                            print(jahresgehalt)
                                
             beginn = "01." + ("%02u"%beginnmonat)  + "." + self.dataset["meldejahr"]
             ende   = "."   + ("%02u"%endmonat)     + "." + self.dataset["meldejahr"]
@@ -133,7 +143,7 @@ class SV_Meldung():
                 
             self.dataset['beginn']  = beginn
             self.dataset['ende']    = ende
-            self.dataset['entgelt'] = jahresgehalt
+            self.dataset['betrag']  = jahresgehalt
         
         if self.dataset["meldung"] == "10":
 
@@ -162,10 +172,17 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "92":
         
-            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div").click()
+            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.xp("//div[text()='Jahresmeldung']").click()
+            time.sleep(1)
+            self.el("[aria-labelledby='overviewViewm92Label']")    .click()
+            self.dataset['beginn'] = "01.01." + self.dataset["meldejahr"]
+            self.dataset['ende']   = "31.12." + self.dataset["meldejahr"]
+
+#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div").click()
 
         if self.dataset["meldung"] == "30":
 
@@ -241,7 +258,7 @@ class SV_Meldung():
         if self.dataset["meldung"] == "50": 
 
             self.set_par("ende",                           ".ende")
-            self.set_par("entgeltRentenberechnung",        ".betrag")
+#            self.set_par("entgeltRentenberechnung",        ".betrag")
 #            self.set_par("waehrung",                       "E")
             self.set_par("entgelt",                        ".betrag")
             self.set_par("gleitzone",                      ".gleitzone")   #  0,1,2  nein/ja/teils
@@ -250,23 +267,25 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "92": 
 
-            self.set_par("uvData.0.betriebsnummerUV",      "15250094")
-            self.set_par("uvData.0.firmaMitgliedsnummerUV","0720911957")
-            self.set_par("uvData.0.grund",                 "000")
-            self.set_par("uvData.0.betriebsnummerGefahrtarifstelle","15250094")
-            self.set_par("uvData.0.gefahrtarifstelle",     "0253")
-            self.set_par("uvData.0.arbeitsentgelt",        "-BETRAG-")
+            self.set_par("uvData.0.betriebsnummerUV",               ".betriebsnummeruv")
+            self.set_par("uvData.0.firmaMitgliedsnummerUV",         ".mitgliedsnummeruv")
+            self.set_par("uvData.0.grund",                          ".grunduv")
+            self.set_par("uvData.0.betriebsnummerGefahrtarifstelle",".betriebsnrgefahr")
+            self.set_par("uvData.0.gefahrtarifstelle",              ".gefahrtarifstelle")
+            self.set_par("uvData.0.arbeitsentgelt",                 ".betrag")
+
+
 
 
 #**************************************************************************************
 
     def run (self):
         
-        gehaltsbescheinigungen = glob.glob("./*/*gehalt*"+self.dataset["meldejahr"]+"*.md")
-        gehaltsbescheinigungen.sort()
-        m = re.search(r"Gehalt +[bB]rutto[: ]+\d+\.\d\d +(\d+\.\d\d)", open(gehaltsbescheinigungen[-1]).read())
-        if m:
-            self.dataset['betrag'] = str(int(float(m.group(1))))
+#        gehaltsbescheinigungen = glob.glob("./*/*gehalt*"+self.dataset["meldejahr"]+"*.md")
+#        gehaltsbescheinigungen.sort()
+#        m = re.search(r"Gehalt +[bB]rutto[: ]+\d+\.\d\d +(\d+\.\d\d)", open(gehaltsbescheinigungen[-1]).read())
+#        if m:
+#            self.dataset['betrag'] = str(int(float(m.group(1))))
             
         m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
         if m:
@@ -296,6 +315,24 @@ if __name__ == "__main__":
     print(r.dataset)
 #    for o in r.dataset.keys():
 #        print(r.dataset[o])
+
+
+    try:
+        r.jahr = ("20" + sys.argv[2])[-4:]
+    except:
+        r.jahr = ""
+        
+    try:
+        r.meldung = sys.argv[1]
+    except:
+        r.meldung = ""
+        
+    dir = os.path.abspath(".")
+    m = re.search(r"^(.*)[\\\/]([a-z]+)([\\\/]|$)",dir)
+    if m:
+        r.person = m.group(2)
+    else:
+        r.person = ""
 
     r.run()
 

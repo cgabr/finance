@@ -67,7 +67,7 @@ class Konto ():
 #            print(dataset)
             if dataset:   #   json files
                 for o in dataset.keys():
-                    print(o)
+#                    print(o)
                     self.dataset[ o.replace("-","").lower() ] = dataset[o]
                     
             else:         #   proprietary pseudo csv files
