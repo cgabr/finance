@@ -109,8 +109,6 @@ class SV_Meldung():
         if not self.person == "":
             self.dataset["person"]    = self.person
 
-        print(self.dataset["meldejahr"])
-
         beginnmonat = 13
         endmonat    =  0
         
@@ -144,6 +142,8 @@ class SV_Meldung():
             self.dataset['beginn']  = beginn
             self.dataset['ende']    = ende
             self.dataset['betrag']  = jahresgehalt
+        
+        print(self.dataset)
         
         if self.dataset["meldung"] == "10":
 
@@ -192,7 +192,7 @@ class SV_Meldung():
             self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
 
 #        return()
-        time.sleep(5)
+        time.sleep(3)
         self.driver.switch_to.frame(1)
 
         self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
@@ -312,19 +312,32 @@ if __name__ == "__main__":
     kto.read_config("./15*/*.csv")
     r.dataset = kto.dataset
 
-    print(r.dataset)
 #    for o in r.dataset.keys():
 #        print(r.dataset[o])
 
-
     try:
-        r.jahr = ("20" + sys.argv[2])[-4:]
+        arg1 = sys.argv[1]
     except:
+        arg1 = None
+    
+    try:
+        arg2 = sys.argv[2]
+    except:
+        arg2 = None
+    
+    if arg2 and len(arg1) > 2:
+        o    = arg1[-2:]
+        arg1 = arg2
+        arg2 = o
+
+    if arg2:
+        r.jahr = arg2
+    else:
         r.jahr = ""
         
-    try:
-        r.meldung = sys.argv[1]
-    except:
+    if arg1:
+        r.meldung = arg1
+    else:
         r.meldung = ""
         
     dir = os.path.abspath(".")

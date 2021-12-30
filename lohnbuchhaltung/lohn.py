@@ -216,7 +216,7 @@ class Lohn (object):
                     if rem == "":
                         break
                         
-            elif art == "LOHN-AN":
+            elif art == "LOHN-AN":  #   and not "KUG-Berechnung" in rem:
                 if not jm in lohndaten:
                     lohndaten[jm] = {}
                 if not 'LOHN1' in lohndaten[jm]:
@@ -468,13 +468,18 @@ class Lohn (object):
 
             if 'kugdiff' in lohndaten[jm]:     #   Sozialversicherung des KUG muss der Arbeitgeber tragen:
 #                print("KUG",lohndaten[jm]['kugdiff'],lohn)
-                lohn = 0.8 * (lohndaten[jm]['kugdiff'] - lohn)
+                lohn_eigen  = lohn
+                lohn_fiktiv = (lohndaten[jm]['kugdiff'] - lohn)
+                lohn        = 0.8 * lohn_fiktiv
             else:
-                lohn = 0.0
+                lohn        = 0.0
+                lohn_eigen  = 0.0
+                lohn_fiktiv = 0.0
             lohnkv = min(lohn,float(lohndaten[jm]['KLIMIT']))
             lohnrv = min(lohn,float(lohndaten[jm]['RLIMIT']))
 #            print(lohnkv,lohnrv)
-                
+
+            lohndaten[jm]['LOHNFIKTIV'] = "%3.2f" % ( lohn + lohn_eigen)
             betraege[jm]['KN-KV-S'] = "%3.2f" % ( 0.01 * float(lohndaten[jm]['KV']) * lohnkv * int(mode in "so")  * int(merk[0]) )
 #            print(betraege[jm]['KN-KV-S'],lohndaten[jm]['KN-KV-S'])
             krankengeld             = "%3.2f" % ( 0.01 * float(lohndaten[jm]['KG']) * lohnkv * int(mode in "so")  * int(merk[0]) )
@@ -564,20 +569,23 @@ class Lohn (object):
                 ktoslip0     = ktoslips[jm]
                 export_slip0 = open(ktoslip0).read()
 
-            export_slip = ""
-            day         = "03"
-            lohnsumme   = 0.00
-            an_soz      = 0.00
-            ar_soz      = 0.00
-            kug_soz     = 0.00
-            st_soz      = 0.00
+            export_slip  = ""
+            day          = "03"
+            lohnsumme    = 0.00
+            an_soz       = 0.00
+            ar_soz       = 0.00
+            kug_soz      = 0.00
+            st_soz       = 0.00
 
             if not jm0[0:4] == jm[0:4]:
                 jahressumme = {}
-                for art in (self.abgabenarten + [1,2,3,4,5,6]):
+                for art in (self.abgabenarten + [1,2,3,4,5,6,7]):
                     jahressumme[art] = 0.00
                 jm0 = jm
 
+            fiktives_gehalt = 0.00
+            if 'LOHNFIKTIV' in lohndaten[jm]:
+                fiktives_gehalt = float(lohndaten[jm]['LOHNFIKTIV'])
 
             agentur_zahlt_sozialabgaben = 0
             while (0 == 0):
@@ -662,6 +670,8 @@ class Lohn (object):
                         kug_soz = kug_soz + lssoz
                     elif art[0:2] == "AN":
                         an_soz = an_soz + lssoz
+                    elif art[0:2] == "AN":
+                        an_soz = an_soz + lssoz
                     else:
                         st_soz = st_soz + lssoz
                     day   = "%02u" % (int(day)+1)
@@ -727,18 +737,23 @@ class Lohn (object):
             jahressumme[4] = jahressumme[4] + netto
             jahressumme[5] = jahressumme[5] + ausz
             jahressumme[6] = jahressumme[6] + ueber
+            jahressumme[7] = jahressumme[7] + fiktives_gehalt
 
-            export_slip = export_slip + "\n"
-            export_slip = export_slip + "Gehalt Brutto:        " + ("%13.2f" % lohnsumme) + ("%13.2f" % jahressumme[1]) + "\n"
-            export_slip = export_slip + "minus Steuern:        " + ("%13.2f" % st_soz)    + ("%13.2f" % jahressumme[2]) + "\n"
-            export_slip = export_slip + "minus Sozialabgaben:  " + ("%13.2f" % an_soz)    + ("%13.2f" % jahressumme[3]) + "\n"
-            export_slip = export_slip + "                            -------      -------\n"
-            export_slip = export_slip + "Gehalt Netto:         " + ("%13.2f" % netto)     + ("%13.2f" % jahressumme[4]) + "\n"
-            export_slip = export_slip + "Auszahlung:           " + ("%13.2f" % ausz)      + ("%13.2f" % jahressumme[5]) + "\n"
-            export_slip = export_slip + "                            -------      -------\n"
-            export_slip = export_slip + "Ueberzahlung:         " + ("%13.2f" % ueber)     + ("%13.2f" % jahressumme[6]) + "\n"
-            export_slip = re.sub(r"-ARBEITGEBER-",("%11.2f" % (ar_soz+kug_soz)),export_slip)
-            export_slip = re.sub(r"-ARBEITG_KUG-",("%3.2f" % kug_soz),export_slip)
+            export_slip  = export_slip + "\n"
+            if (abs(jahressumme[7]) > 0.00001):
+                export_zeile =               "fiktives Gehalt bei KUG:(" + ("%10.2f" % fiktives_gehalt) + ")(" + ("%11.2f" % jahressumme[7]) + ")\n\n"
+                export_zeile = re.sub("\(( +)",'\\1'+"(",export_zeile,99)
+                export_slip  = export_slip + export_zeile 
+            export_slip  = export_slip + "Gehalt Brutto:        " + ("%13.2f" % lohnsumme) + ("%13.2f" % jahressumme[1]) + "\n"
+            export_slip  = export_slip + "minus Steuern:        " + ("%13.2f" % st_soz)    + ("%13.2f" % jahressumme[2]) + "\n"
+            export_slip  = export_slip + "minus Sozialabgaben:  " + ("%13.2f" % an_soz)    + ("%13.2f" % jahressumme[3]) + "\n"
+            export_slip  = export_slip + "                            -------      -------\n"
+            export_slip  = export_slip + "Gehalt Netto:         " + ("%13.2f" % netto)     + ("%13.2f" % jahressumme[4]) + "\n"
+            export_slip  = export_slip + "Auszahlung:           " + ("%13.2f" % ausz)      + ("%13.2f" % jahressumme[5]) + "\n"
+            export_slip  = export_slip + "                            -------      -------\n"
+            export_slip  = export_slip + "Ueberzahlung:         " + ("%13.2f" % ueber)     + ("%13.2f" % jahressumme[6]) + "        (Werte in Klammern: nachrichtlich)\n"
+            export_slip  = re.sub(r"-ARBEITGEBER-",("%11.2f" % (ar_soz+kug_soz)),export_slip)
+            export_slip  = re.sub(r"-ARBEITG_KUG-",("%3.2f" % kug_soz),export_slip)
             
             m = re.search(r"^(.*?)(LOHN-AN.*?Ueberzahlung.*?\n)(.*)$",export_slip0,re.DOTALL)
             if m:
