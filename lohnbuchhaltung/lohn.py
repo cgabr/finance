@@ -572,6 +572,7 @@ class Lohn (object):
             export_slip  = ""
             day          = "03"
             lohnsumme    = 0.00
+            kugausz      = 0.00
             an_soz       = 0.00
             ar_soz       = 0.00
             kug_soz      = 0.00
@@ -579,7 +580,7 @@ class Lohn (object):
 
             if not jm0[0:4] == jm[0:4]:
                 jahressumme = {}
-                for art in (self.abgabenarten + [1,2,3,4,5,6,7]):
+                for art in (self.abgabenarten + [1,2,3,4,5,6,7,8]):
                     jahressumme[art] = 0.00
                 jm0 = jm
 
@@ -600,6 +601,8 @@ class Lohn (object):
                         remark = lohndaten[jm]['LOHN-AN'].pop(0)
                 if "KUGSOZ" in remark:
                     agentur_zahlt_sozialabgaben = 1
+                if "KUG" in remark:
+                    kugausz = kugausz - float(betrag)
                 buchungen.append(jm + day + "  " + betrag + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-AN  "
                              + [self.lohnkto,self.kugkto+"-LOHN"][int("KUG" in remark)]
                              + "-" + self.employee + "  0.00  " + remark)
@@ -738,17 +741,25 @@ class Lohn (object):
             jahressumme[5] = jahressumme[5] + ausz
             jahressumme[6] = jahressumme[6] + ueber
             jahressumme[7] = jahressumme[7] + fiktives_gehalt
+            jahressumme[8] = jahressumme[8] + kugausz
 
             export_slip  = export_slip + "\n"
             if (abs(jahressumme[7]) > 0.00001):
-                export_zeile =               "fiktives Gehalt bei KUG:(" + ("%10.2f" % fiktives_gehalt) + ")(" + ("%11.2f" % jahressumme[7]) + ")\n\n"
+                export_zeile = "fiktives Gehalt bei KUG:(" + ("%10.2f" % fiktives_gehalt) + ")(" + ("%11.2f" % jahressumme[7]) + ")\n\n"
                 export_zeile = re.sub("\(( +)",'\\1'+"(",export_zeile,99)
                 export_slip  = export_slip + export_zeile 
-            export_slip  = export_slip + "Gehalt Brutto:        " + ("%13.2f" % lohnsumme) + ("%13.2f" % jahressumme[1]) + "\n"
+            export_slip  = export_slip + "Gehalt Brutto:        " + ("%13.2f" % (lohnsumme-kugausz)) + ("%13.2f" % (jahressumme[1]-jahressumme[8])) + "\n"
             export_slip  = export_slip + "minus Steuern:        " + ("%13.2f" % st_soz)    + ("%13.2f" % jahressumme[2]) + "\n"
             export_slip  = export_slip + "minus Sozialabgaben:  " + ("%13.2f" % an_soz)    + ("%13.2f" % jahressumme[3]) + "\n"
             export_slip  = export_slip + "                            -------      -------\n"
-            export_slip  = export_slip + "Gehalt Netto:         " + ("%13.2f" % netto)     + ("%13.2f" % jahressumme[4]) + "\n"
+            export_slip  = export_slip + "Gehalt Netto:         " + ("%13.2f" % (netto-kugausz))     + ("%13.2f" % (jahressumme[4]-jahressumme[8])) + "\n"
+            if (abs(jahressumme[8]) > 0.00001):
+                export_slip = export_slip + "Zahlung KUG:          " + ("%13.2f" % kugausz) + ("%13.2f" % jahressumme[8]) + "\n"
+            export_slip  = export_slip + "                            -------      -------\n"
+            if (abs(jahressumme[8]) > 0.00001):
+                export_zeile = "Netto plus KUG gesamt:" + ("%13.2f" % netto) + "" + ("%13.2f" % jahressumme[1]) + "\n"
+                export_zeile = re.sub("\(( +)",'\\1'+"(",export_zeile,99)
+                export_slip  = export_slip + export_zeile 
             export_slip  = export_slip + "Auszahlung:           " + ("%13.2f" % ausz)      + ("%13.2f" % jahressumme[5]) + "\n"
             export_slip  = export_slip + "                            -------      -------\n"
             export_slip  = export_slip + "Ueberzahlung:         " + ("%13.2f" % ueber)     + ("%13.2f" % jahressumme[6]) + "        (Werte in Klammern: nachrichtlich)\n"

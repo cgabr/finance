@@ -45,8 +45,6 @@ class Meldung (object):
         if m:
             person = m.group(2)
 
-
-
         for sv_meldung in sv_meldungen:
         
             if "_orig." in sv_meldung:
@@ -116,7 +114,10 @@ class Meldung (object):
 
             newname = meldejahr + '.' + grund + "_" + sendedatum + "_" + tan + "_" + kkid + "_" + kkname + '_' + person + storniert 
             newname = self.normalize_text(newname)
-            newname = re.sub(r"[ \(\)]","_",newname,99999999) 
+            newname = re.sub(r"[ \(\)\=]","_",newname,99999999) 
+            newname = re.sub(r"__","_",newname,99999999) 
+            newname = re.sub(r"__","_",newname,99999999) 
+            newname = re.sub(r"__","_",newname,99999999) 
 #            print(newname)
 
             m = re.search('^(.*)\.(.*?)$',sv_meldung)  #  renaming the original files

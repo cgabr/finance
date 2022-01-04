@@ -71,7 +71,8 @@ class Konto ():
                     self.dataset[ o.replace("-","").lower() ] = dataset[o]
                     
             else:         #   proprietary pseudo csv files
-                for zeile in config1.split("\n"):
+                felder = config1.split("\n")
+                for zeile in felder:
                     m = re.search(r"^(\S+)\: *(.*?)\"",zeile)
                     if m and not m.group(1).lower() in self.dataset:
                         self.dataset[ m.group(1).lower() ] = m.group(2)
@@ -714,10 +715,13 @@ class Konto ():
         ktofiles1 = glob.glob(self.base_dir+"*.acc")
         ktofiles1.sort()
         ktofiles  = []
+        
+        print(self.base_dir)
 
 #        self.mark("A")
         for ktofile in ktofiles1:
 
+            print(ktofile  + " ...")
             ktofile_sum = ktofile[:-4] + ".sum"
             if not os.path.isfile(ktofile_sum):
                 self.mark("    " + ktofile + " not found, so retrieve it:")

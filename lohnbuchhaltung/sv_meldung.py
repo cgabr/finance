@@ -52,7 +52,7 @@ class SV_Meldung():
             inhalt = self.dataset[inhalt[1:]]
 
         self.driver.find_element(By.ID,feld).send_keys(inhalt)
-        time.sleep(0.5)
+        time.sleep(0.55)
         return(inhalt)
 
 #**************************************************************************************
@@ -66,6 +66,9 @@ class SV_Meldung():
     def el (self,selector):
 
         return(self.driver.find_element(By.CSS_SELECTOR,selector))
+
+#    Besteuer   2731 247 6703, xuUKrHeW534
+
 
 #**************************************************************************************
 
@@ -87,7 +90,17 @@ class SV_Meldung():
 
 #**************************************************************************************
 
-    def run1 (self):
+    def run (self):
+
+
+        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+        if m:
+            self.dataset['strasse'] = m.group(1)
+            self.dataset['hausnr']  = m.group(2)
+        if not 'hausnr' in self.dataset:
+            self.dataset['hausnr']  = ""
+
+
 
         self.driver.get("https://standard.gkvnet-ag.de/svnet/")
         self.driver.set_window_size(712, 705)
@@ -106,8 +119,8 @@ class SV_Meldung():
             self.dataset["meldejahr"] = self.jahr
         if not self.meldung == "":
             self.dataset["meldung"]   = self.meldung
-        if not self.person == "":
-            self.dataset["person"]    = self.person
+#        if not self.person == "":
+#            self.dataset["person"]    = self.person
 
         beginnmonat = 13
         endmonat    =  0
@@ -125,7 +138,13 @@ class SV_Meldung():
                         text     = open(gehaltsmeldung).read()
                         m = re.search(r"Gehalt +Brutto(.*?)(\d+\.\d\d) +(\d+\.\d\d)",text)
                         if m:
-                            jahresgehalt = str(int(float(m.group(3))+0.5))
+                            bruttogehalt = str(int(float(m.group(3))+0.000005))
+                               
+                        m = re.search(r"fiktives +Gehalt(.*?)\((\d+\.\d\d)\) +\((\d+\.\d\d)\)",text)
+                        if not m:
+                            jahresgehalt = bruttogehalt
+                        else:
+                            jahresgehalt = str(int(float(m.group(3))+0.000005))
                             print(jahresgehalt)
                                
             beginn = "01." + ("%02u"%beginnmonat)  + "." + self.dataset["meldejahr"]
@@ -139,16 +158,20 @@ class SV_Meldung():
             else:
                 ende = "28" + ende
                 
-            self.dataset['beginn']  = beginn
-            self.dataset['ende']    = ende
-            self.dataset['betrag']  = jahresgehalt
+            self.dataset['beginn']        = beginn
+            self.dataset['ende']          = ende
+            self.dataset['jahresgehalt']  = jahresgehalt
+            self.dataset['bruttogehalt']  = bruttogehalt
         
         print(self.dataset)
+#        return()
         
         if self.dataset["meldung"] == "10":
 
-            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
-            self.xp("//div[text()='Anmeldung']").click()
+#            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
+#            self.xp("//div[text()='Anmeldung']").click()
+            self.el("[aria-labelledby='overviewViewanmeldungLabel']")    .click()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm10Label']")    .click()
             
@@ -160,8 +183,11 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "50":
 
-            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
-            self.xp("//div[text()='Jahresmeldung']").click()
+#            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
+#            self.xp("//div[text()='Jahresmeldung']").click()
+            self.el("[aria-labelledby='overviewViewjahresmeldungLabel']")    .click()
+#            return()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm50Label']")    .click()
 
@@ -172,8 +198,10 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "92":
         
-            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
-            self.xp("//div[text()='Jahresmeldung']").click()
+#            self.xp("//div[text()='menuLinkSV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
+#            self.xp("//div[text()='Jahresmeldung']").click()
+            self.el("[aria-labelledby='overviewViewjahresmeldungLabel']")    .click()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm92Label']")    .click()
             self.dataset['beginn'] = "01.01." + self.dataset["meldejahr"]
@@ -186,14 +214,25 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "30":
 
-            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div").click()
-            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+#            self.xp("//div[text()='menuLinkSV-Meldung (Allgemein, Knappschaft, See)']").click()
+            self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
+#            self.xp("//div[text()='Jahresmeldung']").click()
+            self.el("[aria-labelledby='overviewViewabmeldungLabel']")    .click()
+            time.sleep(1)
+            self.el("[aria-labelledby='overviewViewm30Label']")    .click()
+#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div").click()
+#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
+
 
 #        return()
-        time.sleep(3)
+        time.sleep(2)
         self.driver.switch_to.frame(1)
+        time.sleep(1)
+
+#        self.xp(".checkbox:nth-child(2) > label").click()
+#            self.set_par("datensatzIdUrsprungsmeldung",             ".datensatzid")
 
         self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
         self.set_par("firmaName1",                     ".firmaname1")
@@ -246,6 +285,23 @@ class SV_Meldung():
             self.set_par("personGeburtsOrt",               ".gebort")
             self.set_par("personGeschlecht",               ".mw")
 
+#       Abmeldung / Jahresmeldung:
+
+        if self.dataset["meldung"] in ("30","50"):
+
+            if self.dataset["persgruppe"] == "109":
+                self.set_par("besteuerungsArt",                ".pauschsteuer")
+                self.set_par("firmaSteuernummer",              ".firmasteuernummer")
+                self.set_par("identifikationsNrArbeitnehmer",  ".lohnstid")
+
+            self.set_par("ende",                           ".ende")
+#            self.set_par("entgeltRentenberechnung",        ".betrag")
+#            self.set_par("waehrung",                       "E")
+            self.set_par("entgelt",                        ".jahresgehalt")
+            self.set_par("gleitzone",                      ".gleitzone")   #  0,1,2  nein/ja/teils
+
+
+
 #       Anmeldung
 
         if self.dataset["meldung"] == "10" and not self.dataset["persgruppe"] == "109": 
@@ -253,49 +309,106 @@ class SV_Meldung():
             self.set_par("kennzeichenSaisonArbeitnehmer",  "N")
             
             
-#       Jahresmeldung:
-
-        if self.dataset["meldung"] == "50": 
-
-            self.set_par("ende",                           ".ende")
-#            self.set_par("entgeltRentenberechnung",        ".betrag")
-#            self.set_par("waehrung",                       "E")
-            self.set_par("entgelt",                        ".betrag")
-            self.set_par("gleitzone",                      ".gleitzone")   #  0,1,2  nein/ja/teils
-
 #       UV-Jahresmeldung:
 
         if self.dataset["meldung"] == "92": 
 
             self.set_par("uvData.0.betriebsnummerUV",               ".betriebsnummeruv")
+            time.sleep(1)
             self.set_par("uvData.0.firmaMitgliedsnummerUV",         ".mitgliedsnummeruv")
             self.set_par("uvData.0.grund",                          ".grunduv")
             self.set_par("uvData.0.betriebsnummerGefahrtarifstelle",".betriebsnrgefahr")
             self.set_par("uvData.0.gefahrtarifstelle",              ".gefahrtarifstelle")
-            self.set_par("uvData.0.arbeitsentgelt",                 ".betrag")
+            self.set_par("uvData.0.arbeitsentgelt",                 ".bruttogehalt")
+
+        if "storno" in self.dataset and self.dataset["storno"][0] == "J":
+        
+            self.xp("//label[text()='Stornierung']").click()
+            self.set_par("datensatzIdUrsprungsmeldung",             ".datensatzid")
+         
 
 
 
 
 #**************************************************************************************
 
-    def run (self):
+    def read (self,file):
+    
+        os.system("pdftotext -layout " + file)
+        text = open(file[:-4]+".txt").read()
+        os.unlink(file[:-4] + ".txt")
         
-#        gehaltsbescheinigungen = glob.glob("./*/*gehalt*"+self.dataset["meldejahr"]+"*.md")
-#        gehaltsbescheinigungen.sort()
-#        m = re.search(r"Gehalt +[bB]rutto[: ]+\d+\.\d\d +(\d+\.\d\d)", open(gehaltsbescheinigungen[-1]).read())
-#        if m:
-#            self.dataset['betrag'] = str(int(float(m.group(1))))
-            
-        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+        m = re.search(r"^(.*?Angaben +zu)(.*?)(Angaben +zu)(.*?)(Meldedaten)(.*?)(Angaben +zu)(.*)",text,re.DOTALL)
+        
+        text_firma  = m.group(1) + m.group(2)
+        text_person = m.group(4)
+        text_melde  = m.group(6)
+        text_einzug = m.group(8)
+        
+        d1 = {}
+        
+        self.set_d1( re.search(r"sv.net +(\S+)"                                    ,text_firma),      "svnetversion"      )
+        self.set_d1( re.search(r"TAN +(\d+)"                                       ,text_firma),      "tan"               )
+        self.set_d1( re.search(r"Betriebsnummer +(\d+)"                            ,text_firma),      "betriebsnummer"    )
+        self.set_d1( re.search(r"Name +(.+)"                                       ,text_firma),      "firmaname1"        )
+        self.set_d1( re.search(r"Name +[^\n]+\n +([^\n]+)"                         ,text_firma),      "firmaname2"        )
+        self.set_d1( re.search(r"Straße *\/ *Hausn\S+ +(.*)"                       ,text_firma),      "strasse"           )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +(\S+) +(\S+) +(\S+)"      ,text_firma),      "firmaland"         )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +\S+ +(\S+) +(\S+)"        ,text_firma),      "firmaplz"          )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +\S+ +\S+ +(\S+)"          ,text_firma),      "firmastadt"        )
+
+        self.set_d1( re.search(r"Versicherung\S+ +(\S+)"                           ,text_person),     "sozversnr"         )
+        self.set_d1( re.search(r"Personal\S+ +(\S+)"                               ,text_person),     "account"           )
+        self.set_d1( re.search(r"Name +(\S+)"                                      ,text_person),     "name"              )
+        self.set_d1( re.search(r"Vorname +(\S+)"                                   ,text_person),     "vorname"           )
+        self.set_d1( re.search(r"Straße *\/ *Hausn\S+ +(.*)"                       ,text_person),     "strasse"           )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +(\S+) +(\S+) +(\S+)"      ,text_person),     "land"              )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +\S+ +(\S+) +(\S+)"        ,text_person),     "plz"               )
+        self.set_d1( re.search(r"Land *\/ *PLZ *\/ *Ort +\S+ +\S+ +(\S+)"          ,text_person),     "stadt"             )
+
+        self.set_d1( re.search(r"Storni\S+ +(\S+)"                                 ,text_melde),      "stornierung"       )
+        self.set_d1( re.search(r"Datensatz +ID +(.+)"                              ,text_melde),      "datensatzid"       )
+        self.set_d1( re.search(r"Grund der Abgabe +(\d+)"                          ,text_melde),      "meldung"           )
+        self.set_d1( re.search(r"Midijob +(\d+)"                                   ,text_melde),      "midijob"           )
+        self.set_d1( re.search(r"Gleitzone +(\d+)"                                 ,text_melde),      "midijob"           )
+        self.set_d1( re.search(r"Besch\S+ +von +(\S+)"                             ,text_melde),      "beginn"            )
+        self.set_d1( re.search(r"Besch\S+ +bis +(\S+)"                             ,text_melde),      "ende"              )
+        self.set_d1( re.search(r"Personengruppe +(\d+)"                            ,text_melde),      "persgruppe"        )
+        self.set_d1( re.search(r"Art der Besteuerung +(\d+)"                       ,text_melde),      "pauschsteuer"      )
+        self.set_d1( re.search(r"Steuernummer des +(\d+)"                          ,text_melde),      "firmasteuernummer" )
+        self.set_d1( re.search(r"Krankenvers\S+ +(\d+)"                            ,text_melde),      "kv"                )
+        self.set_d1( re.search(r"Rentenvers\S+ +(\d+)"                             ,text_melde),      "rv"                )
+        self.set_d1( re.search(r"Arbeitslosenvers\S+ +(\d+)"                       ,text_melde),      "av"                )
+        self.set_d1( re.search(r"Pflegevers\S+ +(\d+)"                             ,text_melde),      "pv"                )
+        self.set_d1( re.search(r"T..?tigkei\S+ +(\d+)"                             ,text_melde),      "tschluessel"       )
+        self.set_d1( re.search(r"Schulabschlu\S+ +(\d+)"                           ,text_melde),      "schule"            )
+        self.set_d1( re.search(r"Berufsausb\S+ +(\d+)"                             ,text_melde),      "beruf"             )
+        self.set_d1( re.search(r"AÜG +(\d+)"                                       ,text_melde),      "aueg"              )
+        self.set_d1( re.search(r"(\d+)(.*?)wird nicht anderen"                     ,text_melde),      "aueg"              )
+        self.set_d1( re.search(r"Vertrag\S+ +(\d+)"                                ,text_melde),      "vertrag"           )
+        self.set_d1( re.search(r"Bruttoarb\S+ +(\S+)"                              ,text_melde),      "jahresgehalt"      )
+
+        self.set_d1( re.search(r"Betriebsnummer +(\S+)"                            ,text_einzug),     "kkbetrnr"          )
+
+        self.jahr              = "9999"
+        self.meldung           = self.dataset["meldung"]
+        self.dataset["storno"] = "Ja"
+        
+        if not "datensatzid" in self.dataset:
+            if not "svnetversion" in self.dataset:
+                self.dataset["svnetversion"] = "18.0.0.0"
+            self.dataset["datensatzid"] = (self.dataset["svnetversion"].replace(".","",99) + "000000000000")[0:8] + "A 0" + self.dataset["tan"]
+
+        if not "jahresgehalt" in self.dataset:
+            self.dataset["jahresgehalt"] = "0"
+
+
+#**************************************************************************************
+
+    def set_d1 (self,m,key):
+    
         if m:
-            self.dataset['strasse'] = m.group(1)
-            self.dataset['hausnr']  = m.group(2)
-        if not 'hausnr' in self.dataset:
-            self.dataset['hausnr']  = ""
-
-
-        self.run1() 
+            self.dataset[key] = m.group(1)
             
 #*************************************************************************************
             
@@ -315,37 +428,41 @@ if __name__ == "__main__":
 #    for o in r.dataset.keys():
 #        print(r.dataset[o])
 
-    try:
-        arg1 = sys.argv[1]
-    except:
-        arg1 = None
-    
-    try:
-        arg2 = sys.argv[2]
-    except:
-        arg2 = None
-    
-    if arg2 and len(arg1) > 2:
-        o    = arg1[-2:]
-        arg1 = arg2
-        arg2 = o
+    if len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
+        r.read(sys.argv[1])
+    else:
 
-    if arg2:
-        r.jahr = arg2
-    else:
-        r.jahr = ""
-        
-    if arg1:
-        r.meldung = arg1
-    else:
-        r.meldung = ""
-        
-    dir = os.path.abspath(".")
-    m = re.search(r"^(.*)[\\\/]([a-z]+)([\\\/]|$)",dir)
-    if m:
-        r.person = m.group(2)
-    else:
-        r.person = ""
+        try:
+            arg1 = sys.argv[1]
+        except:
+            arg1 = None
+    
+        try:
+            arg2 = sys.argv[2]
+        except:
+            arg2 = None
+
+        if arg2 and len(arg1) > 2:
+            o    = arg1[-2:]
+            arg1 = arg2
+            arg2 = o
+
+        if arg2:
+            r.jahr = arg2
+        else:
+            r.jahr = ""
+            
+        if arg1:
+            r.meldung = arg1
+        else:
+            r.meldung = ""
+            
+        dir = os.path.abspath(".")
+        m = re.search(r"^(.*)[\\\/]([a-z]+)([\\\/]|$)",dir)
+        if m:
+            r.person = m.group(2)
+        else:
+            r.person = ""
 
     r.run()
 
