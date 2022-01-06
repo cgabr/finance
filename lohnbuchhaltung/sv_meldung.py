@@ -32,7 +32,7 @@ class SV_Meldung():
         
 #**************************************************************************************
 
-    def set_par (self,feld,inhalt):
+    def set_par (self,feld,inhalt=None):
 
 #        inhalt1 = inhalt
 #        if re.search(r"^\-([A-Z]+\d*)\-$",inhalt):
@@ -47,6 +47,8 @@ class SV_Meldung():
 #            self.soz_par[inhalt] = inhalt1
 #             print(inhalt,self.soz_par[inhalt],inhalt1)
 
+        if inhalt == None:
+            return()
 
         if inhalt.startswith("."):
             inhalt = self.dataset[inhalt[1:]]
@@ -93,6 +95,15 @@ class SV_Meldung():
     def run (self):
 
 
+        self.dataset["adresse"] = self.dataset["strasse"]
+        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+        if m:
+            self.dataset['strasse'] = m.group(1)
+            self.dataset['hausnr']  = m.group(2)
+        if not 'hausnr' in self.dataset:
+            self.dataset['hausnr']  = ""
+
+        self.dataset["firmaadresse"] = self.dataset["firmastrasse"]
         m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
         if m:
             self.dataset['strasse'] = m.group(1)
@@ -101,17 +112,6 @@ class SV_Meldung():
             self.dataset['hausnr']  = ""
 
 
-
-        self.driver.get("https://standard.gkvnet-ag.de/svnet/")
-        self.driver.set_window_size(712, 705)
-        time.sleep(2)
-        self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys("14993475")
-        self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys("cgabriel")
-        self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys("IfT2012")
-        self.xp("//div[text()='Anmelden']").click()
-        time.sleep(2)
-        self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
-        time.sleep(2)
 
 #   1.   Beginn, Ende, Jahresgehalt aus Gehaltsbscheinigungen
 
@@ -164,104 +164,86 @@ class SV_Meldung():
             self.dataset['bruttogehalt']  = bruttogehalt
         
         print(self.dataset)
-#        return()
         
+        if not self.dataset["meldung"] == "01":
+
+            self.driver.get("https://standard.gkvnet-ag.de/svnet/")
+            self.driver.set_window_size(1600, 1000)
+            time.sleep(2)
+            self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys("14993475")
+            self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys("cgabriel")
+            self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys("IfT2012")
+            self.xp("//div[text()='Anmelden']").click()
+            time.sleep(2)
+            self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
+            time.sleep(2)
+
         if self.dataset["meldung"] == "10":
 
-#            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
             self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
-#            self.xp("//div[text()='Anmeldung']").click()
             self.el("[aria-labelledby='overviewViewanmeldungLabel']")    .click()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm10Label']")    .click()
             
-#            self.el( "div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div").click()
-#            self.el( "div:nth-child(7) > div > div > div > div:nth-child(1) >  div:nth-child(1)").click()
-#            self.el( "div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
 
         if self.dataset["meldung"] == "50":
 
-#            self.xp("//div[text()='SV-Meldung (Allgemein, Knappschaft, See)']").click()
             self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
-#            self.xp("//div[text()='Jahresmeldung']").click()
             self.el("[aria-labelledby='overviewViewjahresmeldungLabel']")    .click()
-#            return()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm50Label']")    .click()
 
-#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-
         if self.dataset["meldung"] == "92":
         
-#            self.xp("//div[text()='menuLinkSV-Meldung (Allgemein, Knappschaft, See)']").click()
             self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
-#            self.xp("//div[text()='Jahresmeldung']").click()
             self.el("[aria-labelledby='overviewViewjahresmeldungLabel']")    .click()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm92Label']")    .click()
             self.dataset['beginn'] = "01.01." + self.dataset["meldejahr"]
             self.dataset['ende']   = "31.12." + self.dataset["meldejahr"]
 
-#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div").click()
-
         if self.dataset["meldung"] == "30":
 
-#            self.xp("//div[text()='menuLinkSV-Meldung (Allgemein, Knappschaft, See)']").click()
             self.el("[aria-labelledby='overviewViewduaLabel']")    .click()
-#            self.xp("//div[text()='Jahresmeldung']").click()
             self.el("[aria-labelledby='overviewViewabmeldungLabel']")    .click()
             time.sleep(1)
             self.el("[aria-labelledby='overviewViewm30Label']")    .click()
-#            self.el( "div:nth-child(3) div:nth-child(6) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div").click()
-#            self.el( "div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div").click()
 
 
-#        return()
-        time.sleep(2)
-        self.driver.switch_to.frame(1)
-        time.sleep(1)
+        if not self.dataset["meldung"] == "01":
 
-#        self.xp(".checkbox:nth-child(2) > label").click()
-#            self.set_par("datensatzIdUrsprungsmeldung",             ".datensatzid")
+            time.sleep(2)
+            self.driver.switch_to.frame(1)
+            time.sleep(1)
 
-        self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
-        self.set_par("firmaName1",                     ".firmaname1")
-        self.set_par("firmaName2",                     ".firmaname2")
-        self.set_par("firmaStrasse",                   ".firmastrasse")
-        self.set_par("firmaAnschriftenzusatz",         ".firmastrasse2")
-        self.set_par("firmaLand",                      ".firmaland")
-        self.set_par("firmaPostleitzahl",              ".firmaplz")
-        self.set_par("firmaOrt",                       ".firmastadt")
+            self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
+            self.set_par("firmaName1",                     ".firmaname1")
+            self.set_par("firmaName2",                     ".firmaname2")
+            self.set_par("firmaStrasse",                   ".firmastrasse")
+            self.set_par("firmaAnschriftenzusatz",         ".firmastrasse2")
+            self.set_par("firmaLand",                      ".firmaland")
+            self.set_par("firmaPostleitzahl",              ".firmaplz")
+            self.set_par("firmaOrt",                       ".firmastadt")
 
-        self.set_par("betriebsnummerKrankenkasse",     ".kkbetrnr")
-        self.set_par("beginn",                         ".beginn")
+            self.set_par("betriebsnummerKrankenkasse",     ".kkbetrnr")
+            self.set_par("beginn",                         ".beginn")
 
-        self.set_par("personVersicherungsnummer",      ".sozversnr")
-        self.set_par("personPersonalnummer",           ".account")
-        self.set_par("personStaat",                    ".stkuerzel")
-        self.set_par("personName",                     ".name")
-        self.set_par("personVorsatz",                  "")
-        self.set_par("personVorname",                  ".vorname")
-        self.set_par("personZusatz",                   "")
-        self.set_par("personStrasse",                  ".strasse")
-        self.set_par("personHausnummer",               ".hausnr")
-        self.set_par("personAnschriftenzusatz",        "")
-        self.set_par("personLand",                     ".land")
-        self.set_par("personPostleitzahl",             ".plz")
-        self.set_par("personOrt",                      ".stadt")
+            self.set_par("personVersicherungsnummer",      ".sozversnr")
+            self.set_par("personPersonalnummer",           ".account")
+            self.set_par("personStaat",                    ".stkuerzel")
+            self.set_par("personName",                     ".name")
+            self.set_par("personVorsatz",                  "")
+            self.set_par("personVorname",                  ".vorname")
+            self.set_par("personZusatz",                   "")
+            self.set_par("personStrasse",                  ".strasse")
+            self.set_par("personHausnummer",               ".hausnr")
+            self.set_par("personAnschriftenzusatz",        "")
+            self.set_par("personLand",                     ".land")
+            self.set_par("personPostleitzahl",             ".plz")
+            self.set_par("personOrt",                      ".stadt")
 
 
-        if not self.dataset["meldung"] == "92": 
+        if not self.dataset["meldung"] in("92","01"):
 
             self.set_par("firmaRechtskreis",               ".rechtskreis")
             self.set_par("personengruppe",                 ".persgruppe")
@@ -325,12 +307,152 @@ class SV_Meldung():
         
             self.xp("//label[text()='Stornierung']").click()
             self.set_par("datensatzIdUrsprungsmeldung",             ".datensatzid")
+            
+            
+            
+        if self.dataset["meldung"] == "01":
+        
+            self.driver.get("https://www.elster.de/eportal/start")
+            self.driver.set_window_size(1600, 1000)
+            self.id("loginButtonStart").click()
+            self.id("durchsuchen").click()
+
+            self.set_par("loginBox.file_cert",                 "/home/cgabriel/25_ift/30_hr/05_template/IfT_elster_2019.pfx")
+            time.sleep(1)
+            self.set_par("password",                           "IfT9372")
+            self.el("#bestaetigenButton > span").click()
+            time.sleep(8)
+
+            try:
+                self.id("temporaereaufgaben_nein_button").click()
+            except:
+                pass
+
+            self.id("linkid_navi_formulare-leistungen").click()
+            self.id("linkid_navi_formulare-leistungen_alleformulare").click()
+            self.el(".toggleBox:nth-child(9) .toggleBox__title").click()
+            self.li("Lohnsteuerbescheinigung (Neu/Korrektur)").click()
+
+            self.id("zeitraumJahr").click()
+            el1 = self.id("zeitraumJahr")
+            el1.find_element(By.XPATH, "//option[. = '2020']").click()
+            self.el("option:nth-child(3)").click()
+            self.id("Enter").click()
+            self.id("Continue").click()
+
+            self.id("Startseite(0)_fields(eruLStBLohnsteuerbescheinigungAnweisungart)").click()
+            dropdown = self.id("Startseite(0)_fields(eruLStBLohnsteuerbescheinigungAnweisungart)")
+            dropdown.find_element(By.XPATH, "//option[. = 'Neu']").click()
+
+            self.id("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-country").click()
+            dropdown = self.id("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-country")
+            dropdown.find_element(By.XPATH, "//option[. = 'Bayern']").click()
+
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-tax-office","218")
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-destrict","129")
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-distinction-number","10296")
+            self.el("#NextPage .interactive-icon__text").click()
+
+            self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGName)",         ".firmakurzname")
+            self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberAdresseStr)",       ".firmastrasse")
+            self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberAdresseHausnummer)",".firmahausnr")
+            self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberAdressePLZ)",       ".firmaplz")
+            self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberAdresseOrt)",       ".firmastadt")
+            self.el("#NextPage .interactive-icon__text").click()
+
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinIdNr)",                                    ".lohnstid")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinOrdnungsmerkmal)",                         ".account")
+            dropdown = self.id("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersongeschlecht)")
+            if self.dataset["MW"].upper() == "M":
+                dropdown.find_element(By.XPATH, "//option[. = 'männlich']").click()
+            else:
+                dropdown.find_element(By.XPATH, "//option[. = 'weiblich']").click()
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonGeburtsdatum)",                      ".gebdat")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonFamiliennameName)",                  ".name")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonFamiliennameTitel)")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonFamiliennameVorname)",               ".vorname")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseStr)",                        ".strasse")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseHausnummer)",                 ".hausnummer")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdressePLZ)",                        ".plz")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseOrt)",                        ".stadt")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresselaenderkennzeichen)")
+            self.el("#NextPage .interactive-icon__text").click()
+
+
+            zaehler = 0
+            while zaehler < 1:
+
+                self.el(".mzb__info").click()
+                self.el("#JumpToPage\\/Startseite\\[0\\]\\/Besteuerungsmerkmale\\[0\\]\\/MZBBesteuerungsmerkmaleMZB\\[0\\] .interactive-icon__text").click()
+                self.set_par("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMgueltig_ab)",".beginn")
+                dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMSteuerklasse)")
+                dropdown.find_element(By.XPATH, "//option[. = '1']").click()
+                dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKinder)")
+                dropdown.find_element(By.XPATH, "//option[. = '0,0']").click()
+                self.el("#Startseite\\(0\\)_Besteuerungsmerkmale\\(0\\)_MZBBesteuerungsmerkmaleMZB\\(0\\)_fields\\(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKinder\\) > option:nth-child(2)").click()
+                dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKirchensteuerabzugkonfession)")
+                dropdown.find_element(By.XPATH, "//option[. = 'Evangelische Kirchensteuer - ev']").click()
+                self.el("#NextPage .interactive-icon__text").click()
+                
+                zaehler = zaehler + 1
+                
+
+            self.el("#NextPage .interactive-icon__text").click()
+            
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerAnfang)","01.01")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerEnde)","31.12")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenBruttoArbLohn)","49571,20")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenLSteuer)","0,00")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSoli)","0,00")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnKiSteuer)","0,00")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenEhegKiSteuer)","0,00")
+            self.el("#NextPage .interactive-icon__text").click()
+
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgeVBez)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgebmgfreibetrag)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgejahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgebeginn)") 
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgeende)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgeeinmversbezug)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_ErmBestVersbezuegeMKal(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenK_ErmStVBezMKalJahrErmStVBezMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_ErmBestVersbezuegeMKal(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenK_ErmStVBezMKalJahrjahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_NichtErmBestVersbezuegeMKal(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenK_NErmStVBezMKalJahrNErmStVBezMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_NichtErmBestVersbezuegeMKal(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenK_NErmStVBezMKalJahrjahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenErmStBetrMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenLSteuerMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSoliMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKiSteuerArbnMKalJahr)")
+            self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKiSteuerEhegMKalJahr)")
+            self.el("#NextPage .interactive-icon__text").click()
+
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKurzArbGeld)","21456,84")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGeKrankVers)","11,22")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiPrKrankVers)","11,33")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGePflegeVers)","11,44")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilKrankVers)","11,55")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilPflegVers)","11,66")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilArblVers)","11,77")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenBeitrPrKrankVers)","11,88")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilRenVers)","11,13")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilBerufsVers)","11,88")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAusgezKinderGeld)","11,99")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilRenVers)","11,11")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilBerufsVers)","11,12")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreibetragDbaTuerkei)","23,09")
+            self.el("#NextPage .interactive-icon__text").click()
+
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnAnteilWBUmlage)","23,10")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbgAnteilZusatzVers)","23,11")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAnzahlArbTag)","170")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenStFreiFahrtKAusw)","23,13")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertname)","23,14")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertWert)","23,15")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextname)","23,16")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextText)","23,17")
+
+        
          
-
-
-
-
-#**************************************************************************************
+#**********************************************************************************************************
 
     def read (self,file):
     
