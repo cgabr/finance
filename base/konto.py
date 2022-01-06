@@ -208,7 +208,7 @@ class Konto ():
 #                pattern = p1 + m1 + i1
 #                pattern = re.sub(r"\.$","",pattern)
 
-        print("PATTERN",pattern)
+#        print("PATTERN",pattern)
         
         if not pattern:
             return()
@@ -244,7 +244,7 @@ class Konto ():
 
         self.parse_pattern()
         
-        print(self.search_pattern,self.grep_pattern)
+#        print(self.search_pattern,self.grep_pattern)
 
 
         self.mark("B. Pattern parsed.")
@@ -716,7 +716,7 @@ class Konto ():
         ktofiles1.sort()
         ktofiles  = []
         
-        print(self.base_dir)
+#        print(self.base_dir)
 
 #        self.mark("A")
         for ktofile in ktofiles1:
@@ -1364,7 +1364,7 @@ class Konto ():
                 continue
 
             zeitraum = m.group(1)
-            print(zeitraum,startdate,enddate)
+#            print(zeitraum,startdate,enddate)
             if os.path.isfile(salden_file):
                 if zeitraum < startdate[0:len(zeitraum)]:
                     continue
