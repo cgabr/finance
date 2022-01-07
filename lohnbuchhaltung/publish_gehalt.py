@@ -38,7 +38,7 @@ if __name__ == "__main__":
     mk_gehalt.sort()
     pp = {}
 
-    os.system("rm -f _tmp_")
+    os.system("rm -r _tmp_")
     os.system("mkdir _tmp_")
     for zeile in mk_gehalt:
         m      = re.search(r"(\d\d\d\d)(\d\d).*?([a-z]+)-LOHN",zeile)
@@ -103,6 +103,7 @@ if __name__ == "__main__":
                         os.unlink(x2)
                     time.sleep(0.1)
                 
+    os.system("rm -r _tmp_")
 
 
 
