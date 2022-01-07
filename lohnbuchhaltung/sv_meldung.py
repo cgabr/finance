@@ -112,6 +112,8 @@ class SV_Meldung():
         if not 'firmahausnr' in self.dataset:
             self.dataset['firmahausnr']  = ""
 
+        self.dataset["lohnstid"] = re.sub(r" ","",self.dataset["lohnstid"],9999)
+
 
 
 #   1.   Beginn, Ende, Jahresgehalt aus Gehaltsbscheinigungen
