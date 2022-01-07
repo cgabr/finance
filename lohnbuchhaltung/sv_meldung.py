@@ -21,7 +21,8 @@ class SV_Meldung():
 
     def __init__ (self):
     
-        self.base_dir = konto.Konto().base_dir
+        self.base_dir  = konto.Konto().base_dir
+        self.ankerjahr = "2022"
 
     def setup_method(self, method):
 
@@ -104,12 +105,12 @@ class SV_Meldung():
             self.dataset['hausnr']  = ""
 
         self.dataset["firmaadresse"] = self.dataset["firmastrasse"]
-        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['firmastrasse'])
         if m:
-            self.dataset['strasse'] = m.group(1)
-            self.dataset['hausnr']  = m.group(2)
-        if not 'hausnr' in self.dataset:
-            self.dataset['hausnr']  = ""
+            self.dataset['firmastrasse'] = m.group(1)
+            self.dataset['firmahausnr']  = m.group(2)
+        if not 'firmahausnr' in self.dataset:
+            self.dataset['firmahausnr']  = ""
 
 
 
@@ -136,17 +137,35 @@ class SV_Meldung():
                     if monat > endmonat:
                         endmonat = monat
                         text     = open(gehaltsmeldung).read()
+
+                        m = re.search(r"Zahlung +KUG(.*?)(\d+\.\d\d) +(\d+\.\d\d)",text)
+                        if m:
+                            self.dataset["zahlungkug"] = m.group(3).replace(".",",")
+                               
                         m = re.search(r"Gehalt +Brutto(.*?)(\d+\.\d\d) +(\d+\.\d\d)",text)
                         if m:
-                            bruttogehalt = str(int(float(m.group(3))+0.000005))
+                            bruttogehalt = m.group(3).replace(".",",")
                                
                         m = re.search(r"fiktives +Gehalt(.*?)\((\d+\.\d\d)\) +\((\d+\.\d\d)\)",text)
                         if not m:
                             jahresgehalt = bruttogehalt
                         else:
-                            jahresgehalt = str(int(float(m.group(3))+0.000005))
+                            jahresgehalt = m.group(3).replace(".",",")
                             print(jahresgehalt)
+                            
+                        self.read_sozialabgaben(text,"LS",        "lohnsteuer")
+                        self.read_sozialabgaben(text,"SZ",        "soli")
+                        self.read_sozialabgaben(text,"KI",        "kirchensteuer")
+                        self.read_sozialabgaben(text,"AN-KV",     "ankv")
+                        self.read_sozialabgaben(text,"AN-RV",     "anrv")
+                        self.read_sozialabgaben(text,"AN-AV",     "anav")
+                        self.read_sozialabgaben(text,"AN-PV",     "anpv")
+                        self.read_sozialabgaben(text,"AR-KV",     "arkv")
+                        self.read_sozialabgaben(text,"AR-RV",     "arrv")
+                        self.read_sozialabgaben(text,"AR-AV",     "arav")
+                        self.read_sozialabgaben(text,"AR-PV",     "arpv")
                                
+
             beginn = "01." + ("%02u"%beginnmonat)  + "." + self.dataset["meldejahr"]
             ende   = "."   + ("%02u"%endmonat)     + "." + self.dataset["meldejahr"]
             if endmonat in (1,3,5,7,8,10,12):
@@ -158,10 +177,12 @@ class SV_Meldung():
             else:
                 ende = "28" + ende
                 
-            self.dataset['beginn']        = beginn
-            self.dataset['ende']          = ende
-            self.dataset['jahresgehalt']  = jahresgehalt
-            self.dataset['bruttogehalt']  = bruttogehalt
+            self.dataset['beginn']         = beginn
+            self.dataset['ende']           = ende
+            self.dataset['jahresgehalt']   = jahresgehalt
+            self.dataset['bruttogehalt']   = bruttogehalt
+            self.dataset['jahresgehalt0']  = re.sub(r",\d+$","",jahresgehalt)
+            self.dataset['bruttogehalt0']  = re.sub(r",\d+$","",bruttogehalt)
         
         print(self.dataset)
         
@@ -279,7 +300,7 @@ class SV_Meldung():
             self.set_par("ende",                           ".ende")
 #            self.set_par("entgeltRentenberechnung",        ".betrag")
 #            self.set_par("waehrung",                       "E")
-            self.set_par("entgelt",                        ".jahresgehalt")
+            self.set_par("entgelt",                        ".jahresgehalt0")
             self.set_par("gleitzone",                      ".gleitzone")   #  0,1,2  nein/ja/teils
 
 
@@ -301,7 +322,7 @@ class SV_Meldung():
             self.set_par("uvData.0.grund",                          ".grunduv")
             self.set_par("uvData.0.betriebsnummerGefahrtarifstelle",".betriebsnrgefahr")
             self.set_par("uvData.0.gefahrtarifstelle",              ".gefahrtarifstelle")
-            self.set_par("uvData.0.arbeitsentgelt",                 ".bruttogehalt")
+            self.set_par("uvData.0.arbeitsentgelt",                 ".bruttogehalt0")
 
         if "storno" in self.dataset and self.dataset["storno"][0] == "J":
         
@@ -335,8 +356,10 @@ class SV_Meldung():
 
             self.id("zeitraumJahr").click()
             el1 = self.id("zeitraumJahr")
-            el1.find_element(By.XPATH, "//option[. = '2020']").click()
-            self.el("option:nth-child(3)").click()
+            el1.find_element(By.XPATH, "//option[. = '"+self.ankerjahr+"']").click()
+            print("MELDEJAHR",self.dataset["meldejahr"])
+            nr = int(self.ankerjahr) - int(self.dataset["meldejahr"]) + 1
+            self.el("option:nth-child("+str(nr)+")").click()
             self.id("Enter").click()
             self.id("Continue").click()
 
@@ -348,9 +371,11 @@ class SV_Meldung():
             dropdown = self.id("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-country")
             dropdown.find_element(By.XPATH, "//option[. = 'Bayern']").click()
 
-            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-tax-office","218")
-            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-destrict","129")
-            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-distinction-number","10296")
+            stnrel = self.dataset["firmasteuernummer"].split("/")
+
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-tax-office",                         stnrel[0])
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-destrict",                           stnrel[1])
+            self.set_par("dialogeruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGStNr-tax-number-distinction-number",                 stnrel[2])
             self.el("#NextPage .interactive-icon__text").click()
 
             self.set_par("Startseite(0)_AngabenArbeitgeber(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbeitgeberArbGName)",         ".firmakurzname")
@@ -363,7 +388,7 @@ class SV_Meldung():
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinIdNr)",                                    ".lohnstid")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinOrdnungsmerkmal)",                         ".account")
             dropdown = self.id("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersongeschlecht)")
-            if self.dataset["MW"].upper() == "M":
+            if self.dataset["mw"].upper() == "M":
                 dropdown.find_element(By.XPATH, "//option[. = 'männlich']").click()
             else:
                 dropdown.find_element(By.XPATH, "//option[. = 'weiblich']").click()
@@ -372,7 +397,7 @@ class SV_Meldung():
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonFamiliennameTitel)")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonFamiliennameVorname)",               ".vorname")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseStr)",                        ".strasse")
-            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseHausnummer)",                 ".hausnummer")
+            self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseHausnummer)",                 ".hausnr")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdressePLZ)",                        ".plz")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresseOrt)",                        ".stadt")
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersonAdresselaenderkennzeichen)")
@@ -382,16 +407,22 @@ class SV_Meldung():
             zaehler = 0
             while zaehler < 1:
 
+                lohnsteuermerkmale    = self.dataset["lohnstkl"].split("/")
+                lohnsteuerklasse      = lohnsteuermerkmale[0]
+                kinderfreibetrag      = re.sub(r"\.",",",re.sub(r"-","",lohnsteuermerkmale[1]))
+                kirchensteuermerkmale = lohnsteuermerkmale[2]
+
                 self.el(".mzb__info").click()
                 self.el("#JumpToPage\\/Startseite\\[0\\]\\/Besteuerungsmerkmale\\[0\\]\\/MZBBesteuerungsmerkmaleMZB\\[0\\] .interactive-icon__text").click()
                 self.set_par("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMgueltig_ab)",".beginn")
                 dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMSteuerklasse)")
-                dropdown.find_element(By.XPATH, "//option[. = '1']").click()
+                dropdown.find_element(By.XPATH, "//option[. = '"+lohnsteuerklasse+"']").click()
                 dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKinder)")
-                dropdown.find_element(By.XPATH, "//option[. = '0,0']").click()
+                dropdown.find_element(By.XPATH, "//option[. = '"+kinderfreibetrag+"']").click()
                 self.el("#Startseite\\(0\\)_Besteuerungsmerkmale\\(0\\)_MZBBesteuerungsmerkmaleMZB\\(0\\)_fields\\(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKinder\\) > option:nth-child(2)").click()
                 dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKirchensteuerabzugkonfession)")
-                dropdown.find_element(By.XPATH, "//option[. = 'Evangelische Kirchensteuer - ev']").click()
+                if "e" in kirchensteuermerkmale:
+                    dropdown.find_element(By.XPATH, "//option[. = 'Evangelische Kirchensteuer - ev']").click()
                 self.el("#NextPage .interactive-icon__text").click()
                 
                 zaehler = zaehler + 1
@@ -399,13 +430,13 @@ class SV_Meldung():
 
             self.el("#NextPage .interactive-icon__text").click()
             
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerAnfang)","01.01")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerEnde)","31.12")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenBruttoArbLohn)","49571,20")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenLSteuer)","0,00")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSoli)","0,00")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnKiSteuer)","0,00")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenEhegKiSteuer)","0,00")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerAnfang)",                                         ".beginn")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungDauerEnde)",                                           ".ende")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenBruttoArbLohn)",                 ".bruttogehalt")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenLSteuer)",                       ".lohnsteuer")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSoli)",                          ".soli")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnKiSteuer)",                  ".kirchensteuer")
+            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenEhegKiSteuer)")
             self.el("#NextPage .interactive-icon__text").click()
 
             self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_Versorgungsbezuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenVersorgungsbezgeVBez)")
@@ -425,30 +456,30 @@ class SV_Meldung():
             self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKiSteuerEhegMKalJahr)")
             self.el("#NextPage .interactive-icon__text").click()
 
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKurzArbGeld)","21456,84")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGeKrankVers)","11,22")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiPrKrankVers)","11,33")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGePflegeVers)","11,44")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilKrankVers)","11,55")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilPflegVers)","11,66")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilArblVers)","11,77")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenBeitrPrKrankVers)","11,88")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilRenVers)","11,13")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilBerufsVers)","11,88")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAusgezKinderGeld)","11,99")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilRenVers)","11,11")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilBerufsVers)","11,12")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreibetragDbaTuerkei)","23,09")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKurzArbGeld)",                                          ".zahlungkug")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGeKrankVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiPrKrankVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGePflegeVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilKrankVers)",     ".ankv")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilPflegVers)",     ".anpv")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilArblVers)",      ".anav")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilRenVers)",       ".anpv")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilBerufsVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilRenVers)",       ".arrv")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenBeitrPrKrankVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilBerufsVers)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAusgezKinderGeld)")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreibetragDbaTuerkei)")
             self.el("#NextPage .interactive-icon__text").click()
 
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnAnteilWBUmlage)","23,10")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbgAnteilZusatzVers)","23,11")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAnzahlArbTag)","170")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenStFreiFahrtKAusw)","23,13")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertname)","23,14")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertWert)","23,15")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextname)","23,16")
-            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextText)","23,17")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnAnteilWBUmlage)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbgAnteilZusatzVers)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenAnzahlArbTag)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenStFreiFahrtKAusw)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertname)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeWerte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierWertWert)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextname)")
+            self.set_par("Startseite(0)_FreiwilligeAngaben(0)_ArbgFreiwilligeTexte(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenFreierTextText)")
 
             '''
 
@@ -738,7 +769,16 @@ class SV_Meldung():
 
 '''
         
+#**********************************************************************************************************
          
+    def read_sozialabgaben(self,text,id,dfield):
+    
+        m = re.search(id+" +\(?(\-?\d+\.\d\d)\)? +\(?(\-?\d+\.\d\d)\)? +\(?(\-?\d+\.\d\d)\)?",text)
+        if m:
+            self.dataset[dfield] = m.group(3).replace(".",",")
+        else:
+            self.dataset[dfield] = "0,00"
+                            
 #**********************************************************************************************************
 
     def read (self,file):

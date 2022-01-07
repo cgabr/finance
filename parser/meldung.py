@@ -13,11 +13,10 @@ except:
 class Meldung (object):
 
     def __init__ (self,dir="."):
-        self.dir   = dir
-        self.ktoa  = config.KTO_KRANKENKASSEN     
-        self.ktob  = config.KTO_BEITRAGSNACHWEISE 
-        self.kkmap = re.sub(r"\s","",config.MAP_KRANKENKASSEN,99999999).split(",")
-
+        self.dir     = dir
+        self.ktoa    = config.KTO_KRANKENKASSEN     
+        self.ktob    = config.KTO_BEITRAGSNACHWEISE 
+        self.kkmap   = re.sub(r"\s","",config.MAP_KRANKENKASSEN,99999999).split(",")
 
     
 #*********************************************************************************
@@ -45,6 +44,8 @@ class Meldung (object):
         if m:
             person = m.group(2)
 
+#   Sozialversicherungsmeldungen
+
         for sv_meldung in sv_meldungen:
         
             if "_orig." in sv_meldung:
@@ -68,6 +69,7 @@ class Meldung (object):
             m = re.search('Einzugsstelle.*Betriebsnummer +(\d+)(.*?)Name +([^\n ]+)', text, re.DOTALL)
             if not m:
                 continue
+
             kknr   = m.group(1)
             remark = m.group(3) + ' ' + m.group(1)
             remark = re.sub('[\\n-]/', ' ', remark, 9999, re.DOTALL)
@@ -126,6 +128,79 @@ class Meldung (object):
                 print(sv_meldung, newname + '.' + m.group(2))
                 os.rename(sv_meldung, newname + '.' + m.group(2))
 
+        #   Lohnsteuermeldungen
+
+        for sv_meldung in sv_meldungen:
+        
+            if "_orig." in sv_meldung:
+                continue
+
+            text = ""
+            if "pdf" in sv_meldung.lower():
+                os.system("pdftotext -layout " + sv_meldung + " __xx.txt")
+                text = open("__xx.txt").read()
+            
+            if len(text) < 10:
+                continue
+
+            text = self.normalize_text(text)
+
+            m = re.search('Lohnsteuerbesch(.*?)f(.*?) +(\d\d\d\d)', text, re.DOTALL)
+            if not m:
+                continue
+            meldejahr = m.group(3)
+
+            m = re.search('Transferticket(.*?)(\d+) +(\d\d)\.(\d\d)\.(\d\d)(\d\d)', text, re.DOTALL)
+            if not m:
+                m = re.search('Transferticket(.*?) +([a-z0-9]+)', text, re.DOTALL)
+                if not m:
+                    continue
+                tan = m.group(2)
+                m = re.search('Datum(.*?) +(\d\d)\.(\d\d)\.(\d\d)(\d\d)', text, re.DOTALL)
+                if not m:
+                    continue
+                sendedatum = m.group(5) + m.group(3) + m.group(2)
+            else:
+                tan        = m.group(2)
+                sendedatum = m.group(6) + m.group(4) + m.group(3)
+
+            print(sv_meldung)
+#            print("T",tan)
+#            print("S",sendedatum)
+ 
+ 
+            m = re.search('Steuernummer(.*?)\D(\d\d\d\D\d\d\d\D\d\d\d\d\d)\D', text,re.DOTALL)
+            if not m:
+                continue
+            steuernummer = self.normalize_text(m.group(2),"1")
+ 
+            m = re.search('(Name|Anschrift) (.*?)\n(\S.+?)(\n|   )', text,re.DOTALL)
+            if not m:
+                continue
+            company = self.normalize_text(m.group(3),"1")
+            grund = "01_Lohnsteuerjahresbescheinigung"
+
+            if re.search('Storn.*Ja', text):
+                storniert = "_storniert"
+            else:
+                storniert = ""
+
+
+            newname = meldejahr + '.' + grund + "_" + person + "__" + company + "__" + steuernummer + "__" + sendedatum + "__" + tan + storniert 
+#            print(newname)
+            newname = self.normalize_text(newname)
+#            newname = re.sub(r"[ \(\)\=]","_",newname,99999999) 
+#            newname = re.sub(r"__","_",newname,99999999) 
+#            newname = re.sub(r"__","_",newname,99999999) 
+#            newname = re.sub(r"__","_",newname,99999999) 
+#            print(newname)
+
+            m = re.search('^(.*)\.(.*?)$',sv_meldung)  #  renaming the original files
+            filename = m.group(1)
+            if not filename[2:] == newname and not filename == newname:
+                print(sv_meldung, newname + '.' + m.group(2))
+                os.rename(sv_meldung, newname + '.' + m.group(2))
+
         os.unlink("__xx.txt")
 
 
@@ -158,6 +233,7 @@ class Meldung (object):
 
         return(text)
 
+#************************************************************************************************************
 
 
     def xxxx ():
