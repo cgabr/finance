@@ -256,7 +256,7 @@ class Konto ():
 #            return("Error 207.")
 
 
-        kto_file = None
+        kto_file          = None
         konto_files_found = glob.glob("*.kto")
         #print(konto_files_found,os.path.abspath("."))
         
@@ -596,6 +596,10 @@ class Konto ():
                 uniqu    = []
                 ktoa     = mm.group(5)
                 ktob     = mm.group(6)
+                
+                if "--" in ktoa or "--" in ktob:
+                    continue
+                
                 turn_kto = 0
 
 #                    ktoa = self.parse_ktotext_compute_kto(m.group(5),self.ukto,uniqu)
