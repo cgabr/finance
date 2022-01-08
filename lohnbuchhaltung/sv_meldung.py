@@ -193,9 +193,9 @@ class SV_Meldung():
             self.driver.get("https://standard.gkvnet-ag.de/svnet/")
             self.driver.set_window_size(1600, 1000)
             time.sleep(2)
-            self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys("14993475")
-            self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys("cgabriel")
-            self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys("IfT2012")
+            self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys(".betriebsnummer")
+            self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys(".account")
+            self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys(".password_soz")
             self.xp("//div[text()='Anmelden']").click()
             time.sleep(2)
             self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
@@ -340,9 +340,9 @@ class SV_Meldung():
             self.id("loginButtonStart").click()
             self.id("durchsuchen").click()
 
-            self.set_par("loginBox.file_cert",                 "/home/cgabriel/25_ift/30_hr/05_template/IfT_elster_2019.pfx")
+            self.set_par("loginBox.file_cert",                 ".certfile")
             time.sleep(1)
-            self.set_par("password",                           "IfT9372")
+            self.set_par("password",                           ".password_steu")
             self.el("#bestaetigenButton > span").click()
             time.sleep(8)
 
@@ -407,6 +407,7 @@ class SV_Meldung():
 
 
             zaehler = 0
+            kirchensteuer_anzugeben = 0
             while zaehler < 1:
 
                 lohnsteuermerkmale    = self.dataset["lohnstkl"].split("/")
@@ -423,8 +424,15 @@ class SV_Meldung():
                 dropdown.find_element(By.XPATH, "//option[. = '"+kinderfreibetrag+"']").click()
                 self.el("#Startseite\\(0\\)_Besteuerungsmerkmale\\(0\\)_MZBBesteuerungsmerkmaleMZB\\(0\\)_fields\\(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKinder\\) > option:nth-child(2)").click()
                 dropdown = self.id("Startseite(0)_Besteuerungsmerkmale(0)_MZBBesteuerungsmerkmaleMZB(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsmerkmaleELStAMKirchensteuerabzugkonfession)")
+
                 if "e" in kirchensteuermerkmale:
                     dropdown.find_element(By.XPATH, "//option[. = 'Evangelische Kirchensteuer - ev']").click()
+                    kirchensteuer_anzugeben = 1
+                elif "k" in kirchensteuermerkmale:
+                    dropdown.find_element(By.XPATH, "//option[. = 'Römisch-Katholische Kirchensteuer - rk']").click()
+                    kirchensteuer_anzugeben = 1
+                else:
+                    dropdown.find_element(By.XPATH, "//option[. = '--']").click()
                 self.el("#NextPage .interactive-icon__text").click()
                 
                 zaehler = zaehler + 1
@@ -437,7 +445,8 @@ class SV_Meldung():
             self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenBruttoArbLohn)",                 ".bruttogehalt")
             self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenLSteuer)",                       ".lohnsteuer")
             self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSoli)",                          ".soli")
-            self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnKiSteuer)",                  ".kirchensteuer")
+            if kirchensteuer_anzugeben == 1:
+                self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenArbnKiSteuer)",                  ".kirchensteuer")
             self.set_par("Startseite(0)_ArbeitslohnAbzuege(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenEhegKiSteuer)")
             self.el("#NextPage .interactive-icon__text").click()
 
