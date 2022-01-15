@@ -725,7 +725,7 @@ class Konto ():
 #        self.mark("A")
         for ktofile in ktofiles1:
 
-            print(ktofile  + " ...")
+#            print(ktofile  + " ...")
             ktofile_sum = ktofile[:-4] + ".sum"
             if not os.path.isfile(ktofile_sum):
                 self.mark("    " + ktofile + " not found, so retrieve it:")
