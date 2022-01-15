@@ -1240,6 +1240,93 @@ class Konto ():
 #        print("\n".join(self.formatted_acc)+"\n")
 #        print("\n".join(self.salden_aktuell)+"\n")
         
+#******************************************************************************
+
+    def sort (self,pattern,file=None):
+    
+        if file == None:
+            files = glob.glob("*.kto")
+            if len(files) == 1:
+                file = files[0]
+            else:
+                return()
+
+        if pattern == "..":
+            self.sort_numbers(file)
+            return()
+
+        if pattern == "kto":
+            self.sort_numbers1(file)
+            return()
+
+        text = open(file).read()
+        text_match = []
+        text_rest  = []
+        
+        for zeile in text.split("\n"):
+            if re.search(pattern,zeile,re.IGNORECASE):
+                text_match.append(zeile)
+            else:
+                text_rest.append(zeile)
+                
+        text = "\n".join(text_rest) + "\n" + "\n".join(text_match) + "\n"
+        if os.path.isfile(file+"~"):
+            os.unlink(file+"~")
+#        os.rename(file,file+"~")
+        open(file,"w").write(text)
+
+#******************************************************************************
+
+    def sort_numbers (self,file):
+    
+        text = open(file).read()
+        text_match = []
+        text_rest  = []
+        
+        for zeile in text.split("\n"):
+            m = re.search(r"\d\d\d\d\d\d\d\d +\-?(\d+\.\d\d) ",zeile)
+            if m:
+                text_match.append([zeile,float(m.group(1))])
+            else:
+                text_rest.append(zeile)
+                
+        text_match.sort(key=lambda x:x[1])
+        text_match1 = []
+        for tt in text_match:
+            text_match1.append(tt[0])
+
+        text = "\n".join(text_rest) + "\n" + "\n".join(text_match1) + "\n"
+        if os.path.isfile(file+"~"):
+            os.unlink(file+"~")
+#        os.rename(file,file+"~")
+        open(file,"w").write(text)
+
+#******************************************************************************
+
+    def sort_numbers1 (self,file):
+    
+        text = open(file).read()
+        text_match = []
+        text_rest  = []
+        
+        for zeile in text.split("\n"):
+            m = re.search(r"(\d\d\d\d\d\d\d\d) +\-?(\d+\.\d\d) +(\d+?)\-(\S+?)\-(\S+) ",zeile)
+            if m:
+                text_match.append([zeile,m.group(5)])
+            else:
+                text_rest.append(zeile)
+                
+        text_match.sort(key=lambda x:x[1])
+        text_match1 = []
+        for tt in text_match:
+            text_match1.append(tt[0])
+
+        text = "\n".join(text_rest) + "\n" + "\n".join(text_match1) + "\n"
+        if os.path.isfile(file+"~"):
+            os.unlink(file+"~")
+#        os.rename(file,file+"~")
+        open(file,"w").write(text)
+
 #*************************************************************************
         
     def xxggg (self):
@@ -1972,5 +2059,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1].startswith("test"):
         Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
+    elif len(sys.argv) > 1 and sys.argv[1] == "sort":
+        Konto.__dict__["sort"](Konto(),*sys.argv[2:])
     else:
         Konto.__dict__["kto"](Konto(),*sys.argv[1:])
