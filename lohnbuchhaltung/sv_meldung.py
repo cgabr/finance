@@ -125,13 +125,17 @@ class SV_Meldung():
 #        if not self.person == "":
 #            self.dataset["person"]    = self.person
 
-        beginnmonat = 13
-        endmonat    =  0
-        
+        beginnmonat   = 13
+        endmonat      =  0
+        jahresgehalt  = "0,00"
+        bruttogehalt  = "0,00"
+        jahresgehalt0 = "0"
+        bruttogehalt0 = "0"
+
         if not 'beginn' in self.dataset or not 'jahresgehalt' in self.dataset:
 
             for gehaltsmeldung in glob.glob("*/gehalt*"+self.dataset["meldejahr"]+"*_*.md"):
-                print(gehaltsmeldung)
+#                print(gehaltsmeldung)
                 m = re.search(r"_(\d\d\d\d)_(\d\d)",gehaltsmeldung)
                 if m:
                     monat       = int(m.group(2))
@@ -168,7 +172,9 @@ class SV_Meldung():
                         self.read_sozialabgaben(text,"AR-PV",     "arpv")
                                
 
-            beginn = "01." + ("%02u"%beginnmonat)  + "." + self.dataset["meldejahr"]
+#            print(beginnmonat,endmonat)
+
+            beginn = "01." + re.sub(r"13","01",("%02u"%beginnmonat))  + "." + self.dataset["meldejahr"]
             ende   = "."   + ("%02u"%endmonat)     + "." + self.dataset["meldejahr"]
             if endmonat in (1,3,5,7,8,10,12):
                 ende = "31" + ende
@@ -179,6 +185,9 @@ class SV_Meldung():
             else:
                 ende = "28" + ende
                 
+#            print(beginn,ende)
+#            return()
+
             self.dataset['beginn']         = beginn
             self.dataset['ende']           = ende
             self.dataset['jahresgehalt']   = jahresgehalt
@@ -193,9 +202,9 @@ class SV_Meldung():
             self.driver.get("https://standard.gkvnet-ag.de/svnet/")
             self.driver.set_window_size(1600, 1000)
             time.sleep(2)
-            self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys(".betriebsnummer")
-            self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys(".account")
-            self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys(".password_soz")
+            self.el("[aria-labelledby='loginDialogLabelBetriebsnummer']").send_keys(self.dataset["betriebsnummer"])
+            self.el("[aria-labelledby='loginDialogLabelBenutzername']")  .send_keys(self.dataset["user_soz"])
+            self.el("[aria-labelledby='loginDialogLabelPasswort']")      .send_keys(self.dataset["password_soz"])
             self.xp("//div[text()='Anmelden']").click()
             time.sleep(2)
             self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
@@ -242,7 +251,7 @@ class SV_Meldung():
             self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
             self.set_par("firmaName1",                     ".firmaname1")
             self.set_par("firmaName2",                     ".firmaname2")
-            self.set_par("firmaStrasse",                   ".firmastrasse")
+            self.set_par("firmaStrasse",                   ".firmaadresse")
             self.set_par("firmaAnschriftenzusatz",         ".firmastrasse2")
             self.set_par("firmaLand",                      ".firmaland")
             self.set_par("firmaPostleitzahl",              ".firmaplz")

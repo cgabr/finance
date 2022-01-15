@@ -1726,7 +1726,7 @@ if __name__ == "__main__":
     ktoslip = glob.glob( "gehaltsbescheinigung*.md" )
     ktolstb = glob.glob( "LStB*.md" )
 
-    print(ktofile,ktoslip,ktolstb)
+#    print(ktofile,ktoslip,ktolstb)
 
 
     lohn    = Lohn("13-D5a-6010","13-D5b-6110","10-B12-3695-kug")
