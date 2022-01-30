@@ -233,7 +233,7 @@ class Lohn (object):
                     lohndaten[jm]['UEKV'] = 1
                 if 'RV' in rem:
                     lohndaten[jm]['UERV'] = 1
-                m = re.search("KUG(SOZ|SOH|)(\d\d).*?(\d+)([,\.]\d\d|)",rem)
+                m = re.search("KUG(SOZ|)(\d\d).*?(\d+)([,\.]\d\d|)",rem)
                 if m:
                     lohndaten[jm]['kugjahr'] = m.group(2)
                     lohndaten[jm]['kugdiff'] = abs(float(re.sub(r",",".",m.group(3)+m.group(4))))
@@ -599,11 +599,8 @@ class Lohn (object):
                         float(lohndaten[jm]['LOHN-AN'][0])
                     except:
                         remark = lohndaten[jm]['LOHN-AN'].pop(0)
-                kug_faktor = 0.0
                 if "KUGSOZ" in remark:
                     agentur_zahlt_sozialabgaben = 1
-                if "KUGSOH" in remark:
-                    agentur_zahlt_sozialabgaben = 0.5000001
                 if "KUG" in remark:
                     kugausz = kugausz - float(betrag)
                 buchungen.append(jm + day + "  " + betrag + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-AN  "
@@ -614,7 +611,7 @@ class Lohn (object):
                 day         = "%02u" % (int(day)+1)
 
             export_slip = export_slip + ("LOHN-AR -ARBEITGEBER-   Arbeitgeberabgaben, davon " +
-                                          ["","durch Agentur erstattete "][int(agentur_zahlt_sozialabgaben>0.999)] +
+                                          ["","erstattete "][agentur_zahlt_sozialabgaben] +
                                           "KUG-Sozialabgaben:" +  " -ARBEITG_KUG-\n\n")
 
             o  = "keine Zahlungen\n"
@@ -720,32 +717,15 @@ class Lohn (object):
                 buchungen.append(jm + "11  " + ("%3.2f"%lohn_ar[1]) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-AR  " +
                                     self.sozkto + "-" + self.employee + "  0.00  " + ar + ", Vormonate")
 
-
-            if agentur_zahlt_sozialabgaben < 0.001:
-                kug1 = self.bezeichner['LOHN-KUG']
-                kug2 = self.bezeichner['LOHN-KUG']
-            elif agentur_zahlt_sozialabgaben < 0.999:
-                kug1 = self.bezeichner['LOHN-KUG'] + ", Erstattung durch Arbeitsagentur " + ("%1u" % int(agentur_zahlt_sozialabgaben*100) ) + " Prozent"
-                kug2 = self.bezeichner['LOHN-KUG'] + ", Eigenanteil " + ("%1u" % (100-int(agentur_zahlt_sozialabgaben*100)) ) + " Prozent"
-            else:                
-                kug1 = self.bezeichner['LOHN-KUG'] + ", Erstattung durch Arbeitsagentur"
-                kug2 = self.bezeichner['LOHN-KUG'] + ", Erstattung durch Arbeitsagentur"
-
+            kug = self.bezeichner['LOHN-KUG'] + ["",", Erstattung durch Arbeitsagentur"][agentur_zahlt_sozialabgaben]
             if abs(lohn_kug[0]) > 0.001 or abs(lohn_kug[1]) > 0.001:
-                if agentur_zahlt_sozialabgaben > 0.001:
-                    buchungen.append(jm + "10  " + ("%3.2f"%(lohn_kug[0]*  agentur_zahlt_sozialabgaben  )) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
-                                        self.kugkto+"-SOZ" + "-" + self.employee + "  0.00  " + kug1)
-                if agentur_zahlt_sozialabgaben < 0.999:
-                    buchungen.append(jm + "10  " + ("%3.2f"%(lohn_kug[0]*(1-agentur_zahlt_sozialabgaben))) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
-                                        self.sozkto + "-" + self.employee + "  0.00  " + kug2)
-                
+                buchungen.append(jm + "10  " + ("%3.2f"%lohn_kug[0]) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
+                                    [self.sozkto,self.kugkto+"-SOZ"][agentur_zahlt_sozialabgaben]
+                                    + "-" + self.employee + "  0.00  " + kug)
             if abs(lohn_kug[1]) > 0.001:
-                if agentur_zahlt_sozialabgaben > 0.001:
-                    buchungen.append(jm + "10  " + ("%3.2f"%(lohn_kug[1]*  agentur_zahlt_sozialabgaben  )) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
-                                        self.kugkto+"-SOZ" + "-" + self.employee + "  0.00  " + kug1 + ", Vormonate")
-                if agentur_zahlt_sozialabgaben < 0.999:
-                    buchungen.append(jm + "10  " + ("%3.2f"%(lohn_kug[1]*(1-agentur_zahlt_sozialabgaben))) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
-                                        self.sozkto + "-" + self.employee + "  0.00  " + kug2 + ", Vormonate")
+                buchungen.append(jm + "11  " + ("%3.2f"%lohn_kug[1]) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-KUG  " +
+                                    [self.sozkto,self.kugkto+"-SOZ"][agentur_zahlt_sozialabgaben]
+                                    + "-" + self.employee + "  0.00  " + kug + ", Vormonate")
 
             netto = lohnsumme - st_soz - an_soz
             try:
@@ -784,10 +764,7 @@ class Lohn (object):
             export_slip  = export_slip + "                            -------      -------\n"
             export_slip  = export_slip + "Ueberzahlung:         " + ("%13.2f" % ueber)     + ("%13.2f" % jahressumme[6]) + "        (Werte in Klammern: nachrichtlich)\n"
             export_slip  = re.sub(r"-ARBEITGEBER-",("%11.2f" % (ar_soz+kug_soz)),export_slip)
-            if agentur_zahlt_sozialabgaben > 0.001 and agentur_zahlt_sozialabgaben < 0.999:
-                export_slip  = re.sub(r"-ARBEITG_KUG-",("%3.2f" % (kug_soz*(1-agentur_zahlt_sozialabgaben))) + " plus " + ("%3.2f" % (kug_soz*(agentur_zahlt_sozialabgaben))) + " Erstattung AA",export_slip)
-            else:
-                export_slip  = re.sub(r"-ARBEITG_KUG-",("%3.2f" % (kug_soz)),export_slip)
+            export_slip  = re.sub(r"-ARBEITG_KUG-",("%3.2f" % kug_soz),export_slip)
             
             m = re.search(r"^(.*?)(LOHN-AN.*?Ueberzahlung.*?\n)(.*)$",export_slip0,re.DOTALL)
             if m:
@@ -843,7 +820,7 @@ class Lohn (object):
         monate  = "JA|FE|MR|AP|MA|JN|JL|AU|SE|OC|NO|DE|01|02|03|04|05|06|07|08|09|10|11|12"
         abgaben = "|".join(self.abgabenarten+['LOHN-AN','ZAHL'])
         
-        m             = re.search(r"^(.*)[\\\/]([a-z]+)[\\\/]",os.path.abspath("."))
+        m             = re.search(r"^(.*)[\\\/](.*)[\\\/]*$",os.path.abspath("."))
         self.employee = m.group(2)
 
         m = re.search(r"(\d\d\d\d)_("+monate+")",slip)
@@ -1394,10 +1371,6 @@ sdjomo         1     5.5  0   0 AOK     1514  9.35  1.5  7.3 1.175  1.1  0.25  9
 
         if jahr == "2021":       #   DAK  Arbeitgeberservice  0231/8642569450
         
-            for zeitraum in ("123456789","ABC"):
-                if monat in zeitraum:
-                    break
-    
             jw['RLIMIT']  = "7100"
             jw['KLIMIT']  = "4837.50"
             jw['RV'] = ["9.3","15"]   [ int( jw['NR'] == "1512" ) ] 
@@ -1408,37 +1381,14 @@ sdjomo         1     5.5  0   0 AOK     1514  9.35  1.5  7.3 1.175  1.1  0.25  9
                          "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
             jw['ZA'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
                          "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
-            jw['ZV'] = "1.3"  # der DURCHSCHNITTLICHE Wert der Krankenkassen-Arbeitnehmerzuschlaege
-            jw['PV'] = "1.525"
+            jw['ZV'] = "1.0"  # der DURCHSCHNITTLICHE Wert der Krankenkassen-Arbeitnehmerzuschlaege
+            jw['PV'] = "1.275"
             jw['PZ'] = "0.25"
-            jw['U1'] = { "1510" : "2.4",  "1512" : "0.9", "1514": "1.1", "1515": "2.2", "1517": { "123456789": "2.2", "ABC": "1.6" }[zeitraum],
+            jw['U1'] = { "1510" : "2.4",  "1512" : "0.9", "1514": "1.1", "1515": "2.2", "1517": "2.2",
                          "1518":  "2.2",  "1522": "1.4",  "1523": "1.7"  }  [ jw['NR'] ]  
-            jw['U2'] = { "1510" : "0.65", "1512" : "0.24", "1514": "0.46", "1515": "0.49", "1517": { "123456789": "0.55", "ABC": "0.65" }[zeitraum],
+            jw['U2'] = { "1510" : "0.65", "1512" : "0.24", "1514": "0.46", "1515": "0.49", "1517": "0.55",
                          "1518":  "0.53", "1522": "0.41", "1523": "0.39" } [ jw['NR'] ]  
             jw['U3'] = "0.12"
-
-
-        if jahr == "2022":      
-        
-
-            jw['RLIMIT']  = "7050"   #  ist tatsaechlich abgesenkt!
-            jw['KLIMIT']  = "4837.50"
-            jw['RV'] = ["9.3","15"]   [ int( jw['NR'] == "1512" ) ] 
-            jw['AV'] = ["1.2" ,"3.6"] [ int( jw['NR'] == "1512" ) ] 
-            jw['KV'] = ["7.3","13"]  [ int( jw['NR'] == "1512" ) ] 
-            jw['KG'] = ["0.3","0.0"] [ int( jw['NR'] == "1512" ) ] 
-            jw['ZU'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
-                         "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
-            jw['ZA'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
-                         "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
-            jw['ZV'] = "1.3"  # der DURCHSCHNITTLICHE Wert der Krankenkassen-Arbeitnehmerzuschlaege
-            jw['PV'] = "1.525"
-            jw['PZ'] = "0.35"
-            jw['U1'] = { "1510" : "2.2",  "1512" : "0.9", "1514": "1.1", "1515": "1.7", "1517": "1.6",
-                         "1518":  "2.0",  "1522": "1.4",  "1523": "1.7"  }  [ jw['NR'] ]  
-            jw['U2'] = { "1510" : "0.65", "1512" : "0.24", "1514": "0.46", "1515": "0.56", "1517": "0.65",
-                         "1518":  "0.59", "1522": "0.41", "1523": "0.39" } [ jw['NR'] ]  
-            jw['U3'] = "0.09"
 
 
 
@@ -1779,7 +1729,7 @@ if __name__ == "__main__":
 #    print(ktofile,ktoslip,ktolstb)
 
 
-    lohn    = Lohn("13-D5a-6010","13-D5b-6110","10-B12-1457-1501-kug")
+    lohn    = Lohn("13-D5a-6010","13-D5b-6110","10-B12-3695-kug")
     erg     = lohn.parse_lohndaten(open(ktofile).read(),ktoslip,ktolstb)
 
     open(ktofile,"w").write(erg)  # +"\n"+str(random.randint(1,10000))) 

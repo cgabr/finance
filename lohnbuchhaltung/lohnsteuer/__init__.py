@@ -13,3 +13,4 @@ from konto.lohnbuchhaltung.lohnsteuer import lst2018
 from konto.lohnbuchhaltung.lohnsteuer import lst2019
 from konto.lohnbuchhaltung.lohnsteuer import lst2020
 from konto.lohnbuchhaltung.lohnsteuer import lst2021
+from konto.lohnbuchhaltung.lohnsteuer import lst2022
