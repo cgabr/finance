@@ -78,11 +78,20 @@ if __name__ == "__main__":
 #            print( "ln -s " + os.path.abspath(p+"/52_sozialversicherungsmeldungen") + " " + ablage)
 #            print(glob.glob(p))
             if not os.path.isdir(ablage+"/Sozialversicherung"):
-                os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*sozialvers*")[0] ) + " " + ablage + "/Sozialversicherung")
+                try:
+                    os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*sozialvers*")[0] ) + " " + ablage + "/Sozialversicherung")
+                except:
+                    pass
             if not os.path.isdir(ablage+"/Weitere_Dokumente"):
-                os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*misc*")[0] ) + " " + ablage + "/Weitere_Dokumente")
+                try: 
+                    os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*misc*")[0] ) + " " + ablage + "/Weitere_Dokumente")
+                except:
+                    pass
             if not os.path.isdir(ablage+"/Lohnsteuerbescheinigungen"):
-                os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*lohnsteuerbeschei*")[0] ) + " " + ablage + "/Lohnsteuerbescheinigungen")
+                try:
+                    os.system( "ln -s " + os.path.abspath(  glob.glob(p+"/*lohnsteuerbeschei*")[0] ) + " " + ablage + "/Lohnsteuerbescheinigungen")
+                except:
+                    pass
             if m:
                 x = glob.glob(ablage+"/gehaltsbe*"+monat1+".pdf") + glob.glob(ablage+"/gehaltsbe*"+yy+".pdf")
                 if len(x) == 0 or new_gehalt == 1:
