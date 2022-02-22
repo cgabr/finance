@@ -37,6 +37,11 @@ class CSV (object):
             bed    = 0
             for zeile in text.split("\n"):    #  erase additional line breaks
                 zeile = zeile.strip()
+                m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+#                print(m,zeile[0:100])
+                if m:
+                    zeile = m.group(3) + "." + m.group(2) + "." + m.group(1) + ";" + m.group(4) + ";" + m.group(8)
+                    print(zeile)
                 if re.search(r"^\"?\d\d\.\d\d\.\d\d\d\d\"?",zeile):
                     text1  = text1 + zeile0 + "\n"
 #                    buchungen.append(text1.strip().split(";"))
@@ -156,6 +161,9 @@ class CSV (object):
                         
             self.add_ktoline(datum,betrag,{ 'ZAEHLER' : zaehler, 'ZEILE' : zeile, 'REMARK' : remark})
                     
+        if self.ukto == None:
+            self.ukto = "KONTO"
+        
         return("")
                                 
 #*********************************************************************************
