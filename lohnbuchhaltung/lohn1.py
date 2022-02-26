@@ -231,7 +231,7 @@ class Lohn (object):
                 lohndaten[jm]['LOHN1'].append(rem)
                 if 'KV' in rem:
                     lohndaten[jm]['UEKV'] = 1
-                if 'RV' in rem:
+                if 'RV' in rem or 'XV' in rem:
                     lohndaten[jm]['UERV'] = 1
                 m = re.search("KUG(SOZ|SOH|)(\d\d).*?(\d+)([,\.]\d\d|)",rem)
                 if m:
@@ -446,15 +446,17 @@ class Lohn (object):
             betraege[jm]['AR-U2']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U2']) * lohn  * int(mode not in "") )
             betraege[jm]['AR-U3']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U3']) * lohn  * int(mode not in "") )
 
-            if "r" in merk:
+            if "r" in merk:   #  Rentner
                 betraege[jm]['AN-RV']   = "0.00"
                 betraege[jm]['AN-AV']   = "0.00"
-            if "-" in merk:
-                betraege[jm]['AN-KV-S'] = "%3.2f" % ( float(betraege[jm]['AN-KV-S']) - float(krankengeld) )
+                betraege[jm]['AR-RV']   += "x"
+                betraege[jm]['AR-AV']   += "x"
+            if "-" in merk:   #  ohne Krankengeld
+                betraege[jm]['AN-KV-S'] = "x" + "%3.2f" % ( float(betraege[jm]['AN-KV-S']) - float(krankengeld) )
                 if 'AR-KV-S' in betraege[jm]:
-                    betraege[jm]['AR-KV-S'] = "%3.2f" % ( float(betraege[jm]['AR-KV-S']) - float(krankengeld) )
+                    betraege[jm]['AR-KV-S'] = "x" + "%3.2f" % ( float(betraege[jm]['AR-KV-S']) - float(krankengeld) )
                 else:
-                    betraege[jm]['AR-KV']   = "%3.2f" % ( float(betraege[jm]['AR-KV']) - float(krankengeld) )
+                    betraege[jm]['AR-KV']   = "x" + "%3.2f" % ( float(betraege[jm]['AR-KV']) - float(krankengeld) )
             
 
 #            if 'FIX' in lohndaten[jm] and lohndaten[jm]['FIX'] == 1:
@@ -648,6 +650,12 @@ class Lohn (object):
 
                     lssoz        = float(lssoz_str)
                     betrag       = float(betraege[jm][art])
+                    art1         = art
+                    if betrag[0] == "x":
+                        betrag  = betrag[1:]
+                        art1    = re.sub("RV","XV",art)
+                        art1    = re.sub("AV","BV",art)
+                        art1    = re.sub("KV","EV",art)
 
                     if abs(betrag) > 0.001 or abs(lssoz) > 0.001:
                         consider_b = True
@@ -666,7 +674,7 @@ class Lohn (object):
                     export_zeile = export_zeile + letzter_wert[-1]
                         
                     kto2  = re.sub(r"XXXX",lohndaten[jm]['NR'],self.gegenkonto[art])
-                    zeile = jm + day + "  " + ("%3.2f"%lssoz) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-" + art + "  " 
+                    zeile = jm + day + "  " + ("%3.2f"%lssoz) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-" + art1 + "  " 
                     zeile = zeile + kto2 + "-" + self.employee + "  0.00  " + self.bezeichner[art] + add
                     if art[0:2] == "AR":
                         lohn_ar[int("Vor" in add)] = lohn_ar[int("Vor" in add)] - lssoz

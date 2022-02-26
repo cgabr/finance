@@ -149,13 +149,19 @@ class Beitrag (object):
                 if 'Storno' in remark1:
                     continue
                 elif re.search(', Beitr.*Krankenvers.*ohne|, Beitr.*Krankenvers.*geringf', remark1):
-                    ktoa =  '-KV-meldung'
+                    ktoa =  '-EV-meldung'
                 elif re.search(', Zusatzbeitr.*Krankenvers|, Beitr.*Krankenvers.*erm.*igt', remark1):
                     ktoa =  '-KV-meldZUS'
                 elif ' Arbeitsfoerderung' in remark1 or 'Arbeitslosen' in remark1:
-                    ktoa =  '-AV-meldung'
+                    if "halb" in remark1:
+                        ktoa =  '-BV-meldung'
+                    else:
+                        ktoa =  '-AV-meldung'
                 elif ' Rentenversicherung' in remark1:
-                    ktoa =  '-RV-meldung'
+                    if "halb" in remark1:
+                        ktoa =  '-XV-meldung'
+                    else:
+                        ktoa =  '-RV-meldung'
                 elif ' Krankenversicherung' in remark1:
                     ktoa =  '-KV-meldung'
                 elif ' Pflegeversicherung' in remark1:
