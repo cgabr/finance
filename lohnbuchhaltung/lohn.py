@@ -53,6 +53,8 @@ class Lohn (object):
             'AR-KV-Z'   ,  "Arbeitgeberzuschlag  Krankenversicherung",         "11-C13-3740-XXXX-KV-Z-AR",
             'AR-RV'     ,  "Arbeitgeberbeitrag   Rentenversicherung",          "11-C13-3740-XXXX-RV-AR",
             'AR-AV'     ,  "Arbeitgeberbeitrag   Arbeitslosenversicherung",    "11-C13-3740-XXXX-AV-AR",
+            'AR-XV'     ,  "Arbeitgeberbeitrag   Rentenversicherung",          "11-C13-3740-XXXX-XV-AR",
+            'AR-BV'     ,  "Arbeitgeberbeitrag   Arbeitslosenversicherung",    "11-C13-3740-XXXX-BV-AR",
             'AR-PV'     ,  "Arbeitgeberbeitrag   Pflegeversicherung",          "11-C13-3740-XXXX-PV-AR",
             'AR-ST'     ,  "Pauschalsteuer geringfuegig Beschaeftigte",        "11-C13-3740-XXXX-ST-AR",
             'AR-PS'     ,  "Pauschalsteuer kurzfristig Beschaeftigte",         "11-C13-3065-PS",
@@ -231,7 +233,7 @@ class Lohn (object):
                 lohndaten[jm]['LOHN1'].append(rem)
                 if 'KV' in rem:
                     lohndaten[jm]['UEKV'] = 1
-                if 'RV' in rem:
+                if 'RV' in rem or 'XV' in rem:
                     lohndaten[jm]['UERV'] = 1
                 m = re.search("KUG(SOZ|SOH|)(\d\d).*?(\d+)([,\.]\d\d|)",rem)
                 if m:
@@ -446,10 +448,10 @@ class Lohn (object):
             betraege[jm]['AR-U2']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U2']) * lohn  * int(mode not in "") )
             betraege[jm]['AR-U3']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U3']) * lohn  * int(mode not in "") )
 
-            if "r" in merk:
+            if "r" in merk:   #  Rentner
                 betraege[jm]['AN-RV']   = "0.00"
                 betraege[jm]['AN-AV']   = "0.00"
-            if "-" in merk:
+            if "-" in merk:   #  ohne Krankengeld
                 betraege[jm]['AN-KV-S'] = "%3.2f" % ( float(betraege[jm]['AN-KV-S']) - float(krankengeld) )
                 if 'AR-KV-S' in betraege[jm]:
                     betraege[jm]['AR-KV-S'] = "%3.2f" % ( float(betraege[jm]['AR-KV-S']) - float(krankengeld) )
@@ -648,6 +650,11 @@ class Lohn (object):
 
                     lssoz        = float(lssoz_str)
                     betrag       = float(betraege[jm][art])
+                    if betrag[0] == "x":
+                        betrag      = betrag[1:]
+                        alternative = 1
+                    else:
+                        alternative = 0
 
                     if abs(betrag) > 0.001 or abs(lssoz) > 0.001:
                         consider_b = True
@@ -666,7 +673,12 @@ class Lohn (object):
                     export_zeile = export_zeile + letzter_wert[-1]
                         
                     kto2  = re.sub(r"XXXX",lohndaten[jm]['NR'],self.gegenkonto[art])
-                    zeile = jm + day + "  " + ("%3.2f"%lssoz) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-" + art + "  " 
+                    art1  = art
+                    if alternative == 1:
+                        art1 = re.sub("RV","XV",art)
+                        art1 = re.sub("AV","BV",art)
+                        art1 = re.sub("KV","EV",art)
+                    zeile = jm + day + "  " + ("%3.2f"%lssoz) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-" + art1 + "  " 
                     zeile = zeile + kto2 + "-" + self.employee + "  0.00  " + self.bezeichner[art] + add
                     if art[0:2] == "AR":
                         lohn_ar[int("Vor" in add)] = lohn_ar[int("Vor" in add)] - lssoz
