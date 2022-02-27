@@ -210,8 +210,8 @@ class Lohn (object):
                 export_sum[jm]  = export_sum[jm]  + float(betrag)
                 betrag = m.group(3) + "." + m.group(2) + ".  " + ("%11.2f" % float(betrag)) 
                 while (0 == 0):
-                    export_zahl[jm] = export_zahl[jm] + betrag + "  " + rem[0:75] + "\n"
-                    rem    = re.sub(r"^ +","",rem[75:])
+                    export_zahl[jm] = export_zahl[jm] + betrag + "   " + rem[0:74] + "\n"
+                    rem    = re.sub(r"^ +","",rem[74:])
                     betrag = "                   "
                     if rem == "":
                         break
