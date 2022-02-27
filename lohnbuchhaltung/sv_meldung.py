@@ -189,6 +189,10 @@ class SV_Meldung():
                 endmonat    = int(self.jahr)
 #                self.dataset["meldejahr"] = "20" + self.dataset["meldejahr"][0:2]
 
+
+            if len(self.dataset["meldejahr"]) < 4:
+                self.dataset["meldejahr"] = "20" + self.dataset["meldejahr"]
+
             print(self.dataset["meldejahr"],beginnmonat,endmonat)
 
 
