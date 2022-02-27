@@ -105,14 +105,6 @@ class SV_Meldung():
     def run (self):
 
 
-        self.dataset["adresse"] = self.dataset["strasse"]
-        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
-        if m:
-            self.dataset['strasse'] = m.group(1)
-            self.dataset['hausnr']  = m.group(2)
-        if not 'hausnr' in self.dataset:
-            self.dataset['hausnr']  = ""
-
         self.dataset["firmaadresse"] = self.dataset["firmastrasse"]
         m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['firmastrasse'])
         if m:
@@ -121,7 +113,6 @@ class SV_Meldung():
         if not 'firmahausnr' in self.dataset:
             self.dataset['firmahausnr']  = ""
 
-        self.dataset["lohnstid"] = re.sub(r" ","",self.dataset["lohnstid"],9999)
 
 
 #   1.   Beginn, Ende, Jahresgehalt aus Gehaltsbscheinigungen
@@ -219,6 +210,18 @@ class SV_Meldung():
         
         print(self.dataset)
         
+        if self.dataset["meldung"] in ("10","30","50","92","01"):
+
+            self.dataset["adresse"] = self.dataset["strasse"]
+            m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+            if m:
+                self.dataset['strasse'] = m.group(1)
+                self.dataset['hausnr']  = m.group(2)
+            if not 'hausnr' in self.dataset:
+                self.dataset['hausnr']  = ""
+
+            self.dataset["lohnstid"] = re.sub(r" ","",self.dataset["lohnstid"],9999)
+
         if self.dataset["meldung"] in ("10","30","50","92","70"):
 
             self.driver.get("https://standard.gkvnet-ag.de/svnet/")
