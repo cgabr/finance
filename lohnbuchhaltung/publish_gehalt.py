@@ -57,7 +57,7 @@ if __name__ == "__main__":
 #  1. Gehaltsbescheinigung erstellen
 
         new_gehalt = 0
-        x      = glob.glob(p+"/*/gehaltsbe*"+ monat1+"*md")
+        x      = glob.glob(p+"/*/gehaltsbe*"+ monat1+"*md") # + glob.glob(p+"/*/gehaltsbe*"+ yy +"*md")
         if len(x) == 0: # aber nur, wenn es noch keine Gehaltsbescheinigung gibt
             print(p,monat1)
             os.system("cd " + glob.glob(p+"/*gehalt*")[0] + "; python3 -m konto.base.konto; python3 -m konto.lohnbuchhaltung.lohn " + monat)
