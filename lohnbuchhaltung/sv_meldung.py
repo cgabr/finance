@@ -60,10 +60,10 @@ class SV_Meldung():
 
 #**************************************************************************************
 
-    def set_par1 (self,feld,inhalt=None):
+    def set_par1 (self,feld,erg,inhalt=None):
 
         try:
-            self.set_par(feld,inhalt)
+            self.set_par(feld,erg[inhalt])
         except:
             pass
 
@@ -237,11 +237,11 @@ class SV_Meldung():
 
         if self.dataset["meldung"] == "70":   #  Beitragsnachweis
 
-            if "MINIJOB" in self.dataset: 
+            self.el("[aria-labelledby='overviewViewbna_menuLabel']").click()
+            if "minijob" in self.dataset: 
                 self.el("[aria-labelledby='overviewViewbnaGering_viewEntryLabel']").click()
             else:
-                self.el("[aria-labelledby='overviewViewbna_menuLabel']").click()
-            self.el("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
+                self.el("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
             time.sleep(1)
 #            self.id("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
             
@@ -332,14 +332,18 @@ class SV_Meldung():
 
             erg = self.auswertung(int(self.monatsanzahl))
 
-            self.set_par1("beitrag1000",                    erg["KV"])
-            self.set_par1("beitragZusatzKrankenvers",       erg["KV-ZUS"])
-            self.set_par1("beitrag0100",                    erg["RV"])
-            self.set_par1("beitrag0010",                    erg["AV"])
-            self.set_par1("beitrag0001",                    erg["PV"])
-            self.set_par1("beitragU1",                      erg["U1"])
-            self.set_par1("beitragU2",                      erg["U2"])
-            self.set_par1("beitrag0050",                    erg["U3"])
+            self.set_par1("beitrag1000",                    erg,"KV")
+            self.set_par1("beitragZusatzKrankenvers",       erg,"KV-ZUS")
+            self.set_par1("beitrag0100",                    erg,"RV")
+            self.set_par1("beitrag0010",                    erg,"AV")
+            self.set_par1("beitrag0001",                    erg,"PV")
+            self.set_par1("beitragU1",                      erg,"U1")
+            self.set_par1("beitragU2",                      erg,"U2")
+            self.set_par1("beitrag0050",                    erg,"U3")
+
+            self.set_par1("beitrag6000",                    erg,"KV")
+            self.set_par1("beitrag0500",                    erg,"XV")
+            self.set_par1("beitragPauschsteuer",            erg,"ST")
 
 
 
