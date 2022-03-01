@@ -60,6 +60,15 @@ class SV_Meldung():
 
 #**************************************************************************************
 
+    def set_par1 (self,feld,erg,inhalt=None):
+
+        try:
+            self.set_par(feld,erg[inhalt])
+        except:
+            pass
+
+#**************************************************************************************
+
     def teardown_method(self, method):
 
         self.driver.quit()
@@ -96,14 +105,6 @@ class SV_Meldung():
     def run (self):
 
 
-        self.dataset["adresse"] = self.dataset["strasse"]
-        m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
-        if m:
-            self.dataset['strasse'] = m.group(1)
-            self.dataset['hausnr']  = m.group(2)
-        if not 'hausnr' in self.dataset:
-            self.dataset['hausnr']  = ""
-
         self.dataset["firmaadresse"] = self.dataset["firmastrasse"]
         m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['firmastrasse'])
         if m:
@@ -111,8 +112,6 @@ class SV_Meldung():
             self.dataset['firmahausnr']  = m.group(2)
         if not 'firmahausnr' in self.dataset:
             self.dataset['firmahausnr']  = ""
-
-        self.dataset["lohnstid"] = re.sub(r" ","",self.dataset["lohnstid"],9999)
 
 
 
@@ -131,6 +130,9 @@ class SV_Meldung():
         bruttogehalt  = "0,00"
         jahresgehalt0 = "0"
         bruttogehalt0 = "0"
+
+        print("JJJJ",self.dataset["meldejahr"])
+
 
         if not 'beginn' in self.dataset or not 'jahresgehalt' in self.dataset:
 
@@ -170,9 +172,20 @@ class SV_Meldung():
                         self.read_sozialabgaben(text,"AR-RV",     "arrv")
                         self.read_sozialabgaben(text,"AR-AV",     "arav")
                         self.read_sozialabgaben(text,"AR-PV",     "arpv")
-                               
 
-#            print(beginnmonat,endmonat)
+
+            if self.dataset["meldung"] == "70":
+                self.dataset["meldejahr"] = "20" + self.yy
+                beginnmonat = int(self.jahr)
+                endmonat    = int(self.jahr)
+#                self.dataset["meldejahr"] = "20" + self.dataset["meldejahr"][0:2]
+
+
+            if len(self.dataset["meldejahr"]) < 4:
+                self.dataset["meldejahr"] = "20" + self.dataset["meldejahr"]
+
+            print(self.dataset["meldejahr"],beginnmonat,endmonat)
+
 
             beginn = "01." + re.sub(r"13","01",("%02u"%beginnmonat))  + "." + self.dataset["meldejahr"]
             ende   = "."   + ("%02u"%endmonat)     + "." + self.dataset["meldejahr"]
@@ -197,7 +210,19 @@ class SV_Meldung():
         
         print(self.dataset)
         
-        if not self.dataset["meldung"] == "01":
+        if self.dataset["meldung"] in ("10","30","50","92","01"):
+
+            self.dataset["adresse"] = self.dataset["strasse"]
+            m = re.search(r"^(.*) +(\d+[a-zA-Z]?) *$",self.dataset['strasse'])
+            if m:
+                self.dataset['strasse'] = m.group(1)
+                self.dataset['hausnr']  = m.group(2)
+            if not 'hausnr' in self.dataset:
+                self.dataset['hausnr']  = ""
+
+            self.dataset["lohnstid"] = re.sub(r" ","",self.dataset["lohnstid"],9999)
+
+        if self.dataset["meldung"] in ("10","30","50","92","70"):
 
             self.driver.get("https://standard.gkvnet-ag.de/svnet/")
             self.driver.set_window_size(1600, 1000)
@@ -209,6 +234,17 @@ class SV_Meldung():
             time.sleep(2)
             self.el("[aria-labelledby='overviewViewformulareLabel']")    .click()
             time.sleep(2)
+
+        if self.dataset["meldung"] == "70":   #  Beitragsnachweis
+
+            self.el("[aria-labelledby='overviewViewbna_menuLabel']").click()
+            if "minijob" in self.dataset: 
+                self.el("[aria-labelledby='overviewViewbnaGering_viewEntryLabel']").click()
+            else:
+                self.el("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
+            time.sleep(1)
+#            self.id("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
+            
 
         if self.dataset["meldung"] == "10":
 
@@ -242,7 +278,7 @@ class SV_Meldung():
             self.el("[aria-labelledby='overviewViewm30Label']")    .click()
 
 
-        if not self.dataset["meldung"] == "01":
+        if self.dataset["meldung"] in ("10","30","50","92"):
 
             time.sleep(2)
             self.driver.switch_to.frame(1)
@@ -275,7 +311,45 @@ class SV_Meldung():
             self.set_par("personOrt",                      ".stadt")
 
 
-        if not self.dataset["meldung"] in("92","01"):
+        if self.dataset["meldung"] in ("70"):
+
+            time.sleep(2)
+            self.driver.switch_to.frame(1)
+            time.sleep(1)
+
+            self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
+            self.set_par("firmaSteuernummer",              ".steuernummer")
+            self.set_par("firmaName1",                     ".firmaname1")
+            self.set_par("firmaName2",                     ".firmaname2")
+            self.set_par("firmaStrasse",                   ".firmaadresse")
+            self.set_par("firmaLand",                      ".firmaland")
+            self.set_par("firmaPostleitzahl",              ".firmaplz")
+            self.set_par("firmaOrt",                       ".firmastadt")
+            self.set_par("firmaRechtskreis",               ".rechtskreis")
+            self.set_par("betriebsnummerKrankenkasse",     ".kkbetrnr")
+            self.set_par("beginn",                         ".beginn")
+            self.set_par("ende",                           ".ende")
+
+
+            erg = self.auswertung(int(self.monatsanzahl))
+
+            self.set_par1("beitrag1000",                    erg,"KV")
+            self.set_par1("beitragZusatzKrankenvers",       erg,"KV-ZUS")
+            self.set_par1("beitrag0100",                    erg,"RV")
+            self.set_par1("beitrag0010",                    erg,"AV")
+            self.set_par1("beitrag0001",                    erg,"PV")
+            self.set_par1("beitragU1",                      erg,"U1")
+            self.set_par1("beitragU2",                      erg,"U2")
+            self.set_par1("beitrag0050",                    erg,"U3")
+
+            self.set_par1("beitrag6000",                    erg,"KV")
+            self.set_par1("beitrag0500",                    erg,"XV")
+            self.set_par1("beitragPauschsteuer",            erg,"ST")
+
+            self.set_par1("beitrag0050",                    erg,"U3")   #  um den Gesamtbetrag zu aktualisieren
+
+
+        if self.dataset["meldung"] in ("10","30","50"):
 
             self.set_par("firmaRechtskreis",               ".rechtskreis")
             self.set_par("personengruppe",                 ".persgruppe")
@@ -290,7 +364,7 @@ class SV_Meldung():
             self.set_par("vertragsform",                   ".vertrag")
 
 
-        if self.dataset["sozversnr"] == "":
+        if "sozversnr" in self.dataset and self.dataset["sozversnr"] == "":
 
             self.set_par("personGeburtsName",              ".gebname")
             self.set_par("personGeburtsVorsatz",           "")
@@ -342,7 +416,7 @@ class SV_Meldung():
             
             
             
-        if self.dataset["meldung"] == "01":
+        if self.dataset["meldung"] == "01":     #   Lohnsteuerjahresbescheinigung
         
             self.driver.get("https://www.elster.de/eportal/start")
             self.driver.set_window_size(1600, 1000)
@@ -879,7 +953,48 @@ class SV_Meldung():
         if m:
             self.dataset[key] = m.group(1)
             
-#*************************************************************************************
+#**************************************************************************************
+
+    def auswertung (self,faktor=1.0):
+
+        konto.Konto().kto()
+
+#        print("")
+#        print(glob.glob("*.kto"))
+        erg = {}
+        kv  = 0.00
+        zus = 0.00
+        for zeile in os.popen("grep -P '^([A-Z0-9]+|KV-Z|KV-meldZUS) +(\S+) *$' *.kto").read().split("\n"):
+            print(zeile)
+            m = re.search(r"^(\S+) +(.*)$",zeile)
+            if not m:
+                continue
+            if m.group(1) == "KV":
+                kv = float(m.group(2))
+                erg["KV"] = re.sub(r"\.",",","%3.2f"%(-kv/faktor))
+            elif m.group(1) == "KV-Z":
+                zus = float(m.group(2))
+                erg["KV-ZUS"] = re.sub(r"\.",",","%3.2f"%(-zus/faktor))
+            elif m.group(1) == "KV-meldZUS":
+                zus = zus + float(m.group(2))
+                kv  = kv - zus
+                erg["KV"]     = re.sub(r"\.",",","%3.2f"%(-kv/faktor))
+                erg["KV-ZUS"] = re.sub(r"\.",",","%3.2f"%(-zus/faktor))
+                print ("%-10s" % "KV" +     "%10.2f"%(kv/faktor))
+                print ("%-10s" % "KV-ZUS" + "%10.2f"%(zus/faktor))
+#            elif m.group(1) == "AV":
+#                text = "%-10s" % m.group(1) + "%10.2f"%(float(m.group(2))/faktor)
+#            elif m.group(1) == "PV":
+#                text = text + "\n" + "%-10s" % m.group(1) + "%10.2f"%(float(m.group(2))/faktor)
+            else:
+                erg[m.group(1)] = re.sub(r"\.",",","%3.2f"%(-float(m.group(2))/faktor))
+                print("%-10s" % m.group(1) + "%10.2f"%(float(m.group(2))/faktor))
+#            if m.group(1) == "RV":
+#                print(text)
+
+        return(erg)
+
+#**************************************************************************************
             
 
 if __name__ == "__main__":
@@ -892,7 +1007,10 @@ if __name__ == "__main__":
     kto.read_config("./sv.data")
     kto.read_config("*/sv.data")
     kto.read_config("./15*/*.csv")
+    kto.read_config("../05*/*.csv")
     r.dataset = kto.dataset
+
+    print(r.dataset)
 
 #    for o in r.dataset.keys():
 #        print(r.dataset[o])
@@ -911,17 +1029,23 @@ if __name__ == "__main__":
         except:
             arg2 = None
 
+        try:
+            arg3 = sys.argv[3]
+        except:
+            arg3 = None
+
         if arg2 and len(arg1) > 2:
+            r.yy = arg1[0:2]
             o    = arg1[-2:]
             arg1 = arg2
             arg2 = o
 
-        if arg2:
+        if arg2:     #  Jahr, um das es geht
             r.jahr = arg2
         else:
             r.jahr = ""
             
-        if arg1:
+        if arg1:      #  Nummer der SV-Meldung  (10,30,50,...)
             r.meldung = arg1
         else:
             r.meldung = ""
@@ -932,7 +1056,13 @@ if __name__ == "__main__":
             r.person = m.group(2)
         else:
             r.person = ""
-
+        
+        if arg3:
+            r.monatsanzahl = arg3
+        else:
+            r.monatsanzahl = "1"
+        
+        
     r.run()
 
 
@@ -959,3 +1089,6 @@ if __name__ == "__main__":
 #        
 #        r.run1()    
     
+
+#   Aufruf:   python3 -m konto.lohnbuchhaltung <jahr> <meldeart>
+
