@@ -446,7 +446,7 @@ class Lohn (object):
             betraege[jm]['AR-U2']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U2']) * lohn  * int(mode not in "") )
             betraege[jm]['AR-U3']   = "%3.2f" % ( 0.01 * float(lohndaten[jm]['U3']) * lohn  * int(mode not in "") )
 
-            if "r" in merk:   #  Rentner
+            if "r" in merk or "g" in merk:   #  Rentner
                 betraege[jm]['AN-RV']   = "0.00"
                 betraege[jm]['AN-AV']   = "0.00"
                 betraege[jm]['AR-RV']   += "x"
@@ -649,13 +649,14 @@ class Lohn (object):
                 for lssoz_str in lohndaten[jm][art]:
 
                     lssoz        = float(lssoz_str)
-                    betrag       = float(betraege[jm][art])
+                    betrag       = betraege[jm][art]
                     art1         = art
                     if betrag[0] == "x":
                         betrag  = betrag[1:]
                         art1    = re.sub("RV","XV",art)
                         art1    = re.sub("AV","BV",art)
                         art1    = re.sub("KV","EV",art)
+                    betrag = float(betrag)
 
                     if abs(betrag) > 0.001 or abs(lssoz) > 0.001:
                         consider_b = True

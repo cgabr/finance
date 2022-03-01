@@ -318,6 +318,7 @@ class SV_Meldung():
             time.sleep(1)
 
             self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
+            self.set_par("firmaSteuernummer",              ".steuernummer")
             self.set_par("firmaName1",                     ".firmaname1")
             self.set_par("firmaName2",                     ".firmaname2")
             self.set_par("firmaStrasse",                   ".firmaadresse")
@@ -345,6 +346,7 @@ class SV_Meldung():
             self.set_par1("beitrag0500",                    erg,"XV")
             self.set_par1("beitragPauschsteuer",            erg,"ST")
 
+            self.set_par1("beitrag0050",                    erg,"U3")   #  um den Gesamtbetrag zu aktualisieren
 
 
         if self.dataset["meldung"] in ("10","30","50"):
@@ -362,7 +364,7 @@ class SV_Meldung():
             self.set_par("vertragsform",                   ".vertrag")
 
 
-        if self.dataset["sozversnr"] == "":
+        if "sozversnr" in self.dataset and self.dataset["sozversnr"] == "":
 
             self.set_par("personGeburtsName",              ".gebname")
             self.set_par("personGeburtsVorsatz",           "")
@@ -960,6 +962,8 @@ class SV_Meldung():
 #        print("")
 #        print(glob.glob("*.kto"))
         erg = {}
+        kv  = 0.00
+        zus = 0.00
         for zeile in os.popen("grep -P '^([A-Z0-9]+|KV-Z|KV-meldZUS) +(\S+) *$' *.kto").read().split("\n"):
             print(zeile)
             m = re.search(r"^(\S+) +(.*)$",zeile)
@@ -967,8 +971,10 @@ class SV_Meldung():
                 continue
             if m.group(1) == "KV":
                 kv = float(m.group(2))
+                erg["KV"] = re.sub(r"\.",",","%3.2f"%(-kv/faktor))
             elif m.group(1) == "KV-Z":
                 zus = float(m.group(2))
+                erg["KV-ZUS"] = re.sub(r"\.",",","%3.2f"%(-zus/faktor))
             elif m.group(1) == "KV-meldZUS":
                 zus = zus + float(m.group(2))
                 kv  = kv - zus
