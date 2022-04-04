@@ -295,7 +295,6 @@ class SV_Meldung():
 
             self.set_par("betriebsnummerKrankenkasse",     ".kkbetrnr")
             self.set_par("beginn",                         ".beginn")
-
             self.set_par("personVersicherungsnummer",      ".sozversnr")
             self.set_par("personPersonalnummer",           ".account")
             self.set_par("personStaat",                    ".stkuerzel")
@@ -318,7 +317,10 @@ class SV_Meldung():
             time.sleep(1)
 
             self.set_par("firmaBetriebsnummer",            ".betriebsnummer")
-            self.set_par("firmaSteuernummer",              ".steuernummer")
+            try:
+                self.set_par("firmaSteuernummer",              ".steuernummer")
+            except:
+                pass
             self.set_par("firmaName1",                     ".firmaname1")
             self.set_par("firmaName2",                     ".firmaname2")
             self.set_par("firmaStrasse",                   ".firmaadresse")
