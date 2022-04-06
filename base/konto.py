@@ -351,7 +351,7 @@ class Konto ():
 
 #        self.mark("A. Compute query for transaction file " + pattern1 + " " + str(interval)[0:40] + " ...")
 
-#        print("111",self.interval_long,self.grep_pattern)
+#        print("111",self.interval_long,"--"+self.grep_pattern+"--")
         
         if not self.interval_long == "":
             if self.grep_pattern == "":
@@ -457,12 +457,13 @@ class Konto ():
                 
 #   ktotext:   datum  betrag   kto1   kto2   saldo   bemerkung   original_line
                 
-        print("UKTO: " + self.ukto)
         if self.ukto == "":
             self.buchungen.sort(key=lambda x:x[0]+str(x[1])+x[3]+x[4])
         else:
+            print("UKTO: " + self.ukto)
 #            ktotext.sort(key=lambda x:str(x[5]+1)+x[0])
             self.buchungen.sort(key=lambda x:x[0]+str(x[5]+1)+x[2]+x[3]+x[4])
+            
 
         gesamt              = 0.00
         self.startdatum     = "00000000"
@@ -491,6 +492,10 @@ class Konto ():
                 ktob   = o
                 betrag = re.sub(r"^--","","-"+betrag)
             
+            if mode == 0 and not ktoa.startswith(self.ukto) and self.grep_pattern[0] == " ":
+                print("SKIP: ",self.ukto,zeile)
+                continue
+                
 #            print(ukto,zeile)
             betrag = float(betrag)
 
@@ -536,9 +541,17 @@ class Konto ():
         else:
             interval  = self.mode + self.interval_short
             
+        if self.grep_pattern[-1] == "-":
+            add_minus = "-"
+        else:
+            add_minus = ""
+
+
         self.hkey   = "\n".join(self.formatted_acc) + "\n"
         self.hkey   = hashlib.md5(self.hkey.encode("utf-8")).hexdigest()[0:12]
-        self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+interval))) + " " + self.hkey + "       " + ("%13.2f"%gesamt)
+        self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+add_minus+interval))) + " " + self.hkey + "       " + ("%13.2f"%gesamt)
+#        print(self.title)
+
 
         if has_doublettes:
             print("Attention: Doublettes!")
@@ -558,7 +571,9 @@ class Konto ():
         ukto0               = ""
         pattern             = self.grep_pattern.strip().upper()
         
-        
+        if self.grep_pattern[0] == " ":
+            self.ukto = self.grep_pattern[1:]
+            self.ukto = re.sub(r"-$","",self.ukto)
         
         if len(pattern) > 0 and pattern[-1] == "-":
             pattern = pattern[:-1]
@@ -612,14 +627,14 @@ class Konto ():
                     betrag = re.sub(r"^--","","-"+betrag)
                     turn_kto = 1 - turn_kto
                     
-                if not pattern in ktoa.upper():
+                if not ktoa.upper().startswith(pattern):
                     o      = ktoa   
                     ktoa   = ktob   
                     ktob   = o
                     betrag = re.sub(r"^--","","-"+betrag)
 
                 saldo = 0
-                if not self.ukto == None:
+                if not self.grep_pattern[0] == " " and not self.ukto == None:   #  find self.ukto dynamically
                     
                     if self.ukto == "":
                         if pattern in ktoa.upper():

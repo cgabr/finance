@@ -24,9 +24,72 @@ class CSV (object):
 
 #*********************************************************************************
 
-    def to_kto (self):     # open the csv and kto files and prepare for processing
+    def to_kto (self,*pars):     # open the csv and kto files and prepare for processing
     
-        csv_files = glob.glob(self.dir+"/*.csv")
+        ktofile = glob.glob(self.dir+"/*.kto")
+        
+        if len(ktofile) > 1:
+            print("More than one kto-file.")
+            return()
+        elif len(ktofile) == 0:
+            print("No ktofile found.")
+            return()
+            
+        if os.path.isfile("anchor.txt"):
+        
+            filename = open("anchor.txt").read()
+            filename = re.sub("\s","",filename,99999999)
+            sourcefile = []
+            for zeile in filename.split(","):
+                print(zeile)
+                sourcefile = sourcefile + glob.glob(zeile)
+            if not len(sourcefile) == 1:
+                print("Sourcefile ambiguous.")
+            sourcefile = sourcefile[0]
+            
+            text0 = open(ktofile[0]).read()
+            text1 = open(sourcefile).read()
+            
+            startdatum = ""
+            for zeile in text0.split("\n"):
+                m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                if m:
+                    startdatum = m.group(1)
+                else:
+                    if len(startdatum) == 8:
+                        break
+            
+            make_csv_text = ""
+            for zeile in text1.split("\n"):
+                m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+)\.(\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                if not m:
+                    continue
+                datum = m.group(1) + m.group(2) + m.group(3)
+                if datum <= startdatum:
+                    continue
+                make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
+                
+            make_csv_text = re.sub(r";--",";",make_csv_text,99999999)
+            print(make_csv_text)
+            
+            open("anchor.csv","w").write(make_csv_text)
+                            
+#            return()
+      
+            
+        csv_files = []
+        for csv_file in glob.glob(self.dir+"/*.csv"):
+            m = re.search(r"^(.*)[\\\/](.*)$",csv_file)
+            if m:
+                csv_file1 = m.group(2)
+            else:
+                csv_file1 = csv_file
+                
+            if len(pars) > 0 and not csv_file1 in pars:
+                continue
+                
+            csv_files.append(csv_file)
+
         csv_files.sort()
         
         for csv_file in csv_files:
@@ -55,22 +118,13 @@ class CSV (object):
                 open(csv_file+"~","w").write(text)
                 open(csv_file,"w").write(text1)
                 
-        ktofile = glob.glob(self.dir+"/*.kto")
-        
-        if len(ktofile) > 1:
-            print("More than one kto-file.")
-            return()
-        elif len(ktofile) == 0:
-            print("No ktofile found.")
-            return()
-            
         erg = self.analyse_ktofile(open(ktofile[0]).read())
         if not erg == "":
             print(erg)
             return()
 
         for csv_file in csv_files:
-            print(csv_file)
+            print("-> ",csv_file)
             erg = self.merge_with_ktofile_0(open(csv_file).read())
             if not erg == "":
                 print(erg)
@@ -419,7 +473,7 @@ class CSV (object):
             
             for zeile in self.equivalent_acc[patterns]:
             
-                print(zeile)
+#                print(zeile)
                 m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
                 if m:
                     kto1 = m.group(3)
@@ -3543,7 +3597,7 @@ class CSV (object):
 
 if __name__ == "__main__":
 
-    CSV().to_kto()
+    CSV().to_kto(*(sys.argv[2:]))
     
     
 
