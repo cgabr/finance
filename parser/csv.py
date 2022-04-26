@@ -28,6 +28,8 @@ class CSV (object):
     
         ktofile = glob.glob(self.dir+"/*.kto")
         
+        print(pars)
+
         if len(ktofile) > 1:
             print("More than one kto-file.")
             return()
@@ -50,14 +52,20 @@ class CSV (object):
             text0 = open(ktofile[0]).read()
             text1 = open(sourcefile).read()
             
-            startdatum = ""
-            for zeile in text0.split("\n"):
-                m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-                if m:
-                    startdatum = m.group(1)
-                else:
-                    if len(startdatum) == 8:
-                        break
+            if len(pars) > 0:
+                startdatum = pars[0]
+                pars       = []
+            else:
+                startdatum = ""
+                for zeile in text0.split("\n"):
+                    m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                    if m:
+                        startdatum = m.group(1)
+                    else:
+                        if len(startdatum) == 8:
+                            break
+
+            print(startdatum)
             
             make_csv_text = ""
             for zeile in text1.split("\n"):
@@ -105,7 +113,7 @@ class CSV (object):
                 if m:
                     zeile = m.group(3) + "." + m.group(2) + "." + m.group(1) + ";" + m.group(4) + ";" + m.group(8)
                     print(zeile)
-                if re.search(r"^\"?\d\d\.\d\d\.\d\d\d\d\"?",zeile):
+                if re.search(r"(^|;)\"?\d\d\.\d\d\.(\d\d\d\d|\d\d)\"?",zeile):
                     text1  = text1 + zeile0 + "\n"
 #                    buchungen.append(text1.strip().split(";"))
                     zeile0 = zeile
@@ -296,6 +304,8 @@ class CSV (object):
             for absbetrag in self.csvlines[datum]:
                 for erg in self.csvlines[datum][absbetrag]:
 
+
+#                    print(datum)
                     remark    = erg['REMARK']
 
                     if not datum in self.ktolines or not absbetrag in self.ktolines[datum]:
@@ -382,6 +392,8 @@ class CSV (object):
 
     def create_buchung (self,buchungstext):
     
+        print(buchungstext)
+
         datum    = ""
         betrag   = ""
         soll     = ""
@@ -395,10 +407,12 @@ class CSV (object):
 
         for pattern in buchungstext.split(";"):
             pattern = re.sub(r"^\"?(.*?)\"?$","\\1",pattern)
-            m = re.search(r"^(\d\d)\.(\d\d)\.(\d\d\d\d)$",pattern)
+            m = re.search(r"^(\d\d)\.(\d\d)\.(\d\d|\d\d\d\d)$",pattern)
             if m:
                 if datum == "":
                     datum = m.group(3) + m.group(2) + m.group(1)
+                    if len(datum) == 6:
+                        datum = "20" + datum
                 continue
             m = re.search(r"^(\-?)([\.0123456789]+)[,\.](\d\d)(\-?)$",pattern)
             if m:
@@ -3597,7 +3611,7 @@ class CSV (object):
 
 if __name__ == "__main__":
 
-    CSV().to_kto(*(sys.argv[2:]))
+    CSV().to_kto(*(sys.argv[1:]))
     
     
 

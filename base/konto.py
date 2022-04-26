@@ -345,6 +345,33 @@ class Konto ():
 
 #**********************************************************************************
 
+    def read_saldo (self,search_pattern,salden_expand=None):  #  Updates an actual konto
+        
+        self.mark("---")
+        self.search_pattern = "^" + search_pattern
+        if not salden_expand == None:
+            self.salden_expand = salden_expand
+
+        self.parse_pattern()
+#        print(self.ukto)
+        
+#        print(self.grep_pattern)
+        
+        if self.grep_pattern[0] == " ":
+            self.ukto = self.grep_pattern[1:]
+            self.ukto = re.sub(r"-$","",self.ukto)
+            
+        salden_liste = self.format_salden()
+
+        if len(salden_liste) == 0:
+            return(0.00)
+            
+        return(float(salden_liste[0][2]))
+
+#        print(self.startdatum,self.enddatum,self.ukto)
+        
+#**********************************************************************************
+
     def extract_account_lines (self):
     
 #    This function extracts the matching lines of a request into a sorted array
@@ -375,7 +402,9 @@ class Konto ():
         self.interval_short   = ""
         self.egrep            = ""
         self.mode             = ""
-#        self.search_full      = True   #  not self.search_pattern[0] == "^"
+        self.startdatum       = "00000000"
+        self.enddatum         = "99999999"
+
         m                     = re.search(r"^(.*)([\.\:])(.*)$",self.grep_pattern)
             
         if m:
@@ -387,39 +416,50 @@ class Konto ():
             self.interval_short = m.group(3)
             
             if   months == "A":
-                months = "10"
-                last_m = "10"
+                months  = "10"
+                first_m = "10"
+                last_m  = "10"
             elif months == "B":
-                months = "11"
-                last_m = "11"
+                months  = "11"
+                first_m = "11"
+                last_m  = "11"
             elif months == "C":
-                months = "12"
-                last_m = "12"
+                months  = "12"
+                first_m = "12"
+                last_m  = "12"
             elif months == "I":
-                months = "0[123]"
-                last_m = "03"
+                months  = "0[123]"
+                first_m = "01"
+                last_m  = "03"
             elif months == "J":
-                months = "0[456]"
-                last_m = "06"
+                months  = "0[456]"
+                first_m = "04"
+                last_m  = "06"
             elif months == "K":
-                months = "0[789]"
-                last_m = "09"
+                months  = "0[789]"
+                first_m = "07"
+                last_m  = "09"
             elif months == "L":
-                months = "1[012]"
-                last_m = "12"
+                months  = "1[012]"
+                first_m = "10"
+                last_m  = "12"
             elif months == "M":
-                months = "0[123456]"
-                last_m = "06"
+                months  = "0[123456]"
+                first_m = "01"
+                last_m  = "06"
             elif months == "N":
-                months = "\\(07\\|08\\|09\\|10\\|11\\|12\\)" # "[01][789012]"
-                last_m = "12"
-                egrep  = "e"
+                months  = "\\(07\\|08\\|09\\|10\\|11\\|12\\)" # "[01][789012]"
+                first_m = "07"
+                last_m  = "12"
+                egrep   = "e"
             elif months == "P" or months == "":
-                months = ""
-                last_m = "12"
+                months  = ""
+                first_m = "01"
+                last_m  = "12"
             elif not months == "":
-                months = "0" + months
-                last_m = months
+                months  = "0" + months
+                first_m = months
+                last_m  = months
        
             if self.mode == ":":
                 intervals = []
@@ -440,8 +480,19 @@ class Konto ():
                         month = "%02u" % (int(month) + 1)
                 self.interval_long = "\\(" + "\\|".join(intervals) + "\\)"
                 self.egrep = "e"
+                self.startdatum = intervals[0]
+                self.enddatum   = intervals[-1]
+                
+
             else:
+                self.startdatum    = self.interval_long + first_m + "00"
+                self.enddatum      = self.interval_long + last_m  + "99"
                 self.interval_long = self.interval_long + months
+
+        
+#        print(self.startdatum,self.enddatum)
+
+
                 
 #        if self.search_pattern[0] == "^":
 #            self.start_kto    = re.sub(r"[\^ ]",""self.grep_pattern,9999)
@@ -727,7 +778,7 @@ class Konto ():
     def format_salden (self):
 
         faktor              = 1
-        kto                 = self.ukto
+#        kto                 = self.ukto
 
         self.salden_aktuell = []
 
@@ -762,6 +813,7 @@ class Konto ():
 #            kto    = kto0[1:]
 
         ktoparse = "^" + self.ukto + self.salden_expand
+#        print(ktoparse)
             
         self.enddatum   = (self.enddatum   + "99999999")[0:6]
         self.startdatum = (self.startdatum + "00000000")[0:6]
@@ -893,6 +945,9 @@ class Konto ():
             if kto_ordnung == -1 and max_kto_ordnung < 1:
                 self.salden_aktuell.append("")
                 
+        return(salden_liste)
+
+
 #        print(max_kto_ordnung)
 #        print(self.salden_aktuell)
 
@@ -2076,5 +2131,7 @@ if __name__ == "__main__":
         Konto.__dict__[sys.argv[1]](Konto(),*sys.argv[2:])
     elif len(sys.argv) > 1 and sys.argv[1] == "sort":
         Konto.__dict__["sort"](Konto(),*sys.argv[2:])
+    elif len(sys.argv) > 1 and sys.argv[1] == "saldo":
+        Konto.__dict__["read_saldo"](Konto(),*sys.argv[2:])
     else:
         Konto.__dict__["kto"](Konto(),*sys.argv[1:])
