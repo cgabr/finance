@@ -1036,7 +1036,10 @@ if __name__ == "__main__":
         except:
             arg3 = None
 
+        print(333333333333333333333333333,arg2,arg1)
+
         if arg2 and len(arg1) > 2:
+            print(1234)
             r.yy = arg1[0:2]
             o    = arg1[-2:]
             arg1 = arg2
@@ -1093,4 +1096,4 @@ if __name__ == "__main__":
     
 
 #   Aufruf:   python3 -m konto.lohnbuchhaltung <jahr> <meldeart>
-
+#   bei 70 (Beitragsnachweis):      <jahr> = <yymm>
