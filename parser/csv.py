@@ -416,7 +416,8 @@ class CSV (object):
                 continue
             m = re.search(r"^(\-?)([\.0123456789]+)[,\.](\d\d)(\-?)$",pattern)
             if m:
-                betrag = m.group(1) + m.group(4) + re.sub(r"\.","",m.group(2),9999) + "." + m.group(3)
+                if betrag == "":
+                    betrag = m.group(1) + m.group(4) + re.sub(r"\.","",m.group(2),9999) + "." + m.group(3)
                 continue
             if pattern == "S":
                 soll = "-"
