@@ -8,7 +8,7 @@ class Konto ():
 
 #******************************************************************************
 
-    def __init__ (self):
+    def __init__ (self,ktotyp=None):
 
 
         self.t0              = 0
@@ -26,6 +26,8 @@ class Konto ():
         self.salden_expand   = "(-[^- ]+){0,99},"
 
         self.dataset         = {}
+        
+        self.ktotyp          = ktotyp
 
         ktodir   = os.path.abspath(".")
         
@@ -933,9 +935,22 @@ class Konto ():
                 max_kto_ordnung = max(max_kto_ordnung,kto_ordnung)
                 salden_liste.append([kto,kto_ordnung,betrag])
                 
+
         for salden_zeile in salden_liste:
         
-            kto         = salden_zeile[0]
+            kto = salden_zeile[0]
+            if not self.ktotyp == None:
+                bed = 0
+                if not "-" in kto:
+                    bed = 1
+                else:
+                    for ktyp in self.ktotyp:
+                        if re.search("^"+ktyp+r"-[^\-]+$",kto):
+                            bed = 1
+                            break
+                if bed == 0:
+                    continue
+
             kto_ordnung = salden_zeile[1]
             betrag      = salden_zeile[2]
             kto_spacing = "%-" + ("%2u"% (max_offset+kto_ordnung*4-len(betrag)+2) ) + "s"
