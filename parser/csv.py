@@ -41,13 +41,14 @@ class CSV (object):
         
             filename = open("anchor.txt").read()
             filename = re.sub("\s","",filename,99999999)
-            sourcefile = []
+            sourcefile = []  #  alle moeglichen Files werden durchgegangen
             for zeile in filename.split(","):
                 print(zeile)
                 sourcefile = sourcefile + glob.glob(zeile)
             if not len(sourcefile) == 1:
                 print("Sourcefile ambiguous.")
             sourcefile = sourcefile[0]
+            print(sourcefile)
             
             text0 = open(ktofile[0]).read()
             text1 = open(sourcefile).read()
@@ -61,9 +62,8 @@ class CSV (object):
                     m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
                     if m:
                         startdatum = m.group(1)
-                    else:
-                        if len(startdatum) == 8:
-                            break
+                    if len(startdatum) == 8:
+                        break
 
             print(startdatum)
             
@@ -73,12 +73,13 @@ class CSV (object):
                 if not m:
                     continue
                 datum = m.group(1) + m.group(2) + m.group(3)
+#                print(startdatum,datum,zeile)
                 if datum <= startdatum:
                     continue
                 make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
                 
             make_csv_text = re.sub(r";--",";",make_csv_text,99999999)
-            print(make_csv_text)
+#            print(make_csv_text)
             
             open("anchor.csv","w").write(make_csv_text)
                             
@@ -140,7 +141,7 @@ class CSV (object):
 
         erg = self.merge_with_ktofile()
         if not erg == "":
-            print(erg)
+ #           print(erg)
             return()
 
         self.assign_contra_accounts()
@@ -392,7 +393,7 @@ class CSV (object):
 
     def create_buchung (self,buchungstext):
     
-        print(buchungstext)
+#         print(buchungstext)
 
         datum    = ""
         betrag   = ""
