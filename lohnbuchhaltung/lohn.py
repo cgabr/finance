@@ -854,6 +854,7 @@ class Lohn (object):
         
         m             = re.search(r"^(.*)[\\\/]([a-z]+)[\\\/]",os.path.abspath("."))
         self.employee = m.group(2)
+        print("EMPLOYEE:",self.employee)
 
         m = re.search(r"(\d\d\d\d)_("+monate+")",slip)
         if not m:
