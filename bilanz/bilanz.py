@@ -38,7 +38,6 @@ class Bilanz (object):
 
     def base_bilanz (self,*pars):     # open the csv and kto files and prepare for processing
 
-
         jahr = pars[0]
         name = self.dataset["name"]
         bez  = self.dataset["bez"]
@@ -63,7 +62,7 @@ class Bilanz (object):
 #            os.system("a2ps -B -1 -l 150 -r -o bilanz_" + jahr + "_" + bez + "_zusaetze.ps anlagen*" + jahr + ".md")
             os.system("a2ps -B -1 -l 172 -r -o bilanz_" + jahr + "_" + bez + "_zusaetze.ps anlagen*" + jahr + ".md")
             os.system("ps2pdf bilanz_" + jahr + "_" + bez + "_zusaetze.ps")
-            for file in glob.glob("*.ps") + glob.glob("*.ps~"):
+            for file in glob.glob("*.ps") + glob.glob("*.ps~") + glob.glob("*.kto"):
                 os.unlink(file);
 
             if jahr == jahr1:
@@ -72,29 +71,31 @@ class Bilanz (object):
 
 #*****************************************************************************************************
 
-
     def base_bilanz1 (self,name,bez,jahr,WITH_BWA): 
 
+        kto  = Konto(self.ktotyp)
+
         text = "BILANZ " + name + ", Jahr 20" + jahr
-        Konto(self.ktotyp).kto("^10-."+jahr)
-        text = text + "\nXXAKTIVA   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        kto.read_saldo("10-:"+jahr)
+        text = text + "\nXXAKTIVA   " + kto.salden_text()
 
-        Konto(self.ktotyp).kto("^11-."+jahr)
-        text1 = "\nXXPASSIVA  " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        kto.read_saldo("11-:"+jahr)
+        text1 = "\nXXPASSIVA  " + kto.salden_text()
+#        text1 = "\nXXPASSIVA  " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
         text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
         text1 = re.sub(r" --","   ",text1,999999)
         text  = text + text1
 
-        Konto(self.ktotyp).kto("^12-."+jahr)
-        einnahmen = open(glob.glob("*kto")[0]).read()
-        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        kto.read_saldo("12-."+jahr)
+#        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + kto.salden_text()
         text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
         text1 = re.sub(r" --","   ",text1,999999)
         text  = text + text1
 
-        Konto(self.ktotyp).kto("^13-."+jahr)
-        ausgaben = open(glob.glob("*kto")[0]).read()
-        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
+        kto.read_saldo("13-."+jahr)
+#        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
+        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",kto.salden_text(),99999999)
 
 #        print(text)
 #        exit()
@@ -103,48 +104,57 @@ class Bilanz (object):
         monat_guv = []
 
         for monat in "123456789ABC"*WITH_BWA:
-            Konto(self.ktotyp).kto("^10-."+jahr+monat)
-            o1 = "\nAKTIVA   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+            kto.read_saldo("10-:"+jahr+monat)
+            o1 = "\nAKTIVA   " + kto.salden_text()
+#            o1 = "\nAKTIVA   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
 #            o1 = open(glob.glob("*kto")[0]).read()
             
-            Konto(self.ktotyp).kto("^11-."+jahr+monat)
-            o2 = "\nPASSIVA   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+            kto.read_saldo("11-:"+jahr+monat)
+            o2 = "\nPASSIVA   " + kto.salden_text()
+#            o2 = "\nPASSIVA   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
 #            o2 = open(glob.glob("*kto")[0]).read()
             o2 = re.sub(r" (\-?\d+\.\d\d)","-\\1",o2,999999)  #  Minuszeichen
             o2 = re.sub(r" --","   ",o2,999999)
             
-            Konto(self.ktotyp).kto("^12-."+jahr+monat)
-            o3 = "\nERTRAG   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+            kto.read_saldo("12-."+jahr+monat)
+            o3 = "\nERTRAG   " + kto.salden_text()
+#            o3 = "\nERTRAG   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
 #            o3 = open(glob.glob("*kto")[0]).read()
             o3 = re.sub(r" (\-?\d+\.\d\d)","-\\1",o3,999999)  #  Minuszeichen
             o3 = re.sub(r" --","   ",o3,999999)
             
-            Konto(self.ktotyp).kto("^13-."+jahr+monat)
-            o4 = "\nAUFWAND   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+            kto.read_saldo("13-."+jahr+monat)
+            o4 = "\nAUFWAND   " + kto.salden_text()
+#            o4 = "\nAUFWAND   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
             o4 = re.sub(r"Do","Xo",o4,999999)
             monat_guv.append( o1 + o2 + o3 + o4 ) # open(glob.glob("*kto")[0]).read() )
 
         text = re.sub(r"( .\d+\.\d\d)","                        \\1",text,99999999)
         text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======",text,9999)
 
-        Konto(self.ktotyp).kto("^14-."+jahr)
-        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        kto.read_saldo("14-."+jahr)
+#        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text  = text + "\n\n\f\nABSCHLUSS" + kto.salden_text()
 
         text = re.sub(r"( .\d+\.\d\d)","                        \\1",text,99999999)
         text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======\n",text,9999)
 
+        Konto(self.ktotyp).kto("^12-."+jahr)
+        einnahmen = open(glob.glob("*kto")[0]).read()
+
+        Konto(self.ktotyp).kto("^13-."+jahr)
+        ausgaben = open(glob.glob("*kto")[0]).read()
+
         Konto(self.ktotyp).kto("^10-A11-."+jahr)
         anlagen = open(glob.glob("*kto")[0]).read()
 
-        Konto(self.ktotyp).kto("^10-A11-."+jahr)
+        Konto(self.ktotyp).kto("^11-C13-3060-."+jahr)
         ust = open(glob.glob("*kto")[0]).read()
 
 #        print(text)
 #        exit()
 
-
         text = re.sub(r"\n([^\-]{3}  +\-?\d+\.\d\d) *","\n\n\\1\n",text,99999999)
-
 
         text1 = ""
         for zeile in text.split("\n"):

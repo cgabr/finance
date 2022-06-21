@@ -13,7 +13,7 @@ class USteuer (object):
     
 #*********************************************************************************
 
-    def usteuer (self,ktotext0="",mode="-"):
+    def usteuer (self,ktotext0="",k_12_13=["12","13"]):
 
         text                  = []
         text1                 = []
@@ -57,7 +57,7 @@ class USteuer (object):
                 m = re.search(r"(USt. |Vorst. ).*?\((.*)\)",remark)
                 if m:
                     umsatzsteuerbuchungen[datum+m.group(2)] = 1
-                    print("XX",datum+m.group(2),zeile)
+#                    print("XX",datum+m.group(2),zeile)
                 continue
 
             ustbuchungen = [ [datum, betrag, ktoa, ktob, steuersatz, remark] ]
@@ -68,9 +68,12 @@ class USteuer (object):
 #                if mode == 0:
 #                    gegenkto  = 1 - int(buchung[2][0:1] == '-' and not buchung[3][0:1] == '-')
 #                else:
-                gegenkto  = 1 - int(buchung[2].startswith(mode) and not buchung[3].startswith(mode))
-                steuerart = 1 - (gegenkto + int(float(buchung[1]) < 0))
-                steuerkto = ['U', 'I'][steuerart % 2]
+                
+                gegenkto   = 1 - int(buchung[2][0:2] in k_12_13)
+                vorzeichen = 1 - int(float(buchung[1]) < 0)
+                vorzeichen = 1 - int(gegenkto == vorzeichen)
+                
+                steuerkto = ['U', 'I'][vorzeichen]
                 if steuersatz == 19:
                     steuerkto = steuerkto + '6'
                 elif steuersatz == 7:
@@ -80,7 +83,7 @@ class USteuer (object):
                 elif steuersatz == 5:
                     steuerkto = steuerkto + '1'
                                     
-                steuerart = ['USt.', 'Vorst.'][steuerart % 2]
+                steuerart = ['USt.', 'Vorst.'][vorzeichen]
                 if steuersatz < 100:
                     buchung[1] = '%3.2f' % (-steuersatz * 0.01 / (1.0 + steuersatz * 0.01) * float(buchung[1]))
                     buchung[5] = '   ' + str(steuersatz) + ' v.H. ' + steuerart + ' von ' + '%3.2f' % abs(float(betrag)) + ' (' + buchung[5][2:] + ')'
@@ -113,5 +116,5 @@ class USteuer (object):
 #*************************************************************************
 
 if __name__ == "__main__":
-    USteuer().usteuer("","13")
+    USteuer().usteuer()
 

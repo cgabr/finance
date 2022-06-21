@@ -49,6 +49,7 @@ class Konto ():
         if not self.base_dir == "":
             self.base_dir = re.sub(r"//$","/",self.base_dir + "/")
 
+        self.mark("---")
         os.chdir(ktodir)
 
 #**********************************************************************************
@@ -239,7 +240,6 @@ class Konto ():
 
     def update_konto (self,search_pattern,salden_expand=None):  #  Updates an actual konto
         
-        self.mark("---")
         self.search_pattern = search_pattern
         if not salden_expand == None:
             self.salden_expand = salden_expand
@@ -347,9 +347,9 @@ class Konto ():
 
 #**********************************************************************************
 
-    def read_saldo (self,search_pattern,salden_expand=None):  #  Updates an actual konto
+    def read_saldo (self,search_pattern,salden_expand=None):
         
-        self.mark("---")
+        self.mark("read saldo " + search_pattern)
         self.search_pattern = "^" + search_pattern
         if not salden_expand == None:
             self.salden_expand = salden_expand
@@ -363,15 +363,23 @@ class Konto ():
             self.ukto = self.grep_pattern[1:]
             self.ukto = re.sub(r"-$","",self.ukto)
             
-        salden_liste = self.format_salden()
+        self.startdatum = (self.startdatum + "00000000")[0:8]
+        self.enddatum   = (self.enddatum   + "99999999")[0:8]
 
-        if len(salden_liste) == 0:
+        self.salden_liste = self.format_salden()
+
+        if len(self.salden_liste) == 0:
             return(0.00)
-            
-        return(float(salden_liste[0][2]))
+
+        return(float(self.salden_liste[0][2]))
 
 #        print(self.startdatum,self.enddatum,self.ukto)
         
+#**********************************************************************************
+
+    def salden_text (self):
+        return("\n".join(self.salden_aktuell)+"\n")
+
 #**********************************************************************************
 
     def extract_account_lines (self):
@@ -491,8 +499,8 @@ class Konto ():
                 self.enddatum      = self.interval_long + last_m  + "99"
                 self.interval_long = self.interval_long + months
 
-        
 #        print(self.startdatum,self.enddatum)
+
 
 
                 
@@ -2147,6 +2155,6 @@ if __name__ == "__main__":
     elif len(sys.argv) > 1 and sys.argv[1] == "sort":
         Konto.__dict__["sort"](Konto(),*sys.argv[2:])
     elif len(sys.argv) > 1 and sys.argv[1] == "saldo":
-        Konto.__dict__["read_saldo"](Konto(),*sys.argv[2:])
+        print(Konto.__dict__["read_saldo"](Konto(),*sys.argv[2:]))
     else:
         Konto.__dict__["kto"](Konto(),*sys.argv[1:])
