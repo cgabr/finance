@@ -15,15 +15,14 @@ class Bilanz (object):
         self.FORMAT2 =  8
         self.FORMAT3 = "%8s"
 
-        self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361",
-                        "C11-3170","C12-3310","B12-1435","B12-1340","B12-3695","Do.-4600","Do.-4610",
-                        "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818",
+        self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B11-1374",
+                        "C11-3170","C12-3310","B12-1435","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
+                        "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612",
                         "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700",
                         "D..-4100","D..-4105","D..-4106","D..-4400"]
         
         kto          = Konto()
-        kto.read_config(kto.base_dir+"/*.data")
-        self.dataset = kto.dataset
+        self.dataset = kto.read_config()
 
 #*********************************************************************************
 
@@ -39,8 +38,15 @@ class Bilanz (object):
     def base_bilanz (self,*pars):     # open the csv and kto files and prepare for processing
 
         jahr = pars[0]
-        name = self.dataset["name"]
-        bez  = self.dataset["bez"]
+        try:
+            name = self.dataset["name"]
+        except:
+            name = "buchhaltung"
+            
+        try:
+            bez  = self.dataset["bez"]
+        except:
+            bez  = "___NAME___"
 
         WITH_BWA = 0
         if int(jahr) < 0:
@@ -222,6 +228,8 @@ class Bilanz (object):
         text = re.sub(r"B11                                           ","\nUMLAUFVERMOEGEN\n\n"+
                                                                         "B11: Forderungen                              ",text,1)
         text = re.sub(r"B11-1210                                      ","  1210   Forderungen aus Lieferg.u.Leistungen ",text)
+        text = re.sub(r"B11-1374                                      ","  1374   Mandanten Parkplaetze                ",text)
+        text = re.sub(r"B11-1374-(\S+)                                ","     davon \\1:          ",text,999)
 
 
         text = re.sub(r"B12                                           ","\n"+
@@ -255,6 +263,8 @@ class Bilanz (object):
         text2 = text
         text = re.sub(r"B12-3695-(\S+)                                ","     davon \\1:          ",text,999)
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
+        text = re.sub(r"B12-3696                                      ","  3696   Offene Vertragsstrafen               ",text)
+        text = re.sub(r"B12-3696-([\S\-]+)                            ","     davon \\1:          ",text,999)
 
 
         text = re.sub(r"B22                                           ","\n"+
@@ -388,10 +398,10 @@ class Bilanz (object):
         text = re.sub(r"D..-4400                                      ","  4400   Erloese 19% USt ",text)
         text = re.sub(r"D..-4400-(\S+)                                    ","     davon \\1: ",text,999)
 
-        text = re.sub(r"D..-4600                                      ","  4600   Erloese 19% USt durch Parkgebuehren",text)
-        text = re.sub(r"D..-4600-(\S+)                                    ","     davon \\1: ",text,999)
-        text = re.sub(r"D..-4610                                      ","  4610   Steuerfr. Ums durch Vertragsstrafen",text)
-        text = re.sub(r"D..-4610-(\S+)                                    ","     davon \\1: ",text,999)
+        text = re.sub(r"D..-4401                                      ","  4401   Erloese 19% USt durch Parkgebuehren",text)
+        text = re.sub(r"D..-4401-(\S+)                                    ","     davon \\1: ",text,999)
+        text = re.sub(r"D..-4101                                      ","  4101   Steuerfr. Ums durch Vertragsstrafen",text)
+        text = re.sub(r"D..-4101-(\S+)                                    ","     davon \\1: ",text,999)
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
 
@@ -495,6 +505,8 @@ class Bilanz (object):
         text = re.sub(r"D..-6600                                      ","  6600   Werbekosten                          ",text)
         text = re.sub(r"D..-6601                                      ","  6601   Personal-Sachleistungen              ",text)
         text = re.sub(r"D..-6611                                      ","  6611   Abzugsf.Zuwend.an Dritte ohne Beleg  ",text)
+        text = re.sub(r"D..-6612                                      ","  6612   Ermaessigung Vertragstrafen          ",text)
+        text = re.sub(r"D..-6612-(\S+)                                    ","     davon \\1: ",text,999)
         text = re.sub(r"D..-6640                                      ","  6640   Bewirtungskosten                     ",text)
         text = re.sub(r"D..-6643                                      ","  6643   Aufmerksamkeiten                     ",text)
         text = re.sub(r"D..-6644                                      ","  6644   Nicht abzugsfaehige Bewirtungskosten ",text)
@@ -648,6 +660,7 @@ class Bilanz (object):
             text1 = re.sub(r"ANLAGEVERMOEGEN",  "ANLAGEVERMOEGEN  " + " "*58 + text_monate+"\n"+"-"*171,text1)
             text1 = re.sub(r"STAMMKAPITAL",     "STAMMKAPITAL     " + " "*58 + text_monate+"\n"+"-"*171,text1)
             text1 = re.sub(r"ERLOESE",          "ERLOESE          " + " "*58 + text_monate+"\n"+"-"*171,text1)
+            text1 = re.sub(r"UMLAUFVERMOEGEN",  "UMLAUFVERMOEGEN  " + " "*58 + text_monate+"\n"+"-"*171,text1)
             text1 = re.sub(r"PERSONALAUFWAND",  "PERSONALAUFWAND  " + " "*58 + text_monate+"\n"+"-"*171,text1)
 
         file = jahr + "_bilanz_"+bez+"__20" + jahr

@@ -37,6 +37,8 @@ class CSV (object):
             print("No ktofile found.")
             return()
             
+        anchor_found = 1
+            
         if os.path.isfile("anchor.txt"):
         
             filename = open("anchor.txt").read()
@@ -46,10 +48,13 @@ class CSV (object):
                 print(zeile)
                 sourcefile = sourcefile + glob.glob(zeile)
             if not len(sourcefile) == 1:
-                print("Sourcefile ambiguous.")
+                print("Sourcefile ambiguous:")
+                print(sourcefile)
+                print("--------")
+                anchor_found = 0
             sourcefile = sourcefile[0]
             print(sourcefile)
-            
+                        
             text0 = open(ktofile[0]).read()
             text1 = open(sourcefile).read()
             
@@ -149,6 +154,8 @@ class CSV (object):
         self.combine_ktofile()
 
         open(ktofile[0],"w").write(  "\n".join(self.kto_text) + "\n")
+
+        return(anchor_found)
 
 
 

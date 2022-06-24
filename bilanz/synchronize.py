@@ -7,6 +7,7 @@ from konto.base.konto import Konto
 from konto.steuer.usteuer import USteuer
 from konto.steuer.abschreibung import Abschreibung
 from konto.bilanz.jahresabschluss import Jahresabschluss
+from konto.parser.csv import CSV
 
 #*********************************************************************************
 
@@ -30,8 +31,28 @@ class Synchronize (object):
 
         abschreibungskonto = pars[0]
 
-        kto  = Konto()
+        kto          = Konto()
+        self.dataset = kto.read_config()
+#        print(self.dataset)
+
+        local_dir    = os.path.abspath(".")
+
+        for anchor_dir in (  glob.glob(kto.base_dir+"/../anchor.txt") +
+                             glob.glob(kto.base_dir+"/../*/anchor.txt") +
+                             glob.glob(kto.base_dir+"/../*/*/anchor.txt") +
+                             glob.glob(kto.base_dir+"/../*/*/*/anchor.txt") +
+                             glob.glob(kto.base_dir+"/../*/*/*/*/anchor.txt") +
+                             glob.glob(kto.base_dir+"/../*/*/*/*/*/anchor.txt") ):
         
+            anchor_dir = re.sub(r"^(.*)[\\\/](.*)$","\\1",anchor_dir)
+            os.chdir(anchor_dir)
+            kto.kto()
+            if CSV().to_kto() == 0:
+                print("Anchor is broken in " + os.path.abspath(anchor_dir))
+                return()
+            kto.kto()
+            os.chdir(local_dir)
+            
         kto.kto("^12-")
         USteuer().usteuer()
         kto.kto()
@@ -45,8 +66,9 @@ class Synchronize (object):
         kto.kto()
 
         kto.kto("^14-")
-        Jahresabschluss().jahressteuer("","2")
+        Jahresabschluss().jahressteuer("",self.dataset["gesellschaftsform"])
         kto.kto()
+
 
 
 

@@ -158,7 +158,7 @@ class Jahresabschluss (object):
 
             jahr1         = min(max_jahr,int(jahr))
 
-            gewinn        = - kto.read_saldo("12-:"+str(jahr)[2:4]) - kto.read_saldo("13-:"+str(jahr)[2:4])
+            gewinn        = - kto.read_saldo("12-."+str(jahr)[2:4]) - kto.read_saldo("13-."+str(jahr)[2:4])
             hebesatz      = int(self.steuersatz['HS'][jahr1])
 #            print(jahr,hebesatz,jahr1)
             soli          = float(self.steuersatz['SZ'][jahr1])

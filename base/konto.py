@@ -54,11 +54,15 @@ class Konto ():
 
 #**********************************************************************************
 
-    def read_config (self,dir):
+    def read_config (self,dir=""):
+
+        if dir == "":
+            dir = self.base_dir + "/*.data"
+
 
         for config_file in glob.glob(dir):
         
-            print(config_file)
+#            print(config_file)
             config1 = open(config_file).read()
 #            print(config1)
 
@@ -80,6 +84,8 @@ class Konto ():
                     if m and not m.group(1).lower() in self.dataset:
                         self.dataset[ m.group(1).lower() ] = m.group(2)
         
+        return(self.dataset)
+
 
 #**********************************************************************************
 
@@ -366,12 +372,12 @@ class Konto ():
         self.startdatum = (self.startdatum + "00000000")[0:8]
         self.enddatum   = (self.enddatum   + "99999999")[0:8]
 
-        self.salden_liste = self.format_salden()
+        salden_liste = self.format_salden()
 
-        if len(self.salden_liste) == 0:
+        if len(salden_liste) == 0:
             return(0.00)
 
-        return(float(self.salden_liste[0][2]))
+        return(float(salden_liste[0][2]))
 
 #        print(self.startdatum,self.enddatum,self.ukto)
         
