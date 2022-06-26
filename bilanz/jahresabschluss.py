@@ -84,8 +84,9 @@ class Jahresabschluss (object):
 
     def jahressteuer (self,ktotext0="",*pars):
 
-        gesell_form = pars[0]
-        print(gesell_form)
+        gesell_form = pars[0]   #  0: Koerperschaftsteuer und Quellensteuer
+                                #  1: Koerperschaftsteuer
+                                #  2: keine Bilanzierung
 
         if ktotext0 == "":
             ktofile = glob.glob("*.kto")[0]

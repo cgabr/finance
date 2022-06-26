@@ -603,24 +603,25 @@ class Bilanz (object):
             text = re.sub(r"\n  \d\d\d\d.*? \-?0.00 [\-0\. ]*\n","\n",text,99999999)
             text = re.sub(r"\n +davon.*? \-?0.\d\d [\-0\. ]*\n","\n",text,99999999)
 
+#        print(text)
+#        return()
 
-        text = re.sub(r"Daa                                           ","\nUNTERNEHMENSSTEUERN\n\n"+
+        text = re.sub(r"Daa    ","\nUNTERNEHMENSSTEUERN\n\n"+
                                                                         "Daa: Koerperschaft- und Gewerbesteuer          ",text,1)
-        text = re.sub(r"Daa-7603                                      ","  7603   Koerperschaftsteuer                   ",text)
-        text = re.sub(r"Daa-7608                                      ","  7608   Solidaritaetszuschlag zur KoerpSteuer ",text)
-        text = re.sub(r"Daa-7610                                      ","  7610   Gewerbesteuer                         ",text)
+        text = re.sub(r"Daa-7603                 ","  7603   Koerperschaftsteuer                   ",text)
+        text = re.sub(r"Daa-7608                 ","  7608   Solidaritaetszuschlag zur KoerpSteuer ",text)
+        text = re.sub(r"Daa-7610                 ","  7610   Gewerbesteuer                         ",text)
 
 
-        text = re.sub(r"Dba                                           ","\nENTNAHME\n\n"+
-                                                                        "Dba: Ausschuettungen und Quellensteuer        ",text,1)
-        text = re.sub(r"Dba-7790                                      ","  7790   Ausschuettung an Gesellschafter      ",text)
-        text = re.sub(r"Dba-3700                                      ","  3700   Quellensteuer                        ",text)
-        text = re.sub(r"Dba-3708                                      ","  3708   Solidaritaetszuschlag zur Quellensteu",text)
+        text = re.sub(r"Dba                      ","\nENTNAHME\n\n"+
+                                                           "Dba: Ausschuettungen und Quellensteuer        ",text,1)
+        text = re.sub(r"Dba-7790                 ","  7790   Ausschuettung an Gesellschafter      ",text)
+        text = re.sub(r"Dba-3700                 ","  3700   Quellensteuer                        ",text)
+        text = re.sub(r"Dba-3708                 ","  3708   Solidaritaetszuschlag zur Quellensteu",text)
 
-
-        text = re.sub(r"Dca                                           ","\nJAHRESERGEBNIS\n\n"+
+        text = re.sub(r"Dca                      ","\nJAHRESERGEBNIS\n\n"+
                                                                         "Dca: Jahresergebnis nach Steu.u.Ausschuettung ",text,1)
-        text = re.sub(r"Dca-7639                                      ","  7639   Jahres-Nettoueberschuss              ",text)
+        text = re.sub(r"Dca-7639                 ","  7639   Jahres-Nettoueberschuss              ",text)
 
 
 #        print(text)
