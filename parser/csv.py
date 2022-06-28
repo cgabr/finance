@@ -113,12 +113,13 @@ class CSV (object):
             zeile0 = ""
             bed    = 0
             for zeile in text.split("\n"):    #  erase additional line breaks
+
                 zeile = zeile.strip()
                 m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
 #                print(m,zeile[0:100])
                 if m:
                     zeile = m.group(3) + "." + m.group(2) + "." + m.group(1) + ";" + m.group(4) + ";" + m.group(8)
-                    print(zeile)
+#                    print(zeile)
                 if re.search(r"(^|;)\"?\d\d\.\d\d\.(\d\d\d\d|\d\d)\"?",zeile):
                     text1  = text1 + zeile0 + "\n"
 #                    buchungen.append(text1.strip().split(";"))
@@ -143,7 +144,7 @@ class CSV (object):
             if not erg == "":
                 print(erg)
                 return()
-
+                
         erg = self.merge_with_ktofile()
         if not erg == "":
  #           print(erg)
@@ -240,7 +241,7 @@ class CSV (object):
 
     def add_ktoline (self,datum,betrag,entry):
     
-        absbetrag = re.sub(r"---","",betrag)
+        absbetrag = re.sub(r"-","",betrag)
         if not datum in self.ktolines:
             self.ktolines[datum] = {}
         if not absbetrag in self.ktolines[datum]:
@@ -252,7 +253,7 @@ class CSV (object):
 
     def add_csvline (self,datum,betrag,entry):
     
-        absbetrag = re.sub(r"---","",betrag)
+        absbetrag = re.sub(r"-","",betrag)
         if not datum in self.csvlines:
             self.csvlines[datum] = {}
         if not absbetrag in self.csvlines[datum]:
@@ -290,7 +291,6 @@ class CSV (object):
             if bed == 0:
                 continue
                 
-#            print(zeile)
             erg       = self.create_buchung(zeile)
 #            print(erg)
             if erg == None:
@@ -298,8 +298,11 @@ class CSV (object):
             datum     = erg['DATUM']
             betrag    = erg['BETRAG']
             remark    = erg['REMARK']
-            absbetrag = re.sub(r"---","",betrag)
+            absbetrag = re.sub(r"-","",betrag)
+#            if "IGEFA" in zeile:
+#                print(zeile)
 
+#            print(datum,absbetrag,remark)
             self.add_csvline(datum,absbetrag,erg)
             
         return("")
@@ -309,11 +312,10 @@ class CSV (object):
     def merge_with_ktofile (self):
 
         for datum in self.csvlines:
+#            print("DD", datum)
             for absbetrag in self.csvlines[datum]:
                 for erg in self.csvlines[datum][absbetrag]:
-
-
-#                    print(datum)
+ 
                     remark    = erg['REMARK']
 
                     if not datum in self.ktolines or not absbetrag in self.ktolines[datum]:
@@ -325,51 +327,46 @@ class CSV (object):
 #                        #  es gibt also mindestens einen Eintrag mit gleichem Datum und gleichen Absolutbetrag
                         #  Alle diese Eintrage durchgehen, fuer jedes moegliche Pattern in der CSV-Remark:
 
+
+                        candidates = self.ktolines[datum][absbetrag]
+                        
                         for pattern in (remark.split(";")):
                             pattern = re.sub(r"\"?(.*?)\"?","\\1",pattern)
                             if pattern == "":
                                 continue
-#                            print(self.no_umlaute(pattern))
-                            anzahl_ziel    = 0
-                            anzahl_zeilen  = 0
-                            matching_entry = self.ktolines[datum][absbetrag][0]
-                            for entry in self.ktolines[datum][absbetrag]:
-#                                print("WW",pattern)
-#                                print("VV",entry['REMARK'])
-                                if self.no_umlaute(pattern) in self.no_umlaute(entry['REMARK']):
-                                    matching_entry = entry
-                                    anzahl_zeilen  = anzahl_zeilen + 1
-                                    if anzahl_zeilen > 1:
-                                        break
-                                if anzahl_zeilen > 1:
-                                    break
-                            if anzahl_zeilen == 1:
-                                for entry1 in self.csvlines[datum][absbetrag]:
-                                    if pattern in entry1['REMARK']:
-                                        anzahl_ziel = anzahl_ziel + 1
-                                    if anzahl_ziel > 1:
-                                        break
-                                if anzahl_ziel < 2:
-                                    break
+                            candidates1 = []
+                            for candidate in candidates:
+                                if self.no_umlaute(pattern) in self.no_umlaute(candidate['REMARK']):
+                                    candidates1.append(candidate)
+                            candidates = candidates1[:]
+                            if len(candidates) == 0:
+                                break
 
-                        if anzahl_zeilen > 1:
-                            return("More than one matching line found for " + entry['ZEILE'] + ".")
 
-                        remark_orig = matching_entry['REMARK']
-                        remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
-                        remark1     = remark1.replace("#","",9999)
-#                        print(remark)
-#                        print(datum,"    ",remark1)
-                        if not remark.replace("#","",9999) == remark1:           #  only if the remark is changed
-#                            print(12345)
-                            zaehler = matching_entry['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
-                            zeile1  = matching_entry['ZEILE']
-                            m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
-                            if m:
-                                patterns_orig = self.extract_patterns_from_remark(remark_orig)
-                                for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
-                                    remark.replace(pattern,"#"+pattern+"#")
-                                self.kto_text[zaehler] = m.group(1) + remark
+                        if len(candidates) > 1:
+                            print("More than one matching line found for " + candidates[0]['ZEILE'] + ".")
+                            return("More than one matching line found for " + candidates[0]['ZEILE'] + ".")
+
+                        if len(candidates) == 0:
+                            self.append_to_konto(erg)
+
+                        if len(candidates) == 1:
+
+                            remark_orig = candidates[0]['REMARK']
+                            remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
+                            remark1     = remark1.replace("#","",9999)
+#                            print(remark)
+#                            print(datum,"    ",remark1)
+                            if not remark.replace("#","",9999) == remark1:           #  only if the remark is changed
+#                                print(12345)
+                                zaehler = candidates[0]['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
+                                zeile1  = candidates[0]['ZEILE']
+                                m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
+                                if m:
+                                    patterns_orig = self.extract_patterns_from_remark(remark_orig)
+                                    for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
+                                        remark.replace(pattern,"#"+pattern+"#")
+                                    self.kto_text[zaehler] = m.group(1) + remark
                                 
                         
         return("")
@@ -463,20 +460,25 @@ class CSV (object):
         betrag = entry['BETRAG']
         remark = entry['REMARK']
 
-        print(datum,betrag,self.ukto)
+        print("Append",datum,betrag,self.ukto)
         zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + config.STANDARD_CONTRA_ACCOUNT + "  0.00  " + remark
 
 
 #        print("XX",zeile)
 
         self.new_lines.append(zeile)
+        
+#        print(self.new_lines)
 
 #******************************************************************************
 
     def combine_ktofile (self):
     
+
+        print("hier")
+
         for line in self.new_lines:
-            print(line)
+            print("New line",line)
             self.kto_text.append(line)
 
 #******************************************************************************
