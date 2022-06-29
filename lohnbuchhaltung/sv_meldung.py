@@ -239,6 +239,7 @@ class SV_Meldung():
 
             self.el("[aria-labelledby='overviewViewbna_menuLabel']").click()
             if "minijob" in self.dataset: 
+                print("MINIJOB")
                 self.el("[aria-labelledby='overviewViewbnaGering_viewEntryLabel']").click()
             else:
                 self.el("[aria-labelledby='overviewViewbna_viewEntryLabel']")    .click()
@@ -1039,7 +1040,6 @@ if __name__ == "__main__":
 #        print(333333333333333333333333333,arg2,arg1)
 
         if arg2 and len(arg1) > 2:
-            print(1234)
             r.yy = arg1[0:2]
             o    = arg1[-2:]
             arg1 = arg2
