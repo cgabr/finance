@@ -61,9 +61,9 @@ if __name__ == "__main__":
         if len(x) == 0: # aber nur, wenn es noch keine Gehaltsbescheinigung gibt
             print(p,monat1)
             os.system("cd " + glob.glob(p+"/*gehalt*")[0] + "; python3 -m konto.base.konto; python3 -m konto.lohnbuchhaltung.lohn " + monat)
-            os.system("rm /var/www/html/ift/web/gehalt/*/gehaltsbe*"+p+"*"+monat1+".pdf")
-            os.system("rm /var/www/html/ift/web/gehalt/*/gehaltsbe*"+p+"*"+yy+"_12.pdf")
-            os.system("rm /var/www/html/ift/web/gehalt/*/gehaltsbe*"+p+"*"+yy+".pdf")
+            os.system("rm /var/www/html/*/web/gehalt/*/gehaltsbe*"+p+"*"+monat1+".pdf")
+            os.system("rm /var/www/html/*/web/gehalt/*/gehaltsbe*"+p+"*"+yy+"_12.pdf")
+            os.system("rm /var/www/html/*/web/gehalt/*/gehaltsbe*"+p+"*"+yy+".pdf")
             pp[p] = 1
             os.system("cd " + glob.glob(p+"/*gehalt*")[0] + "; python3 -m konto.base.konto")  #  die urspruengliche Form des Kontos wiederherstellen
             new_gehalt = 1
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
 #  2. die pdfs ins Netz stellen
 
-        x = glob.glob("/var/www/html/ift/web/gehalt/*/."+p)
+        x = glob.glob("/var/www/html/*/web/gehalt/*/."+p)
         if len(x) > 0:
             m      = re.search(r"^(.*)[\\\/]\.[a-z]+$",x[0])
             ablage = m.group(1)  #  das ist das gefundene Verzeichnis, in das zu publizieren ist
