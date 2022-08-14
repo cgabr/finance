@@ -70,7 +70,7 @@ class CSV (object):
                     if len(startdatum) == 8:
                         break
 
-            print(startdatum)
+#            print(startdatum)
             
             make_csv_text = ""
             for zeile in text1.split("\n"):
@@ -319,6 +319,7 @@ class CSV (object):
                     remark    = erg['REMARK']
 
                     if not datum in self.ktolines or not absbetrag in self.ktolines[datum]:
+                        print("---------->",datum,absbetrag)
                         self.append_to_konto(erg)
 
                     else:
@@ -330,17 +331,21 @@ class CSV (object):
 
                         candidates = self.ktolines[datum][absbetrag]
                         
-                        for pattern in (remark.split(";")):
-                            pattern = re.sub(r"\"?(.*?)\"?","\\1",pattern)
-                            if pattern == "":
-                                continue
-                            candidates1 = []
-                            for candidate in candidates:
-                                if self.no_umlaute(pattern) in self.no_umlaute(candidate['REMARK']):
-                                    candidates1.append(candidate)
-                            candidates = candidates1[:]
-                            if len(candidates) == 0:
-                                break
+#                        print(candidates)
+                        
+                        if len(candidates) > 1:
+
+                            for pattern in (remark.split(";")):
+                                pattern = re.sub(r"\"?(.*?)\"?","\\1",pattern)
+                                if pattern == "":
+                                    continue
+                                candidates1 = []
+                                for candidate in candidates:
+                                    if self.no_umlaute(pattern) in self.no_umlaute(candidate['REMARK']):
+                                        candidates1.append(candidate)
+                                candidates = candidates1[:]
+                                if len(candidates) == 0:
+                                    break
 
 
                         if len(candidates) > 1:
@@ -357,7 +362,7 @@ class CSV (object):
                             remark1     = remark1.replace("#","",9999)
 #                            print(remark)
 #                            print(datum,"    ",remark1)
-                            if not remark.replace("#","",9999) == remark1:           #  only if the remark is changed
+                            if not remark.replace("#","",9999) == remark1 and remark1[0:2] == "XX":           #  only if the remark is changed and the line is marked
 #                                print(12345)
                                 zaehler = candidates[0]['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
                                 zeile1  = candidates[0]['ZEILE']
@@ -475,10 +480,8 @@ class CSV (object):
     def combine_ktofile (self):
     
 
-        print("hier")
-
         for line in self.new_lines:
-            print("New line",line)
+#            print("New line",line)
             self.kto_text.append(line)
 
 #******************************************************************************
