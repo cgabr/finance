@@ -37,59 +37,94 @@ class CSV (object):
             print("No ktofile found.")
             return()
             
-        anchor_found = 1
+        anchor_found = 0
+        
+#---------------------  anchor.txt   ---------------------------
             
         if os.path.isfile("anchor.txt"):
-        
-            filename = open("anchor.txt").read()
-            filename = re.sub("\s","",filename,99999999)
-            sourcefile = []  #  alle moeglichen Files werden durchgegangen
-            for zeile in filename.split(","):
-                print(zeile)
-                sourcefile = sourcefile + glob.glob(zeile)
-            if not len(sourcefile) == 1:
-                print("Sourcefile ambiguous:")
-                print(sourcefile)
-                print("--------")
-                anchor_found = 0
-            sourcefile = sourcefile[0]
-            print(sourcefile)
+
+            text1 = ""
+            if os.path.isfile("anchor.sh"):
+                text1 = re.sub("\s","",open("anchor.sh").read())
+                text1 = re.sub(r"^(.+)[ \=](.*)$","\\2",text1)
+#                print("TT",text1)
+                if os.path.isfile(text1):
+                    text1 = open(text1).read()
+                else:
+                    text1 = ""
+                    os.unlink("anchor.sh")
+       
+            if text1 == "":
+                filename = open("anchor.txt").read()
+                filename = re.sub("\s","",filename,99999999)
+
+                parent0  = ""
+                parent   = "."
+                while 0 == 0:
+                    if len(os.path.abspath(parent)) < 3:
+                        break
+                    if parent0 == parent:
+                        break
+                    if filename == "":
+                        break
+                    sublevel = "/"
+                    while 0 == 0:
+                        sourcefile = glob.glob(parent + sublevel + filename)
+                        if len(sourcefile) > 0:
+                            break
+                        sublevel = "/*" + sublevel
+                        if len(sublevel) > 15:
+                            break
+                    print(sourcefile)
+                    if len(sourcefile) == 1:
+                        anchor_found = 1
+                        open("anchor.sh","w").write("AN="+sourcefile[0]+"\n")
+                        text1 = open(sourcefile[0]).read()
+                        break
+                    parent0 = parent
+                    parent  = "../" + parent
+                    print(filename,sourcefile,parent+"/"+filename)
                         
             text0 = open(ktofile[0]).read()
-            text1 = open(sourcefile).read()
-            
-            if len(pars) > 0:
-                startdatum = pars[0]
-                pars       = []
-            else:
-                startdatum = ""
-                for zeile in text0.split("\n"):
-                    m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-                    if m:
-                        startdatum = m.group(1)
-                    if len(startdatum) == 8:
-                        break
+        
+            if not text1 == "":
+        
+                if len(pars) > 0:
+                    startdatum = pars[0]
+                    pars       = []
+                else:
+                    startdatum = ""
+                    for zeile in text0.split("\n"):
+                        m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                        if m:
+                            startdatum = m.group(1)
+                        if len(startdatum) == 8:
+                            break
 
-#            print(startdatum)
-            
-            make_csv_text = ""
-            for zeile in text1.split("\n"):
-                m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+)\.(\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-                if not m:
-                    continue
-                datum = m.group(1) + m.group(2) + m.group(3)
-#                print(startdatum,datum,zeile)
-                if datum <= startdatum:
-                    continue
-                make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
+#                print(startdatum)
                 
-            make_csv_text = re.sub(r";--",";",make_csv_text,99999999)
-#            print(make_csv_text)
-            
-            open("anchor.csv","w").write(make_csv_text)
-                            
-#            return()
+                make_csv_text = ""
+                for zeile in text1.split("\n"):
+                    m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+)\.(\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
+                    if not m:
+                        continue
+                    datum = m.group(1) + m.group(2) + m.group(3)
+#                    print(startdatum,datum,zeile)
+                    if datum <= startdatum:
+                        continue
+                    make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
+                    
+                make_csv_text = re.sub(r";--",";",make_csv_text,99999999)
+#                print(make_csv_text)
+                
+                open("anchor.csv","w").write(make_csv_text)
+                                
+#                return()
       
+
+#---------------------  anchor.txt  end   ---------------------------
+
+
             
         csv_files = []
         for csv_file in glob.glob(self.dir+"/*.csv"):
@@ -152,7 +187,19 @@ class CSV (object):
 
         self.assign_contra_accounts()
 
+        if os.path.isfile("anchor.txt"):  #  wenn es ein anchor-file gibt, dann die nicht durch CSV lines abgedeckten Zeilen wirklich loeschen
+            kto_text1 = []
+            for datum in self.ktolines:
+                for absbetrag in self.ktolines[datum]:
+#                    print(datum,absbetrag)
+                    for entry in self.ktolines[datum][absbetrag]:
+#                        print("EE",entry)
+                        if entry['ISINCSV'] == 1:
+                            kto_text1.append( self.kto_text[ entry['ZAEHLER'] ] )
+            self.kto_text = self.ktotext_misc + kto_text1            
+
         self.combine_ktofile()
+
 
         open(ktofile[0],"w").write(  "\n".join(self.kto_text) + "\n")
 
@@ -171,6 +218,7 @@ class CSV (object):
         self.new_lines        = []
         self.csvlines         = {}
         self.undef_acc        = []
+        self.ktotext_misc     = []
 
 
         ktotext1              = self.kto_text[:]
@@ -182,6 +230,7 @@ class CSV (object):
 
             m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
             if not m:
+                self.ktotext_misc.append(zeile)
                 continue
                 
             datum    = m.group(1)
@@ -230,7 +279,7 @@ class CSV (object):
                     else:
                         return("No account pattern found.")
                         
-            self.add_ktoline(datum,betrag,{ 'ZAEHLER' : zaehler, 'ZEILE' : zeile, 'REMARK' : remark})
+            self.add_ktoline(datum,betrag,{ 'ZAEHLER' : zaehler, 'ZEILE' : zeile, 'REMARK' : remark, 'ISINCSV': 0})
                     
         if self.ukto == None:
             self.ukto = "KONTO"
@@ -325,7 +374,7 @@ class CSV (object):
                     else:
 #                        print("-----")                        
 #                        print("VVV",datum,absbetrag,remark)
-#                        #  es gibt also mindestens einen Eintrag mit gleichem Datum und gleichen Absolutbetrag
+#                        #  es gibt also mindestens einen Eintrag im ktofile mit gleichem Datum und gleichen Absolutbetrag
                         #  Alle diese Eintrage durchgehen, fuer jedes moegliche Pattern in der CSV-Remark:
 
 
@@ -358,13 +407,14 @@ class CSV (object):
                         if len(candidates) == 1:
 
                             remark_orig = candidates[0]['REMARK']
+                            candidates[0]['ISINCSV'] = 1
                             remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
                             remark1     = remark1.replace("#","",9999)
 #                            print(remark)
 #                            print(datum,"    ",remark1)
                             if not remark.replace("#","",9999) == remark1 and remark1[0:2] == "XX":           #  only if the remark is changed and the line is marked
 #                                print(12345)
-                                zaehler = candidates[0]['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
+                                zaehler = candidates[0]['ZAEHLER']                  #  then we replace it by the CSV, but keep the markers!
                                 zeile1  = candidates[0]['ZEILE']
                                 m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
                                 if m:
@@ -479,7 +529,6 @@ class CSV (object):
 
     def combine_ktofile (self):
     
-
         for line in self.new_lines:
 #            print("New line",line)
             self.kto_text.append(line)
