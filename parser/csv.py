@@ -9,9 +9,10 @@ from konto.base import config
 class CSV (object):
 
     def __init__ (self,dir="."):
-        self.dir            = dir
-        self.csv_doublettes = {}  #  to avoid to have double entries from csv-files
-        self.check_cache    = {}
+        self.dir             = dir
+        self.csv_doublettes  = {}  #  to avoid to have double entries from csv-files
+        self.check_cache     = {}
+        self.contra_accounts = config.STANDARD_CONTRA_ACCOUNT
     
 #*********************************************************************************
 
@@ -221,6 +222,7 @@ class CSV (object):
         self.ktotext_misc     = []
 
 
+
         ktotext1              = self.kto_text[:]
         ktotext1.sort()
         
@@ -239,7 +241,7 @@ class CSV (object):
             kto2     = m.group(4)
             remark   = m.group(6)
             
-            if kto2 == config.STANDARD_CONTRA_ACCOUNT:
+            if kto2 in self.contra_accounts:
                 self.undef_acc.append(zaehler)
 
             patterns = self.extract_patterns_from_remark(remark)
@@ -249,7 +251,7 @@ class CSV (object):
                     self.equivalent_acc[patterns] = []
                 self.equivalent_acc[patterns].append(zeile)
                 
-                if kto2 == config.STANDARD_CONTRA_ACCOUNT:
+                if kto2 in self.contra_accounts:
                     zaehler1 = zaehler
                     while zaehler1 > 0:
                         zaehler1 = zaehler1 - 1
@@ -259,7 +261,7 @@ class CSV (object):
                             m1 = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile1)
                             if m1:
                                 kto02 = m1.group(4)
-                                if not kto02 == config.STANDARD_CONTRA_ACCOUNT:
+                                if not kto02 in self.contra_accounts:
                                     self.equivalent_acc[patterns][-1] = zeile1
                                     break
                     
@@ -407,6 +409,11 @@ class CSV (object):
                         if len(candidates) == 1:
 
                             remark_orig = candidates[0]['REMARK']
+                            m9          = re.search(r"^(.*) *\[(.*)\]\s*$",remark_orig)
+                            remark_explain = ""
+                            if m9:
+                                remark_orig = m9.group(1)
+                                remark_explain = " [" + m9.group(2) + "]"
                             candidates[0]['ISINCSV'] = 1
                             remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
                             remark1     = remark1.replace("#","",9999)
@@ -414,14 +421,14 @@ class CSV (object):
 #                            print(datum,"    ",remark1)
                             if not remark.replace("#","",9999) == remark1 and remark1[0:2] == "XX":           #  only if the remark is changed and the line is marked
 #                                print(12345)
-                                zaehler = candidates[0]['ZAEHLER']                  #  then we replace it by the CSV, but keep the markers!
+                                zaehler = candidates[0]['ZAEHLER']                  #  then we replace it by the CSV, but keep the markers and the explains!
                                 zeile1  = candidates[0]['ZEILE']
                                 m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
                                 if m:
                                     patterns_orig = self.extract_patterns_from_remark(remark_orig)
                                     for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
                                         remark.replace(pattern,"#"+pattern+"#")
-                                    self.kto_text[zaehler] = m.group(1) + remark
+                                    self.kto_text[zaehler] = m.group(1) + remark + remark_explain
                                 
                         
         return("")
@@ -516,7 +523,7 @@ class CSV (object):
         remark = entry['REMARK']
 
         print("Append",datum,betrag,self.ukto)
-        zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + config.STANDARD_CONTRA_ACCOUNT + "  0.00  " + remark
+        zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + self.contra_accounts[0] + "  0.00  " + remark
 
 
 #        print("XX",zeile)
@@ -564,7 +571,7 @@ class CSV (object):
                         break
                 zeile0 = zeile
                 
-            for nr1 in self.undef_acc:
+            for nr1 in self.undef_acc:   #   gehe durch alle undefinierten Zeilen des Kontofiles
                 if nr1 in used_numbers1:
                     continue
                 x = self.check_patterns(patterns,kto1,kto2,self.kto_text[nr1])

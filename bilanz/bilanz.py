@@ -532,6 +532,7 @@ class Bilanz (object):
         text = re.sub(r"D..-6821                                      ","  6821   Fortbildungskosten                   ",text)
         text = re.sub(r"D..-6822                                      ","  6822   Freiwillige Sozialleistungen         ",text)
         text = re.sub(r"D..-6825                                      ","  6825   Rechts- und Beratungskosten          ",text)
+        text = re.sub(r"D..-6826                                      ","  6826   Foerderberatung                      ",text)
         text = re.sub(r"D..-6838                                      ","  6838   Verwaltungskosten Immobilien         ",text)
         text = re.sub(r"D..-6845                                      ","  6845   Ausstattung und Kleingeraete         ",text)
         text = re.sub(r"D..-6850                                      ","  6850   Diverse Kosten                       ",text)
