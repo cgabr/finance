@@ -12,7 +12,7 @@ class CSV (object):
         self.dir             = dir
         self.csv_doublettes  = {}  #  to avoid to have double entries from csv-files
         self.check_cache     = {}
-        self.contra_accounts = config.STANDARD_CONTRA_ACCOUNT
+        self.contra_accounts = config.STANDARD_CONTRA_ACCOUNT.split(",")
     
 #*********************************************************************************
 
