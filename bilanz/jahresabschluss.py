@@ -84,9 +84,9 @@ class Jahresabschluss (object):
 
     def jahressteuer (self,ktotext0="",*pars):
 
-        gesell_form = pars[0]   #  0: Koerperschaftsteuer und Quellensteuer
+        gesell_form = pars[0]   #  2: Koerperschaftsteuer und Quellensteuer
                                 #  1: Koerperschaftsteuer
-                                #  2: keine Bilanzierung
+                                #  0: keine Bilanzierung
 
         if ktotext0 == "":
             ktofile = glob.glob("*.kto")[0]
@@ -169,7 +169,7 @@ class Jahresabschluss (object):
             rest          = gewinn - ausschuettung
 
             betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1])
-#            print(jahr1,betrag1,gewinn)
+            print(jahr1,betrag1,gewinn)
             if int(gesell_form) < 2:
                 betrag1 = 0.00
             zeile    = str(jahr)+"1223" + "  " + ("%3.2f"%betrag1) + "  "  + ks[0] + "  " + ks[1] + "  0.00  "

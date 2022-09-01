@@ -596,6 +596,9 @@ class Konto ():
             
             self.extracted_acc.append(zeile[6])
             self.formatted_acc.append(zeile1)
+            if "Jahres-Netto" in rem_z:
+                self.extracted_acc.append("---")
+                self.formatted_acc.append("---")
             if self.startdatum == "00000000":
                 self.startdatum = datum
 
