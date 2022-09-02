@@ -150,6 +150,8 @@ class Jahresabschluss (object):
 
         jahr = min_jahr - 1
         kto  = Konto()
+        
+        print(ausschuettungen)
  
         while 0 == 0:
 
@@ -164,9 +166,10 @@ class Jahresabschluss (object):
 #            print(jahr,hebesatz,jahr1)
             soli          = float(self.steuersatz['SZ'][jahr1])
             ausschuettung = 0.00
-            if jahr in ausschuettungen:
-                ausschuettung = ausschuettungen[jahr]
+            if str(jahr) in ausschuettungen:
+                ausschuettung = ausschuettungen[str(jahr)]
             rest          = gewinn - ausschuettung
+            print(jahr,"AUS",ausschuettung)
 
             betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1])
             print(jahr1,betrag1,gewinn)
@@ -198,8 +201,10 @@ class Jahresabschluss (object):
             rest     = rest - float ("%3.2f"%betrag1) 
 
             betrag1  = float(ausschuettung) * float(self.steuersatz["QS"][jahr1]) * soli
+            print(gesell_form,"BB",betrag1)
             if int(gesell_form) < 2:
                 betrag1 = 0.00
+            print(gesell_form,"BC",betrag1)
             zeile    = str(jahr)+"1227"  + "  " + ("%3.2f"%betrag1) + "  "  + qs_sz[0] + "  " + qs_sz[1] + "  0.00  "
             text     = text + zeile + "Solidaritaetszuschlag zur Quellensteuerr\n"
             rest     = rest - float ("%3.2f"%betrag1) 
