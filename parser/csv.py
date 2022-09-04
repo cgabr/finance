@@ -111,8 +111,8 @@ class CSV (object):
                         continue
                     datum = m.group(1) + m.group(2) + m.group(3)
 #                    print(startdatum,datum,zeile)
-                    if datum <= startdatum:
-                        continue
+#                    if datum <= startdatum:
+#                        continue
                     make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
                     
                 make_csv_text = re.sub(r";--",";",make_csv_text,99999999)

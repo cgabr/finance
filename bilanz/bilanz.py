@@ -271,6 +271,7 @@ class Bilanz (object):
                                                                         "B22: Bankkonten und Kassenbestand             ",text,1)
         text = re.sub(r"B22-1600                                      ","  1600   Kassenbestand                        ",text)
         text = re.sub(r"B22-1615                                      ","  1615   Privatkredit Gesellschafter          ",text)
+        text = re.sub(r"B22-1800                                      ","  1800   Commerzbank                          ",text)
         text = re.sub(r"B22-1802                                      ","  1802   Sparkasse Fuerth                     ",text)
         text = re.sub(r"B22-1803                                      ","  1803   Consors Bank                         ",text)
         text = re.sub(r"B22-1804                                      ","  1804   Flessabank Fuerth                    ",text)
@@ -427,6 +428,7 @@ class Bilanz (object):
         text = re.sub(r"D..-6075                                      ","  4982   Zuschuesse der Agenturen fuer Arbeit  ",text)
         text = re.sub(r"D..-7110                                      ","  7110   Zinsen auf Bodenwerte                 ",text)
         text = re.sub(r"D..-7141                                      ","  7141   Allgemeine Zinsen                     ",text)
+        text = re.sub(r"D..-7111                                      ","  7111   Mieten                                ",text)
 
 #        text = re.sub(r"D4a                                           ","\n"+
 #                                                                        "D4a: Aufwaende Parken                         ",text,1)
