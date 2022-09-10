@@ -424,6 +424,7 @@ class Bilanz (object):
         text = re.sub(r"D..-4945                                      ","  4945   Verlustvortrag                        ",text)
         text = re.sub(r"D..-4946                                      ","  4946   Aufloesung Sonder-Rueckstellung China ",text)
         text = re.sub(r"D..-4947                                      ","  4947   Verrechnungen sonstige Sachbezuege PKW",text)
+        text = re.sub(r"D..-4970                                      ","  4970   Erstattung Krankheitsausfall          ",text)
         text = re.sub(r"D..-4982                                      ","  4982   Erstattung Krankheitsausfall          ",text)
         text = re.sub(r"D..-6075                                      ","  4982   Zuschuesse der Agenturen fuer Arbeit  ",text)
         text = re.sub(r"D..-7110                                      ","  7110   Zinsen auf Bodenwerte                 ",text)
@@ -626,6 +627,19 @@ class Bilanz (object):
                                                                         "Dca: Jahresergebnis nach Steu.u.Ausschuettung ",text,1)
         text = re.sub(r"Dca-7639                 ","  7639   Jahres-Nettoueberschuss              ",text)
 
+
+        for key1 in self.dataset:
+            if not key1.startswith("bilanzreplace"):
+                continue
+            m = re.search(r"^(.*),(.*)$",self.dataset[key1])
+            a = m.group(1)
+            b = m.group(2)
+            c = max(len(a),len(b))
+            a = (a+"                                                                   ")[0:c]
+            b = (b+"                                                                   ")[0:c]
+            if not m:
+                continue
+            text = text.replace(a,b)
 
 #        print(text)
 

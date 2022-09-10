@@ -5,7 +5,6 @@ import os,sys,re,glob,time,base64,hashlib,random,functools,hashlib,json
 
 class Konto ():
 
-
 #******************************************************************************
 
     def __init__ (self,ktotyp=None):
