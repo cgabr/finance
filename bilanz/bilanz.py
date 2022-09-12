@@ -15,7 +15,7 @@ class Bilanz (object):
         self.FORMAT2 =  8
         self.FORMAT3 = "%8s"
 
-        self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B11-1374",
+        self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B12-1369","B11-1374",
                         "C11-3170","C12-3310","B12-1435","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
                         "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612",
                         "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700",
@@ -254,6 +254,22 @@ class Bilanz (object):
         text = re.sub(r"B12-1361-1522                                 ","     davon AOK Baden-W.: ",text)
         text = re.sub(r"B12-1361-1523                                 ","     davon IKK classic:  ",text)
         text = re.sub(r"B12-1361-1524                                 ","     davon Hanseatische: ",text)
+        text = re.sub(r"B12-1369                                      ","  1369   Forderg.aus Erstatt.im Krankheitsfall",text)
+        text = re.sub(r"B12-1369-1510                                 ","     davon DAK:          ",text)
+        text = re.sub(r"B12-1369-1511                                 ","     davon AOK Hessen:   ",text)
+        text = re.sub(r"B12-1369-1512                                 ","     davon Minijob:      ",text)
+        text = re.sub(r"B12-1369-1513                                 ","     davon VBU:          ",text)
+        text = re.sub(r"B12-1369-1514                                 ","     davon AOK Bayern:   ",text)
+        text = re.sub(r"B12-1369-1515                                 ","     davon Mobiloil:     ",text)
+        text = re.sub(r"B12-1369-1516                                 ","     davon Siemens BK:   ",text)
+        text = re.sub(r"B12-1369-1517                                 ","     davon TechnikerKK:  ",text)
+        text = re.sub(r"B12-1369-1518                                 ","     davon Barmer:       ",text)
+        text = re.sub(r"B12-1369-1519                                 ","     davon Debeka:       ",text)
+        text = re.sub(r"B12-1369-1520                                 ","     davon AOK Rhl.Pf.:  ",text)
+        text = re.sub(r"B12-1369-1521                                 ","     davon AOK NordWest: ",text)
+        text = re.sub(r"B12-1369-1522                                 ","     davon AOK Baden-W.: ",text)
+        text = re.sub(r"B12-1369-1523                                 ","     davon IKK classic:  ",text)
+        text = re.sub(r"B12-1369-1524                                 ","     davon Hanseatische: ",text)
         text = re.sub(r" +davon.*?\: +\-?0.\d\d *\n","",text,9999)
         text = re.sub(r"B12-1355                                      ","  1355   Mietkautionen                        ",text)
         text = re.sub(r"B12-1435                                      ","  1435   Forderungen aus Steuerueberzahlungen ",text)
@@ -265,6 +281,7 @@ class Bilanz (object):
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
         text = re.sub(r"B12-3696                                      ","  3696   Offene Vertragsstrafen               ",text)
         text = re.sub(r"B12-3696-([\S\-]+)                            ","     davon \\1:          ",text,999)
+        text = re.sub(r"B12-1457                                      ","  1457   Forderung AAG KUG                    ",text)
 
 
         text = re.sub(r"B22                                           ","\n"+
