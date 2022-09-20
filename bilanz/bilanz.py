@@ -16,7 +16,7 @@ class Bilanz (object):
         self.FORMAT3 = "%8s"
 
         self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B12-1369","B11-1374",
-                        "C11-3170","C12-3310","B12-1435","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
+                        "C11-3170","C12-3310","B12-1435","B23-1437","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
                         "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612",
                         "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700",
                         "D..-4100","D..-4105","D..-4106","D..-4400"]
@@ -200,6 +200,7 @@ class Bilanz (object):
         if "Restwerte" in text:
             text = re.sub(r"A11-0675","\nA11-0675",text) 
 
+        text = re.sub(r"A11-0144                                      ","  0144   Erstellte Softwareprodukte           ",text)
         text = re.sub(r"A11-0300                                      ","  0300   Wohnbauten                           ",text)
         text = re.sub(r"A11-0310                                        ","  0310   Immob. Schw.Gmuend, Lorcher Str.98, EGH",text)
         text = re.sub(r"A11-0311                                      ","  0311   Immob. Rheydt, Gertraudenstr. 73, ETW",text)
@@ -274,6 +275,7 @@ class Bilanz (object):
         text = re.sub(r"B12-1355                                      ","  1355   Mietkautionen                        ",text)
         text = re.sub(r"B12-1435                                      ","  1435   Forderungen aus Steuerueberzahlungen ",text)
         text = re.sub(r"B12-1435-1506                                        ","     davon Gewerbesteuer Fuerth:",text)
+        text = re.sub(r"B12-1435-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
         text = re.sub(r"B12-1435-1509                                        ","     davon Finanzamt Fuerth:    ",text)
         text = re.sub(r"B12-3695                                      ","  3695   Forderg. gg. Mitarbeitern, Auslagen  ",text)
         text2 = text
@@ -285,7 +287,11 @@ class Bilanz (object):
 
 
         text = re.sub(r"B22                                           ","\n"+
-                                                                        "B22: Bankkonten und Kassenbestand             ",text,1)
+                                                                        "B22: Bankkonten                               ",text,1)
+        text = re.sub(r"B22-1435                                      ","  1435   Steuerkonten                         ",text)
+        text = re.sub(r"B22-1435-1506                                        ","     davon Gewerbesteuer Fuerth:",text)
+        text = re.sub(r"B22-1435-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
+        text = re.sub(r"B22-1435-1509                                        ","     davon Finanzamt Fuerth:    ",text)
         text = re.sub(r"B22-1600                                      ","  1600   Kassenbestand                        ",text)
         text = re.sub(r"B22-1615                                      ","  1615   Privatkredit Gesellschafter          ",text)
         text = re.sub(r"B22-1800                                      ","  1800   Commerzbank                          ",text)
@@ -303,6 +309,30 @@ class Bilanz (object):
         text = re.sub(r"B22-1885                                      ","  1885   Transferkonto Bankueberweisungen     ",text)
         text = re.sub(r"B22-1890                                      ","  1890   Bestand gegen andere Geschaeftsfelder",text)
         text = re.sub(r"B22-1891                                      ","  1891   Transferkonto Finanzamt              ",text)
+
+        text = re.sub(r"B23                                           ","\n"+
+                                                                        "B23: Verfügbare Eigenmittel, Tagesgeld        ",text,1)
+        text = re.sub(r"B23-1437                                      ","  1435   Steuerkonten                         ",text)
+        text = re.sub(r"B23-1437-1506                                        ","     davon Gewerbesteuer Fuerth:",text)
+        text = re.sub(r"B23-1437-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
+        text = re.sub(r"B23-1437-1509                                        ","     davon Finanzamt Fuerth:    ",text)
+        text = re.sub(r"B23-1600                                      ","  1600   Kassenbestand                        ",text)
+        text = re.sub(r"B23-1615                                      ","  1615   Privatkredit Gesellschafter          ",text)
+        text = re.sub(r"B23-1800                                      ","  1800   Commerzbank                          ",text)
+        text = re.sub(r"B23-1802                                      ","  1802   Sparkasse Fuerth                     ",text)
+        text = re.sub(r"B23-1803                                      ","  1803   Consors Bank                         ",text)
+        text = re.sub(r"B23-1804                                      ","  1804   Flessabank Fuerth                    ",text)
+        text = re.sub(r"B23-1805                                      ","  1805   VRBank Ostalb Immo Konto             ",text)
+        text = re.sub(r"B23-1806                                      ","  1806   VRBank Ostalb IfT Konto              ",text)
+        text = re.sub(r"B23-1807                                      ","  1807   VRBank Ostalb Firmenkreditkarte IfT  ",text)
+        text = re.sub(r"B23-1811                                      ","  1811   Forecast Konto fuer Planung          ",text)
+        text = re.sub(r"B23-1819                                      ","  1812   Bausparvertrag VRBank                ",text)
+        text = re.sub(r"B23-1821                                      ","  1821   Konto Stolberg                       ",text)
+        text = re.sub(r"B23-1840                                      ","  1840   Geschaeftsanteile VRBank             ",text)
+        text = re.sub(r"B23-1851                                      ","  1851   Kapitalkonto Sparkasse Fuerth        ",text)
+        text = re.sub(r"B23-1885                                      ","  1885   Transferkonto Bankueberweisungen     ",text)
+        text = re.sub(r"B23-1890                                      ","  1890   Bestand gegen andere Geschaeftsfelder",text)
+        text = re.sub(r"B23-1891                                      ","  1891   Transferkonto Finanzamt              ",text)
 
         if "C11-2978" in text:
             text = re.sub(r"C11                                           ","\nVERLUSTVORTRAG\n\n"+
@@ -460,6 +490,7 @@ class Bilanz (object):
         text = re.sub(r"D..-6011                                      ","  6011   Loehne und Gehaelter 12park           ",text)
         text = re.sub(r"D..-6011-(\S+)                                    ","     davon \\1: ",text,999)
         text = re.sub(r"D..-6020                                      ","  6020   freiberufliche Verguetung             ",text)
+        text = re.sub(r"D..-6021                                      ","  6021   Aktivierung lohnbezogener Gueter      ",text)
 
 
         text = re.sub(r"D5b                                           ","\n"+
@@ -468,6 +499,10 @@ class Bilanz (object):
         text = re.sub(r"D..-6111-(\S+)                                    ","     davon \\1: ",text,999)
         text = re.sub(r"D..-6111                                      ","  6111   Gesetzliche Sozialaufwendungen 12park  ",text)
 
+
+        text = re.sub(r"D5c                                           ","\n"+
+                                                                        "D5c: Aktivierung gehaltsbezogener Gueter        ",text,1)
+        text = re.sub(r"D..-6021                                      ","  6021   Aktivierung erstellter Gueter          ",text)
 
         text = re.sub(r"D6a                                           ","\nABSCHREIBUNGEN\n\n"+
                                                                         "D6a: auf immaterielles Vermoegen u.Sachanlagen",text,1)
