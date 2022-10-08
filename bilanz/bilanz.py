@@ -275,6 +275,7 @@ class Bilanz (object):
         text = re.sub(r"B12-1355                                      ","  1355   Mietkautionen                        ",text)
         text = re.sub(r"B12-1435                                      ","  1435   Forderungen aus Steuerueberzahlungen ",text)
         text = re.sub(r"B12-1435-1506                                        ","     davon Gewerbesteuer Fuerth:",text)
+        text = re.sub(r"B12-1435-1507                                        ","     davon Forschungszulage:    ",text)
         text = re.sub(r"B12-1435-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
         text = re.sub(r"B12-1435-1509                                        ","     davon Finanzamt Fuerth:    ",text)
         text = re.sub(r"B12-3695                                      ","  3695   Forderg. gg. Mitarbeitern, Auslagen  ",text)
@@ -312,7 +313,7 @@ class Bilanz (object):
 
         text = re.sub(r"B23                                           ","\n"+
                                                                         "B23: Verfügbare Eigenmittel, Tagesgeld        ",text,1)
-        text = re.sub(r"B23-1437                                      ","  1435   Steuerkonten                         ",text)
+        text = re.sub(r"B23-1437                                      ","  1437   Steuerkonten                         ",text)
         text = re.sub(r"B23-1437-1506                                        ","     davon Gewerbesteuer Fuerth:",text)
         text = re.sub(r"B23-1437-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
         text = re.sub(r"B23-1437-1509                                        ","     davon Finanzamt Fuerth:    ",text)
