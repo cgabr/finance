@@ -467,8 +467,8 @@ class Bilanz (object):
         text = re.sub(r"D3a                                           ","\nERTRAEGE\n\n"+
                                                                         "D3a: sonstige betriebliche Ertraege            ",text,1)
         text = re.sub(r"D..-4440                                      ","  4440   ZIM Foerderung                        ",text)
-        text = re.sub(r"D..-4441                                      ","  4440   Einnahmenausgleich                    ",text)
-        text = re.sub(r"D..-4442                                      ","  4440   Foerderung Kultur                     ",text)
+        text = re.sub(r"D..-4441                                      ","  4441   Einnahmenausgleich                    ",text)
+        text = re.sub(r"D..-4442                                      ","  4442   Foerderung Kultur                     ",text)
         text = re.sub(r"D..-4945                                      ","  4945   Verlustvortrag                        ",text)
         text = re.sub(r"D..-4946                                      ","  4946   Aufloesung Sonder-Rueckstellung China ",text)
         text = re.sub(r"D..-4947                                      ","  4947   Verrechnungen sonstige Sachbezuege PKW",text)
