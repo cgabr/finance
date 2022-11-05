@@ -106,6 +106,7 @@ class Meldung (object):
             else:
                 storniert = ""
 
+            print(sv_meldung)
 
             text = re.sub('(.*) +ohne +Sozialausgleich(.*)', '', text, 9999)  # wegen doppelt eingetragener Betraege
 

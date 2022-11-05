@@ -151,7 +151,7 @@ class Beitrag (object):
                 elif re.search(', Beitr.*Krankenvers.*allgem', remark1):
                     ktoa =  '-KV-meldung'
                 elif re.search(', Zusatzbeitr.*Krankenvers', remark1):
-                    ktoa =  '-KV-meldung'
+                    ktoa =  '-KV-meldZUS'
                 elif re.search(', Beitr.*Krankenvers.*geringf', remark1):
                     ktoa =  '-KV-meldung'
                 elif re.search(', Pauschal.*Krankenvers', remark1):
