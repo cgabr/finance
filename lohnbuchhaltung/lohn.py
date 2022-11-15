@@ -403,6 +403,9 @@ class Lohn (object):
             kinder     = lohndaten[jm]['KINDER']
 
 #            print(merk,stkl)
+            if merk[0:4] == "3321":
+                merk = "1111r-" + merk[4:]
+
             if merk[0:4] == "1100" or merk[0:4] == "6500" and stkl == 0:
                 mode     = "g"   #   geringfuegig beschaeftigt
                 merk     = "1100" + merk[4:]
@@ -449,8 +452,8 @@ class Lohn (object):
             if "r" in merk or "g" in merk:   #  Rentner
                 betraege[jm]['AN-RV']   = "0.00"
                 betraege[jm]['AN-AV']   = "0.00"
-                betraege[jm]['AR-RV']   += "x"
-                betraege[jm]['AR-AV']   += "x"
+                betraege[jm]['AR-RV']   = "x" + betraege[jm]['AR-RV']   #   das dient dazu, um die Soz-Vers-Klasse mit EV (ermaessigt) statt als KV zu kennzeichnen
+                betraege[jm]['AR-AV']   = "x" + betraege[jm]['AR-AV']   #   genauso mit BV fuer AV und XV fuer RV
             if "-" in merk:   #  ohne Krankengeld
                 betraege[jm]['AN-KV-S'] = "x" + "%3.2f" % ( float(betraege[jm]['AN-KV-S']) - float(krankengeld) )
                 if 'AR-KV-S' in betraege[jm]:
@@ -535,7 +538,7 @@ class Lohn (object):
 
             if not lst_exists:
                 for art in self.abgabenarten:
-                    lohndaten[jm][art] = [ betraege[jm][art], "%3.2f" % diffs[art] ]
+                    lohndaten[jm][art] = [ re.sub("x","",betraege[jm][art]), "%3.2f" % diffs[art] ]
                     diffs[art]         = 0.00
                     jahressumme[art]   = -99999999
                     
@@ -648,15 +651,17 @@ class Lohn (object):
                 letzter_wert = []  #  fuer jahressummenbildung
                 for lssoz_str in lohndaten[jm][art]:
 
-                    lssoz        = float(lssoz_str)
                     betrag       = betraege[jm][art]
+#                    print(betrag)
+                    lssoz        = float(lssoz_str)
                     art1         = art
                     if betrag[0] == "x":
                         betrag  = betrag[1:]
                         art1    = re.sub("RV","XV",art)
-                        art1    = re.sub("AV","BV",art)
-                        art1    = re.sub("KV","EV",art)
+                        art1    = re.sub("AV","BV",art1)
+                        art1    = re.sub("KV","EV",art1)
                     betrag = float(betrag)
+#                    print(jm,art,art1,lssoz_str,betrag)
 
                     if abs(betrag) > 0.001 or abs(lssoz) > 0.001:
                         consider_b = True
