@@ -116,5 +116,15 @@ class USteuer (object):
 #*************************************************************************
 
 if __name__ == "__main__":
-    USteuer().usteuer()
+
+    u            = USteuer()
+    kto          = konto.Konto()
+    kto.read_config(kto.base_dir+"/*.data")
+    kto.read_config("../*.data")
+    kto.read_config("./sv.data")
+    kto.read_config("*/sv.data")
+    kto.read_config("./15*/*.csv")
+    kto.read_config("../05*/*.csv")
+    u.dataset = kto.dataset
+    u.usteuer()
 
