@@ -564,7 +564,7 @@ class CSV (object):
                     if kto2 == "" or kto2 == m.group(4):
                         kto2 = m.group(4)
                     else:
-                        kto2 = ""
+                        kto2 = self.contra_accounts[0]
                         print("Ambiguous pattern in lines:")
                         print(zeile0)
                         print(zeile)

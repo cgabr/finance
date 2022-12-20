@@ -1,8 +1,9 @@
 #  coding:  utf8
 
-import os,sys,re,glob,time,sqlite3,hashlib,time,base64,datetime,random
+import os,sys,re,glob,time,sqlite3,hashlib,time,base64,datetime,random,konto
 
 from konto.base import config
+from konto.base import konto
 
 #*********************************************************************************
 
@@ -27,6 +28,11 @@ class USteuer (object):
         else:
             ktotext = ktotext0
             
+        uebertragsbuchhaltung = ""
+        m = re.search(r" (10\-B23\-1890\-[\da-z]+\-)([^\n]+)(USt\.|Vorst\.)",ktotext)
+        if m:
+            uebertragsbuchhaltung = m.group(1)
+        
         for zeile in ktotext.split('\n'):
 
             m = re.search('^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+?) +(\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
@@ -50,7 +56,10 @@ class USteuer (object):
             elif remark[0:2] == '+-':
                 steuersatz = 7
             elif remark[0:2] == '-+':
-                steuersatz = 16
+                if int(datum[0:4]) < 2022:
+                    steuersatz = 16  #  Steuersatz Corona 2021 Juli bis Dezember
+                else:
+                    steuersatz = 17  #  Steuersatz Bosnien
             elif remark[0:2] == '--':
                 steuersatz = 5
             else:
@@ -78,6 +87,8 @@ class USteuer (object):
                     steuerkto = steuerkto + '6'
                 elif steuersatz == 7:
                     steuerkto = steuerkto + '7'
+                elif steuersatz == 17:
+                    steuerkto = steuerkto + '3'
                 elif steuersatz == 16:
                     steuerkto = steuerkto + '2'
                 elif steuersatz == 5:
@@ -94,7 +105,7 @@ class USteuer (object):
                         buchung[5] = '   ' + m.group(1) + ' v.H. ' + steuerart + ' enthalten in ' + '%3.2f' % abs(float(betrag)) + ' (' + buchung[5][2:] + ')'
                     else:
                         continue
-                buchung[3 - gegenkto] = config.UMSATZSTEUER_KONTO + '-' + steuerkto
+                buchung[3 - gegenkto] = uebertragsbuchhaltung + config.UMSATZSTEUER_KONTO + '-' + steuerkto
                 buchung[4] = '0.00'
                 datrem = datum+remark[2:]
                 if not datrem in neue_ust_buchungen:

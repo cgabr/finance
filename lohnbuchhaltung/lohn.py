@@ -157,6 +157,13 @@ class Lohn (object):
         ktoslips          = {}
         ukto              = "-"
         
+        uebertragsbuchhaltung = ""
+        m = re.search(r" (10\-B23\-1890\-[\da-z]+\-)",buchungsdaten_text)
+        if m:
+            uebertragsbuchhaltung = m.group(1)
+        
+        
+        
         diffs = {}
         for art in self.abgabenarten:
             diffs[art] = 0.00
@@ -551,10 +558,7 @@ class Lohn (object):
                         except:
                             pass
                     jahressumme[art] = jahressumme[art] + sum
-                    diffs[art] = diffs[art] + ( float(betraege[jm][art]) - sum )
-
-
-
+                    diffs[art] = diffs[art] + ( float(re.sub("x","",betraege[jm][art])) - sum )
 
 #    8.  Buchungen schreiben
 
@@ -679,7 +683,7 @@ class Lohn (object):
                     letzter_wert.append("%13.2f" % lssoz)
                     export_zeile = export_zeile + letzter_wert[-1]
                         
-                    kto2  = re.sub(r"XXXX",lohndaten[jm]['NR'],self.gegenkonto[art])
+                    kto2  = re.sub(r"XXXX",lohndaten[jm]['NR'],uebertragsbuchhaltung+self.gegenkonto[art])
                     zeile = jm + day + "  " + ("%3.2f"%lssoz) + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-" + art1 + "  " 
                     zeile = zeile + kto2 + "-" + self.employee + "  0.00  " + self.bezeichner[art] + add
                     if art[0:2] == "AR":
