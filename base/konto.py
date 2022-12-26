@@ -679,6 +679,8 @@ class Konto ():
                 remark   = mm.group(8)
                 uniqu    = []
                 ktoa     = mm.group(5)
+                if ktoa.startswith("-"):
+                    ktoa = self.ukto + ktoa
                 ktob     = mm.group(6)
                 
                 if "--" in ktoa or "--" in ktob:

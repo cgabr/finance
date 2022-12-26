@@ -214,7 +214,7 @@ class Tool ():
 
 #************************************************************************
 
-    def rechnung (self,*pars):   #  spiegelt ein Konto in eine andere Buchhaltung
+    def rechnung (self,*pars):   #   stimmt die Umsatzsteuer und die Gesamtsalden in einer Rechnung ab
     
 
         rechnung_file = pars[0]

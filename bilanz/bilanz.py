@@ -574,6 +574,7 @@ class Bilanz (object):
         text = re.sub(r"D7f                                           ","\n"+
                                                                         "D7f: verschiedene betriebliche Kosten         ",text,1)
         text = re.sub(r"D..-5840                                      ","  5840   Zoll                                 ",text)
+        text = re.sub(r"D..-6303                                      ","  6303   Fremdleistungen                      ",text)
         text = re.sub(r"D..-6770                                      ","  6770   Verkaufsprovisionen                  ",text)
         text = re.sub(r"D..-6800                                      ","  6800   Porto                                ",text)
         text = re.sub(r"D..-6805                                      ","  6805   Telefon                              ",text)
