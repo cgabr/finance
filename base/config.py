@@ -21,6 +21,8 @@ KTO_KRANKENKASSEN                = "10-B12-1361"
 
 KTO_FINANZAMT                    = "11-C13-3751"
 KTO_SAEUMNIS                     = "13-D7b-6436-saeumnis"
+KTO_ZWISCHEN                     = "10-B22-1891-auszahlung"
+KTO_ZAHLUNG                      = "10-B12-1435-1509-zahlung"
 
 
 #  Krankenkassen-Mapping
