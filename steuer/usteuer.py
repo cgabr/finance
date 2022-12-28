@@ -28,10 +28,17 @@ class USteuer (object):
         else:
             ktotext = ktotext0
             
+
         uebertragsbuchhaltung = ""
-        m = re.search(r" (10\-B23\-1890\-[\da-z]+\-)([^\n]+)(USt\.|Vorst\.)",ktotext)
-        if m:
-            uebertragsbuchhaltung = m.group(1)
+        ktotext9 = ktotext.split("\n")
+        ktotext9.reverse()
+        for zeile in ktotext9:
+            if (" " + config.UMSATZSTEUER_KONTO) in zeile:
+                break
+            m = re.search(" (10\-B23\-1890\-[\da-z]+\-)"+config.UMSATZSTEUER_KONTO,ktotext)
+            if m:
+                uebertragsbuchhaltung = m.group(1)
+                break
         
         for zeile in ktotext.split('\n'):
 

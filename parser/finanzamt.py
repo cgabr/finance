@@ -13,11 +13,12 @@ except:
 class Finanzamt (object):
 
     def __init__ (self,dir="."):
-        self.dir            = dir
-        self.KTO_FINANZAMT  = config.KTO_FINANZAMT     
-        self.KTO_SAEUMNIS   = config.KTO_SAEUMNIS 
-        self.KTO_ZWISCHEN   = config.KTO_ZWISCHEN  
-        self.KTO_ZAHLUNG    = config.KTO_ZAHLUNG 
+        self.dir             = dir
+        self.KTO_STEUERARTEN = config.KTO_STEUERARTEN     
+        self.KTO_SAEUMNIS    = config.KTO_SAEUMNIS 
+        self.KTO_ZINSEN      = config.KTO_ZINSEN
+        self.KTO_ZWISCHEN    = config.KTO_ZWISCHEN  
+        self.KTO_ZAHLUNG     = config.KTO_ZAHLUNG 
     
 #*********************************************************************************
 
@@ -30,11 +31,12 @@ class Finanzamt (object):
             
         ktotext = open(ktofile[0]).read()
             
-        gegenkonto0 = self.KTO_FINANZAMT
+        gegenkonto0 = self.KTO_STEUERARTEN
         gegenkonto1 = self.KTO_SAEUMNIS
+        gegenkonto2 = self.KTO_ZINSEN
 
 
-        files = glob.glob("*.csv")
+        files = glob.glob("*.manuell")
         print(files)
         if len(files) == 0:
             return(ktotext)
@@ -68,7 +70,8 @@ class Finanzamt (object):
                 "VS"   :   " Vollstreckung",
                 "MG"   :   ", Mahngebuehr",
                 "GR"   :   ", Grundsteuerauskunft",
-                "ZW"   :   " Zwangsgeld"
+                "ZW"   :   " Zwangsgeld",
+                "UN"   :   " unbekannt"
             }
                 
         text = []
@@ -77,20 +80,20 @@ class Finanzamt (object):
 #            if "-erklaerung-" in zeile or gegenkonto0 in zeile or " 10-1510-15" in zeile:
             if "-auszahlung" in zeile or "-XX-" in zeile:
                 text.append(zeile)
+            elif re.search(r"\-[A-Z][A-Z]\-[A-Z][A-Z]\-\d\d",zeile):
+                continue
             elif re.search(r" 10-B.*? 10-B",zeile):
                 text.append(zeile)
-            elif re.search(r"-[A-Z][A-Z]\-[A-Z][A-Z]\-\d\d",zeile):
-                continue
             else:
                 text.append(zeile)
                   
         for zeile in open(files[0]).read().split("\n"):
         
             m = re.search(r"^(\d\d\d\d\d*) +([A-Z\-]+) +(\-?\d+\.\d\d)(.*)$",zeile)
-#            print(zeile)
             if not m:
                 continue
             datum     = m.group(1)
+#            print(zeile)
             
             if len(datum) == 4:
                 datum = datum + "1230"
@@ -107,18 +110,20 @@ class Finanzamt (object):
                 addrem = m.group(2)
 #            print(datum)
             gegenkonto = gegenkonto1
+            if steuerart[3:] == "ZI":
+                gegenkonto = gegenkonto2
             if steuerart in ("LS-ST","LD-ST","LR-ST","LE-ST","LI-ST","LA-ST",
-                             "LS-ZI","LD-ZI","LR-ZI","LE-ZI","LI-ZI","LA-ZI",
-                             "LS-VZ","LD-VZ","LR-VZ","LE-VZ","LI-VZ","LA-VZ"):
-                gegenkonto = gegenkonto0 + "-1503-bescheid" #+ zeitraum
-            if steuerart in ("US-ST","US-ZI","US-VZ"):
-                gegenkonto = gegenkonto0 + "-1502-bescheid" #+ zeitraum
-            if steuerart in ("KS-ST","KD-ST","KS-ZI","KD-ZI","KS-VZ","KD-VZ"):
-                gegenkonto = gegenkonto0 + "-1505-bescheid" #+ zeitraum
-            if steuerart in ("GW-ST","GW-ZI","GW-VZ","GW-NZ","GW-EZ"):
-                gegenkonto = gegenkonto0 + "-1506-bescheid" #+ zeitraum
-            if steuerart in ("QS-ST","QD-ST","QS-ZI","QD-ZI","QS-VZ","QD-VZ"):
-                gegenkonto = gegenkonto0 + "-1507-bescheid" #+ zeitraum
+                             "LxS-ZI","LxD-ZI","LxR-ZI","LxE-ZI","LxI-ZI","LxA-ZI",
+                             "LxS-VZ","LxD-VZ","LxR-VZ","LxE-VZ","LxI-VZ","LxA-VZ"):
+                gegenkonto = gegenkonto0 + "-3065-bescheid" #+ zeitraum
+            if steuerart in ("US-ST","UxS-ZI","UxS-VZ"):
+                gegenkonto = gegenkonto0 + "-3060-bescheid" #+ zeitraum
+            if steuerart in ("KS-ST","KD-ST","KxS-ZI","KxD-ZI","KxS-VZ","KxD-VZ"):
+                gegenkonto = gegenkonto0 + "-3040-bescheid" #+ zeitraum
+            if steuerart in ("GW-ST","GxW-ZI","GxW-VZ","GxW-NZ","GxW-EZ"):
+                gegenkonto = gegenkonto0 + "-3035-bescheid" #+ zeitraum
+            if steuerart in ("QS-ST","QD-ST","QxS-ZI","QxD-ZI","QxS-VZ","QxD-VZ"):
+                gegenkonto = gegenkonto0 + "-3050-bescheid" #+ zeitraum
             zeile1 = datum + "  " + ("%3.2f" % -betrag) + "  -" + steuerart + "-" + zeitraum + "  " + gegenkonto
             zeile1 = zeile1 + "  0.00  " + steuerarten[ steuerart[0:2] ] + " 20" + zeitraum + gebuehrenarten[ steuerart[3:5] ]
             zeile1 = zeile1 + addrem

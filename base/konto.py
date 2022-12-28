@@ -679,6 +679,8 @@ class Konto ():
                 remark   = mm.group(8)
                 uniqu    = []
                 ktoa     = mm.group(5)
+                if ktoa == None:
+                    print(zeile)
                 if ktoa.startswith("-"):
                     ktoa = self.ukto + ktoa
                 ktob     = mm.group(6)
@@ -846,6 +848,7 @@ class Konto ():
         for ktofile in ktofiles:  #  retrieving of the relevant lines via grep
 #            print(ktofile)
             ktotexts.append([])
+#            print("grep -P '" + ktoparse + "' " + ktofile)
             for zeile in os.popen("grep -P '" + ktoparse + "' " + ktofile).read().split("\n")[:-1]:
                 ktotexts[-1].append(zeile.split(","))
 
