@@ -37,7 +37,7 @@ class Tool ():
 
 
         if len(glob.glob("./mirror.sh")) == 0:   #  man ist nicht direkt in einem Spiegelkonto,
-            akt_path0 = ""                       #  wir gehen jetzt maöl zu dem uebergeordneten 01_...er Konto
+            akt_path0 = ""                       #  wir gehen jetzt mal zu dem uebergeordneten 01_...er Konto
             while (0 == 0):
                 akt_path = os.path.abspath(".")
                 print(akt_path)
@@ -55,7 +55,6 @@ class Tool ():
                     print(new_path1[0])
                     break
                 os.chdir("..")
-
 
         mirror_dirs = ( glob.glob("*/mirror.sh") + glob.glob("*/*/mirror.sh") +
                         glob.glob("*/*/*/mirror.sh") + glob.glob("*/*/*/*/mirror.sh") +
@@ -89,6 +88,8 @@ class Tool ():
                 
         if len(mirror_dirs) > 0:
             return()
+
+#        print(os.path.abspath("."))
 
 
         ktofile0 = glob.glob("*.kto")

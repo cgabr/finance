@@ -16,9 +16,9 @@ class Bilanz (object):
         self.FORMAT3 = "%8s"
 
         self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B12-1369","B11-1374",
-                        "C11-3170","C12-3310","B12-1435","B23-1437","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
-                        "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612",
-                        "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700",
+                        "C11-3170","C11-3170-[a-z]+","C12-3310","B12-1435","B23-1437","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
+                        "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612","C02-2080","B23-1890","B25-[^\ ]+","X[EFGH]11-[^\- ]+","F11-001",
+                        "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700","C01-2900",
                         "D..-4100","D..-4105","D..-4106","D..-4400"]
         
         kto          = Konto()
@@ -103,6 +103,32 @@ class Bilanz (object):
 #        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
         text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",kto.salden_text(),99999999)
 
+        kto.read_saldo("90-:"+jahr)
+#        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXGOODS  " + kto.salden_text()
+        text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
+        text1 = re.sub(r" --","   ",text1,999999)
+        text_add = text1
+
+        kto.read_saldo("91-:"+jahr)
+#        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
+        text_add  = text_add + "\nXXVALUES " + re.sub(r"Do","Xo",kto.salden_text(),99999999)
+
+        kto.read_saldo("92-."+jahr)
+#        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXGDIFF  " + kto.salden_text()
+        text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
+        text1 = re.sub(r" --","   ",text1,999999)
+        text_add = text_add + text1
+
+        kto.read_saldo("93-."+jahr)
+#        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
+        text_add  = text_add + "\nXXVDIFF   " + re.sub(r"Do","Xo",kto.salden_text(),99999999)
+        
+        o1 = re.sub(r"0","",text_add,99999999)
+        if not re.search(r"\d\.\d\d",o1):
+            text_add = ""
+
 #        print(text)
 #        exit()
 
@@ -133,16 +159,47 @@ class Bilanz (object):
             o4 = "\nAUFWAND   " + kto.salden_text()
 #            o4 = "\nAUFWAND   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
             o4 = re.sub(r"Do","Xo",o4,999999)
-            monat_guv.append( o1 + o2 + o3 + o4 ) # open(glob.glob("*kto")[0]).read() )
+#            monat_guv.append( o1 + o2 + o3 + o4 ) # open(glob.glob("*kto")[0]).read() )
 
-        text = re.sub(r"( .\d+\.\d\d)","                        \\1",text,99999999)
-        text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======",text,9999)
+            kto.read_saldo("90-:"+jahr+monat)
+            o5 = "\nGOODS    " + kto.salden_text()
+#            o5 = "\nERTRAG   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+#            o5 = open(glob.glob("*kto")[0]).read()
+            
+            kto.read_saldo("91-:"+jahr+monat)
+            o6 = "\nVALUES    " + kto.salden_text()
+#            o6 = "\nAUFWAND   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+#            o4 = re.sub(r"Do","Xo",o4,999999)
+
+            kto.read_saldo("92-."+jahr+monat)
+            o7 = "\nGDIFF   " + kto.salden_text()
+#            o7 = "\nERTRAG   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+#            o7 = open(glob.glob("*kto")[0]).read()
+            o7 = re.sub(r" (\-?\d+\.\d\d)","-\\1",o7,999999)  #  Minuszeichen
+            o7 = re.sub(r" --","   ",o7,999999)
+            
+            kto.read_saldo("93-."+jahr+monat)
+            o8 = "\nVDIFF     " + kto.salden_text()
+#            o8 = "\nAUFWAND   " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+            o8 = re.sub(r"Do","Xo",o8,999999)
+            o8 = re.sub(r" (\-?\d+\.\d\d)","-\\1",o8,999999)  #  Minuszeichen
+            o8 = re.sub(r" --","   ",o8,999999)
+#            monat_guv.append( o1 + o2 + o3 + o4 ) # open(glob.glob("*kto")[0]).read() )
+
+            monat_guv.append( o1 + o2 + o3 + o4 + o5 + o6 + o7 + o8 ) # open(glob.glob("*kto")[0]).read() )
+#            print(jahr+monat)
+#            print( o1 + o2 + o3 + o4 + o5 + o6 + o7 + o8 ) # open(glob.glob("*kto")[0]).read() )
+
+#        text = re.sub(r"( .\d+\.\d\d)","                        \\1",text,99999999)
+#        text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======",text,9999)
 
         kto.read_saldo("14-."+jahr)
 #        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
         text  = text + "\n\n\f\nABSCHLUSS" + kto.salden_text()
 
-        text = re.sub(r"( .\d+\.\d\d)","                        \\1",text,99999999)
+        text = text + text_add
+
+        text = re.sub(r"( .\d+\.\d\d)","                                                      \\1",text,99999999)
         text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======\n",text,9999)
 
         Konto(self.ktotyp).kto("^12-."+jahr)
@@ -164,9 +221,11 @@ class Bilanz (object):
 
         text1 = ""
         for zeile in text.split("\n"):
-            m   = re.search(r"^([ABC]\S\S|AXKTIVA|PXASSIVA|ERTRAG|AUFWAND|[DX][o\d]\S)(|\-\S+) (.*?)(\-?\d+\.\d\d) *$",zeile)
+            m   = re.search(r"^([ABCEFGH]\S\S|AXKTIVA|PXASSIVA|ERTRAG|AUFWAND|GOODS|VALUES|GDIFF|VDIFF|[DX][o\d]\S)(|\-\S+) (.*?)(\-?\d+\.\d\d) *$",zeile)
             if m:
                 kto = m.group(1) + m.group(2)
+                if len(zeile) > 95:
+                    zeile = re.sub(r"          ","",zeile,1)
                 zeile = zeile + "                                                     "
                 zeile = zeile[0:95]
                 for monat in monat_guv:
@@ -181,6 +240,7 @@ class Bilanz (object):
         text = re.sub(r"Xo","Do",text1,99999999)
 
 #        print(text)
+#        exit()
 
         text = re.sub(r"A11                                           ","\nANLAGEVERMOEGEN\n\n"+
                                                                         "A11: Sachanlagen - Betriebsausstattung        ",text,1)
@@ -305,9 +365,11 @@ class Bilanz (object):
         text = re.sub(r"B22-1811                                      ","  1811   Forecast Konto fuer Planung          ",text)
         text = re.sub(r"B22-1819                                      ","  1812   Bausparvertrag VRBank                ",text)
         text = re.sub(r"B22-1821                                      ","  1821   Konto Stolberg                       ",text)
+        text = re.sub(r"B22-1837                                      ","  1837   Unicredit Bank Banja Luka            ",text)
         text = re.sub(r"B22-1840                                      ","  1840   Geschaeftsanteile VRBank             ",text)
         text = re.sub(r"B22-1851                                      ","  1851   Kapitalkonto Sparkasse Fuerth        ",text)
         text = re.sub(r"B22-1885                                      ","  1885   Transferkonto Bankueberweisungen     ",text)
+        text = re.sub(r"B22-1886                                      ","  1885   Transferkonto Sonstige               ",text)
         text = re.sub(r"B22-1890                                      ","  1890   Bestand gegen andere Geschaeftsfelder",text)
         text = re.sub(r"B22-1891                                      ","  1891   Transferkonto Finanzamt              ",text)
 
@@ -318,6 +380,8 @@ class Bilanz (object):
         text = re.sub(r"B23-1437-1508                                             ","     davon Umsatzsteuer Organschaft:",text)
         text = re.sub(r"B23-1437-1509                                        ","     davon Finanzamt Fuerth:    ",text)
         text = re.sub(r"B23-1600                                      ","  1600   Kassenbestand                        ",text)
+        text = re.sub(r"B23-1601                                      ","  1601   Kassenbestand cgabriel               ",text)
+        text = re.sub(r"B23-1602                                      ","  1602   Kassenbestand dsrdic                 ",text)
         text = re.sub(r"B23-1615                                      ","  1615   Privatkredit Gesellschafter          ",text)
         text = re.sub(r"B23-1800                                      ","  1800   Commerzbank                          ",text)
         text = re.sub(r"B23-1802                                      ","  1802   Sparkasse Fuerth                     ",text)
@@ -333,21 +397,35 @@ class Bilanz (object):
         text = re.sub(r"B23-1851                                      ","  1851   Kapitalkonto Sparkasse Fuerth        ",text)
         text = re.sub(r"B23-1885                                      ","  1885   Transferkonto Bankueberweisungen     ",text)
         text = re.sub(r"B23-1890                                      ","  1890   Bestand gegen andere Geschaeftsfelder",text)
+        text = re.sub(r"B23-1890-(\S+)                                    ","     davon \\1: ",text,999)
         text = re.sub(r"B23-1891                                      ","  1891   Transferkonto Finanzamt              ",text)
 
-        if "C11-2978" in text:
-            text = re.sub(r"C11                                           ","\nVERLUSTVORTRAG\n\n"+
-                                                                            "C11: Verlustvortrag                           ",text,1)
-            text = re.sub(r"C11-2978                                      ","  2978   Verlustvortrag                       ",text)
+        if "B24-2978" in text:
+            text = re.sub(r"B24                                           ","\nVERLUSTVORTRAG\n\n"+
+                                                                            "B24: Verlustvortrag                           ",text,1)
+        text = re.sub(r"B24-2978                                      ","  2978   Verlustvortrag vor Verwendung        ",text)
+
+        text = re.sub(r"B25-9501                                      ","  9501   EUR Value                            ",text)
+        text = re.sub(r"B25-9501-(\S+)                                    ","     davon \\1: ",text,999)
+
+
+        if "C11-297" in text:
+            text = re.sub(r"C11                                           ","\nGEWINNVORTRAG\n\n"+
+                                                                            "C11: Gewinnvortrag                           ",text,1)
+        text = re.sub(r"C11-2970                                      ","  2970   Gewinnvortrag vor Verwendung        ",text)
+        text = re.sub(r"C14-2971                                      ","  2971   Sonderrueckstellung China            ",text)
+        text = re.sub(r"C14-2972                                      ","  2972   Sonderruecklage Nachforderg Haus Gera",text)
 
         text = re.sub(r"C01                                           ","\nSTAMMKAPITAL\n\n"+
                                                                         "C01: Stammkapital                             ",text,1)
         text = re.sub(r"C01-2900                                      ","  2900   Stammeinlage                         ",text)
+        text = re.sub(r"C01-2900-(\S+)                                    ","     davon \\1: ",text,999)
 
 
         text = re.sub(r"C02                                           ","\nEIGENKAPITAL\n\n"+
-                                                                        "C02: Gewinnvortrag                            ",text,1)
-        text = re.sub(r"C02-2970                                      ","  2970   Gewinnvortrag vor Verwendung         ",text)
+                                                                        "C02: Kumulierte Erloese                       ",text,1)
+        text = re.sub(r"C02-2080                                      ","  2080   Kumulierte Erloese vor Verwendung    ",text)
+        text = re.sub(r"C02-2080-(\S+)                                    ","     davon \\1: ",text,999)
 
 
         text = re.sub(r"C11                                           ","\nDARLEHEN\n\n"+
@@ -359,8 +437,13 @@ class Bilanz (object):
         text = re.sub(r"C11-3170-kreditstolberg                             ","     davon Baudarlehen Stolberg:       ",text)
         text = re.sub(r"C11-3170-kreditingdiba                              ","     davon Darlehen Ing-Diba:          ",text)
         text = re.sub(r"C11-3170-kreditnetbank                              ","     davon Darlehen Netbank:           ",text)
+        text = re.sub(r"C11-3170-kreditauxmoney                             ","     davon Darlehen DSL Bank:          ",text)
         text = re.sub(r"C11-3170-kreditvrsmart                              ","     davon Darlehen VR Smart:          ",text)
+#        print(text)
         text = re.sub(r"C11-3170-[a-z]+ +\-?0.00 *\n","",text,9999)
+
+        text = re.sub(r"(C11-3170-[a-z]+-)([a-z]+)  ","        (\\2)",text,9999)
+
 
 
         text = re.sub(r"C12                                           ","\nKREDITE\n\n"+
@@ -427,8 +510,6 @@ class Bilanz (object):
 
         text = re.sub(r"C14                                           ","\nSONDER-RUECKSTELLUNGEN\n\n"+
                                                                         "C14: Sonder-Rueckstellungen                   ",text,1)
-        text = re.sub(r"C14-2971                                      ","  2971   Sonderrueckstellung China            ",text)
-        text = re.sub(r"C14-2972                                          ","  2972   Sonderruecklage Nachforderungen Haus Gera",text)
 
 
 
@@ -469,8 +550,9 @@ class Bilanz (object):
         text = re.sub(r"D..-4440                                      ","  4440   ZIM Foerderung                        ",text)
         text = re.sub(r"D..-4441                                      ","  4441   Einnahmenausgleich                    ",text)
         text = re.sub(r"D..-4442                                      ","  4442   Foerderung Kultur                     ",text)
-        text = re.sub(r"D..-4945                                      ","  4945   Verlustvortrag                        ",text)
-        text = re.sub(r"D..-4946                                      ","  4946   Aufloesung Sonder-Rueckstellung China ",text)
+        text = re.sub(r"D..-7720                                      ","  7720   Verlustvortrag                        ",text)
+        text = re.sub(r"D..-7730                                      ","  7730   Gewinnvortrag Verwendung              ",text)
+        text = re.sub(r"D..-7731                                      ","  7731   Aufloesung Sonder-Rueckstellung China ",text)
         text = re.sub(r"D..-4947                                      ","  4947   Verrechnungen sonstige Sachbezuege PKW",text)
         text = re.sub(r"D..-4970                                      ","  4970   Erstattung Krankheitsausfall          ",text)
         text = re.sub(r"D..-4982                                      ","  4982   Erstattung Krankheitsausfall          ",text)
@@ -526,7 +608,11 @@ class Bilanz (object):
         text = re.sub(r"D..-6343                                      ","  6343   Abwasser                             ",text)
         text = re.sub(r"D..-6344                                      ","  6344   Oel                                  ",text)
         text = re.sub(r"D..-6345                                      ","  6345   Muell                                ",text)
+        text = re.sub(r"D..-6346                                      ","  6346   Fernwaerme                           ",text)
+        text = re.sub(r"D..-6347                                      ","  6347   Fuchs GmbH                           ",text)
+        text = re.sub(r"D..-6348                                      ","  6348   Abfindungen                          ",text)
         text = re.sub(r"D..-6350                                      ","  6350   Hausmeister und Wartung              ",text)
+        text = re.sub(r"D..-6351                                      ","  6350   Knappschaft Minijob                  ",text)
 
 
         text = re.sub(r"D7b                                           ","\n"+
@@ -598,17 +684,17 @@ class Bilanz (object):
         text = re.sub(r"D..-6859                                      ","  6859   Aufwend. f.Abraum u.Abfallbeseitigung",text)
 
 
-
         text = re.sub(r"D7g                                           ","\n"+
                                                                         "D7g: Aktivierungskonto                        ",text,1)
         text = re.sub(r"D..-6986                                      ","  6986   Durchlaufkonto Abschreibungen        ",text)
 
 
         text = re.sub(r"D8a                                           ","\n"+
-                                                                        "D8a: Aufloesung Vortraege und Rueckstellungen ",text,1)
-        text = re.sub(r"D..-4930                                      ","  4930   Aufloesung Verlustvortrag            ",text)
-        text = re.sub(r"D..-4931                                      ","  4931   Sonder-Rueckstellung China           ",text)
-        text = re.sub(r"D..-4932                                      ","  4932   Sonderruecklage Haus Gera            ",text)
+                                                                        "D8a: Gewinnvortraege und Verwendung Verluste ",text,1)
+        text = re.sub(r"D..-7700                                      ","  7700   Gewinnvortrag                        ",text)
+        text = re.sub(r"D..-7740                                      ","  7740   Verlustvortrag Verwendung            ",text)
+        text = re.sub(r"D..-7701                                      ","  7701   Sonder-Rueckstellung China           ",text)
+        text = re.sub(r"D..-7702                                      ","  7702   Sonderruecklage Haus Gera            ",text)
 
 
         text = re.sub(r"D9a                                           ","\n"+
@@ -655,11 +741,35 @@ class Bilanz (object):
         text = re.sub(r"Bo.-(ver|kto|umlagen|1700)-(\S+)                                        ","         davon \\2:  ",text,999)
 
 
+        text = re.sub(r"E11                                           ","\nGOODS AND CURRENCIES\n\n"+
+                                                                        "E11: Goods and currencies                     ",text,1)
+        text = re.sub(r"E11-(\S+)                                     ","     xxyyzz.\\1                                ",text)
+
+        text = re.sub(r"F11                                           ","\nVALUES\n\n"+
+                                                                        "F11: Values of goods                          ",text,1)
+        text = re.sub(r"F11-(\S+)                                     ","     xxyyzz.\\1                                ",text)
+
+        text = re.sub(r"G11                                           ","\nGOODS RECEIPTS AND ISSUES\n\n"+
+                                                                        "G11: Goods receipts and issues                ",text,1)
+        text = re.sub(r"G11-(\S+)                                     ","     xxyyzz.\\1                                ",text)
+
+        text = re.sub(r"H11                                           ","\nASSIGNED VALUE DIFFS\n\n"+
+                                                                        "H11: Value differences                        ",text,1)
+        text = re.sub(r"H11-(\S+)                                     ","     xxyyzz.\\1                                ",text)
 
 
-        for i in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20):
-            text = re.sub(r"\n  \d\d\d\d.*? \-?0.00 [\-0\. ]*\n","\n",text,99999999)
+
+        for i in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20):  #  loeschen von Zeilen, die alle Null sind
             text = re.sub(r"\n +davon.*? \-?0.\d\d [\-0\. ]*\n","\n",text,99999999)
+
+        text = re.sub(r"\n( +davon)","PROTECT\n\\1",text,99999999)
+        for i in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20):  #  loeschen von Zeilen, die alle Null sind
+            text = re.sub(r"\n  \d\d\d\d.*? \-?0.00 [\-0\. ]*\n","\n",text,99999999)
+        text = re.sub(r"PROTECT","",text,99999999)
+        
+        
+        text = re.sub(r"\nXX([A-Z]+)","\\n\\1\\n=======",text,999999)
+        
 
 #        print(text)
 #        return()
@@ -722,7 +832,18 @@ class Bilanz (object):
                 zeile1 = ("%-39s" % m.group(1)) + ("%13s" % m.group(2))
                 zeile1 = zeile1 + "                                    "
                 zeile1 = zeile1[0:75] + m.group(3)[-12*self.FORMAT2:]
+            m = re.search(r"^( +xxyyzz.*?) +( \-?\d+\.\d\d)(.*)$",zeile)
+            if m:
+                zeile1 = ("%-61s" % m.group(1)) + ("%13s" % m.group(2))
+                zeile1 = zeile1 + "                                               "
+                zeile1 = zeile1[0:82] + m.group(3)[-12*self.FORMAT2:]
+            m = re.search(r"^( +\([a-z]+\)) +( \-?\d+\.\d\d)(.*)$",zeile)
+            if m:
+                zeile1 = ("%-18s" % m.group(1)) + ("%13s" % m.group(2))
+                zeile1 = zeile1 + "                                                    "
+                zeile1 = zeile1[0:75] + m.group(3)[-12*self.FORMAT2:]
             text1 = text1 + zeile1 + "\n"
+            text1 = re.sub(r"xxyyzz\.","",text1,999999)
             
         if WITH_BWA == 1:
             text_monate = ""
@@ -734,6 +855,7 @@ class Bilanz (object):
             text1 = re.sub(r"ERLOESE",          "ERLOESE          " + " "*58 + text_monate+"\n"+"-"*171,text1)
             text1 = re.sub(r"UMLAUFVERMOEGEN",  "UMLAUFVERMOEGEN  " + " "*58 + text_monate+"\n"+"-"*171,text1)
             text1 = re.sub(r"PERSONALAUFWAND",  "PERSONALAUFWAND  " + " "*58 + text_monate+"\n"+"-"*171,text1)
+            text1 = re.sub(r"GOODS AND CURRENCIES",  "GOODS AND CURRENCIES" + " "*55 + text_monate+"\n"+"-"*171,text1)
 
         file = jahr + "_bilanz_"+bez+"__20" + jahr
         open(file + ".md","w").write(text1)

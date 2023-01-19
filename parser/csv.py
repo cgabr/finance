@@ -332,7 +332,11 @@ class CSV (object):
 
         self.csvline = {}
 
+        self.skip_erste_spalte = 0
+
         for zeile in csv_text.split("\n"):
+            if zeile.startswith("\"Saldo") or zeile.startswith("Saldo"):
+                self.skip_erste_spalte = 1
 #            print(zeile)
             bed = 1
             for ausschlusspattern in config.EXCLUDE_CSV_LINES.split(","):
@@ -342,7 +346,7 @@ class CSV (object):
             if bed == 0:
                 continue
                 
-            erg       = self.create_buchung(zeile)
+            erg = self.create_buchung(zeile)
 #            print(erg)
             if erg == None:
                 continue
@@ -470,9 +474,12 @@ class CSV (object):
         if m:
             return({ 'DATUM': m.group(1), 'BETRAG' : m.group(2), 'REMARK' : m.group(6), 'ZEILE' : buchungstext})
 
-        buchungstext = re.sub(r"\"\"","\";\"",buchungstext,99999999)
+        buchungstext  = re.sub(r"\"\"","\";\"",buchungstext,99999999)
+        buchungstext1 = buchungstext.split(";")
+        if self.skip_erste_spalte == 1:
+            buchungstext1.pop(0)
 
-        for pattern in buchungstext.split(";"):
+        for pattern in buchungstext1:
             pattern = re.sub(r"^\"?(.*?)\"?$","\\1",pattern)
             m = re.search(r"^(\d\d)\.(\d\d)\.(\d\d|\d\d\d\d)$",pattern)
             if m:

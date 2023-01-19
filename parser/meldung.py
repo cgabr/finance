@@ -94,7 +94,7 @@ class Meldung (object):
             if not m:
                 continue
             sendedatum =  m.group(4) + m.group(2) + m.group(1)
-
+            print(sendedatum)
 
             m = re.search('Grund +der +Abgabe. *(.*)', text)
             if not m:

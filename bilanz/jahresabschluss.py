@@ -17,8 +17,9 @@ class Jahresabschluss (object):
         self.kto_ausschuettung            = "14-Dba-7790/..........."
         self.kto_quellensteuer            = "14-Dba-3700/11-C13-3050"
         self.kto_soli_quellensteuer       = "14-Dba-3708/11-C13-3050"
-        self.kto_ueberschuss              = "14-Dca-7639/11-C02-2970"
+        self.kto_ueberschuss              = "14-Dca-7639/11-C02-2080"
 
+        
         self.steuersatz = {
     
           "KS": {2006:0.15,
@@ -68,7 +69,50 @@ class Jahresabschluss (object):
                      
               }
 
+        self.steuersatz_ba = {
+        
+          "KS": {
+                 2019:0.15,2020:0.15,2021:0.15,2022:0.15,2023:0.15,
+                 2024:0.15,2025:0.15,2026:0.15,2027:0.15,2028:0.15,
+                 2029:0.15,2030:0.15,2031:0.15,2032:0.15,2033:0.15,
+                 2034:0.15,2035:0.15,2036:0.15,2037:0.15,2038:0.15,
+                 },
+                 
+          "GW": {
+                 2019:0.00,2020:0.00,2021:0.00,2022:0.00,2023:0.00,
+                 2024:0.00,2025:0.00,2026:0.00,2027:0.00,2028:0.00,
+                 2029:0.00,2030:0.00,2031:0.00,2032:0.00,2033:0.00,
+                 2034:0.00,2035:0.00,2036:0.00,2037:0.00,2038:0.00,
+                 },
+                 
+          "HS": {2006:425,
+                 2007:425,2008:425,2009:425,2010:425,2011:440,2012:440,
+                 2013:440,2014:440,2015:440,2016:440,2017:440,2018:440,
+                 2019:440,2020:440,2021:440,2022:440,2023:440,
+                 2024:440,2025:440,2026:440,2027:440,2028:440,
+                 2029:440,2030:440,2031:440,2032:440,2033:440,
+                 2034:440,2035:440,2036:440,2037:440,2038:440,
+                 },
+                 
+          "QS": {
+                 2007:0.00025,2008:0.00025,2009:0.00025,2010:0.00025,2011:0.00025,2012:0.00025,
+                 2013:0.00025,2014:0.00025,2015:0.00025,2016:0.00025,2017:0.00025,2018:0.00025,
+                 2019:0.00025,2020:0.00025,2021:0.00025,2022:0.00025,2023:0.00025,
+                 2024:0.00025,2025:0.00025,2026:0.00025,2027:0.00025,2028:0.00025,
+                 2029:0.00025,2030:0.00025,2031:0.00025,2032:0.00025,2033:0.00025,
+                 2034:0.00025,2035:0.00025,2036:0.00025,2037:0.00025,2038:0.00025,
+                 },
 
+          "SZ": {2006:0.000001,
+                 2007:0.000001,2008:0.000001,2009:0.000001,2010:0.000001,2011:0.000001,2012:0.000001,
+                 2013:0.000001,2014:0.000001,2015:0.000001,2016:0.000001,2017:0.000001,2018:0.000001,
+                 2019:0.000001,2020:0.000001,2021:0.000001,2022:0.000001,2023:0.000001,
+                 2024:0.000001,2025:0.000001,2026:0.000001,2027:0.000001,2028:0.000001,
+                 2029:0.000001,2030:0.000001,2031:0.000001,2032:0.000001,2033:0.000001,
+                 2034:0.000001,2035:0.000001,2036:0.000001,2037:0.000001,2038:0.000001,
+                 }
+                     
+              }
 
 
 #*********************************************************************************
@@ -102,6 +146,8 @@ class Jahresabschluss (object):
         qs_sz = self.kto_soli_quellensteuer.split("/")
         ueb   = self.kto_ueberschuss.split("/")
 
+        if self.dataset["firmaland"] == "BA":
+            self.steuersatz = self.steuersatz_ba
 
 #        jahresgewinn = {}    
 #        for file in einnahmen_ausgaben:
@@ -152,6 +198,7 @@ class Jahresabschluss (object):
         kto  = Konto()
         
         print(ausschuettungen)
+        print(jahr,max_jahr)
  
         while 0 == 0:
 
@@ -161,9 +208,11 @@ class Jahresabschluss (object):
 
             jahr1         = min(max_jahr,int(jahr))
 
+            print(kto.read_saldo("12-."+str(jahr)[2:4]))
+            print(kto.read_saldo("13-."+str(jahr)[2:4]))
             gewinn        = - kto.read_saldo("12-."+str(jahr)[2:4]) - kto.read_saldo("13-."+str(jahr)[2:4])
             hebesatz      = int(self.steuersatz['HS'][jahr1])
-#            print(jahr,hebesatz,jahr1)
+            print(jahr,hebesatz,jahr1,gewinn)
             soli          = float(self.steuersatz['SZ'][jahr1])
             ausschuettung = 0.00
             if str(jahr) in ausschuettungen:
@@ -224,5 +273,18 @@ class Jahresabschluss (object):
 
 if __name__ == "__main__":
 
-    Jahresabschluss().jahressteuer("",*sys.argv[1:])
+    r = Jahresabschluss()
+    
+
+    kto          = Konto()
+    kto.read_config(kto.base_dir+"/*.data")
+    kto.read_config("../*.data")
+    kto.read_config("./sv.data")
+    kto.read_config("*/sv.data")
+    kto.read_config("./15*/*.csv")
+    kto.read_config("../05*/*.csv")
+    r.dataset = kto.dataset
+    print("QQQQQ",r.dataset)
+
+    r.jahressteuer("",*sys.argv[1:])
     

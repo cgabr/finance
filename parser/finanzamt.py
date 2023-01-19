@@ -149,7 +149,7 @@ class Finanzamt (object):
 
         text1 = []
         for zeile in ktotext.split("\n"):
-            if not "Steuerzahlung lt. Kontoauszug" in zeile:
+            if not "lt. Kontoauszug" in zeile:
                 text1.append(zeile)
         ktotext = "\n".join(text1) + "\n"
                   
@@ -167,7 +167,7 @@ class Finanzamt (object):
             if "MARK" in zeile:
                 kontext = "%03u" % (int(kontext) + 1)
             zeile = zeile[15:]
-            m = re.search("(.)(.) +(\d\d)(\d\d)(\d\d)(\S?) +(CR|) +(\d+) *[,.] *(\d\d) *(zusammeng|Zahlung|Umbuch)",zeile)
+            m = re.search("(.)(.) +(\d\d)(\d\d)(\d\d)(\S?) +(CR|) +(\d+) *[,.] *(\d\d) *(zusammeng|Zahlung|Erlass|Umbuch)",zeile)
             if not m:
                 m = re.search("(\d\d\d) +(\d\d\d\d\d\d)\S? +(\d\d)(\d\d)(\d\d)\S? +(\d\d\d\d\d\d) +(CR|) +(\d+) *[,.] *(\d\d)",zeile)
             if not m:
@@ -178,7 +178,14 @@ class Finanzamt (object):
                 zeile1 = "20" + m.group(5) + m.group(4) + m.group(3)
 #                zeile1 = "20060101"
                 zeile1 = zeile1 +  "  " + betrag
-                zeile1 = zeile1 + "  " + zkto + "-" + kontext + "  " + fkto + "  0.00  Steuerzahlung lt. Kontoauszug " 
+                remark = ""
+                if "Erlass" in zeile:
+                    remark = " per Erlass"
+                elif "Umbuch" in zeile:
+                    remark = " per Umbuchung"
+                elif "Zahlung" in zeile:
+                    remark = " per Zahlung"
+                zeile1 = zeile1 + "  " + zkto + "-" + kontext + "  " + fkto + "  0.00  Steuerzahlung" + remark + " lt. Kontoauszug " 
                 zaehler = "%04u" % (int(zaehler) + 1)
                 zeile1 = zeile1 + zaehler
                 ktotext = ktotext + zeile1 + "\n"

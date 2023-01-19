@@ -586,7 +586,12 @@ class Konto ():
             zeile1   = dbl_z + " " + saldo + "  " + rem_z
 
             dbl_mark = dbl_z + rem_z   #  wenn Doubletten gefunden werden, diese eindeutig markieren
-            if not dbl_mark in dbl_marks:
+#            if "abc" in dbl_mark:
+#                for oo in dbl_marks:
+#                    print(oo)
+#                print("--------------------")
+            if not (dbl_mark in dbl_marks.keys()):
+#                print(">>",dbl_mark,"1235")
                 dbl_marks[dbl_mark] = 0
             else:
                 dbl_marks[dbl_mark] = dbl_marks[dbl_mark] + 1
@@ -1199,6 +1204,8 @@ class Konto ():
                     if datum.startswith(abschnitt):
                         betrag = eval(m.group(3))
                         ktoa   = m.group(4)
+                        if ktoa.startswith("-"):
+                            ktoa = self.ukto + ktoa
                         ktob   = m.group(5)
                         add_buchung = 1
                         if m.group(1).startswith("-"):

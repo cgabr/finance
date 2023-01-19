@@ -162,8 +162,6 @@ class Lohn (object):
         if m:
             uebertragsbuchhaltung = m.group(1)
         
-        
-        
         diffs = {}
         for art in self.abgabenarten:
             diffs[art] = 0.00
@@ -325,7 +323,7 @@ class Lohn (object):
             except:
                 print("No data for STKL in " + jm)
             kist = lohndaten[jm]['KIST']
-            merk       = lohndaten[jm]['MERK']
+            merk = lohndaten[jm]['MERK']
             if not merk[0] == "0":
                 kv_zuschlag_f_lst_berechnung = float(lohndaten[jm]['ZV'])  #  average 'ZU' 
                 kv_zuschlag_f_lst_berechnung = float(lohndaten[jm]['ZU'])
@@ -461,6 +459,12 @@ class Lohn (object):
                 betraege[jm]['AN-AV']   = "0.00"
                 betraege[jm]['AR-RV']   = "x" + betraege[jm]['AR-RV']   #   das dient dazu, um die Soz-Vers-Klasse mit EV (ermaessigt) statt als KV zu kennzeichnen
                 betraege[jm]['AR-AV']   = "x" + betraege[jm]['AR-AV']   #   genauso mit BV fuer AV und XV fuer RV
+            if lohndaten[jm]['NR'] == "1579":   #  Srpska
+                betraege[jm]['AR-RV']   = "0.00"
+                betraege[jm]['AR-KV-S']   = "0.00"
+                betraege[jm]['AR-KV-Z']   = "0.00"
+                betraege[jm]['AR-AV']   = "0.00"
+                betraege[jm]['AR-PV']   = "0.00"
             if "-" in merk:   #  ohne Krankengeld
                 betraege[jm]['AN-KV-S'] = "x" + "%3.2f" % ( float(betraege[jm]['AN-KV-S']) - float(krankengeld) )
                 if 'AR-KV-S' in betraege[jm]:
@@ -823,6 +827,14 @@ class Lohn (object):
                     export_slip = re.sub(r"\nSteuern:( .*)\n","\nAbgaben:\\1    [KEINE STEUERN]",export_slip,re.DOTALL)
                 export_slip = re.sub(r"\n(LOHN-KUG) +0.00 +([^\n]+)","",export_slip,9999)
 
+            if lohndaten[jm]['NR'] == "1579":  # Srpska
+                o9 = ""
+                for o7 in export_slip.split("\n"):
+                    if re.search(r"(Arbeitgeber|^AR\-|^AN\-KV\-Z|^AN\-KV |^AN\-PV\-Y|^AN\-PV |^SZ |^KI )",o7):
+                        continue
+                    o9 = o9 + o7 + "\n"
+                export_slip = re.sub(r"\(Werte .+?\)","",o9)
+
             if jm in ktoslips:
                 self.lstfile[jm] = None
                 self.lsttext[jm] = None
@@ -920,7 +932,8 @@ class Lohn (object):
                          "1521": "AOKNW5",
                          "1522": "AOKBW5",
                          "1523": "IKKCLA",
-                         "1524": "HEK" 
+                         "1524": "HEK", 
+                         "1579": "SRPSKA" 
                          } [ jw['NR'] ]
 
 
@@ -1440,29 +1453,52 @@ sdjomo         1     5.5  0   0 AOK     1514  9.35  1.5  7.3 1.175  1.1  0.25  9
         if jahr == "2022":      
         
 
-            jw['RLIMIT']  = "7050"   #  ist tatsaechlich abgesenkt!
-            jw['KLIMIT']  = "4837.50"
-            jw['RV'] = ["9.3","15"]   [ int( jw['NR'] == "1512" ) ] 
-            jw['AV'] = ["1.2" ,"3.6"] [ int( jw['NR'] == "1512" ) ] 
-            jw['KV'] = ["7.3","13"]  [ int( jw['NR'] == "1512" ) ] 
-            jw['KG'] = ["0.3","0.0"] [ int( jw['NR'] == "1512" ) ] 
+            jw['RLIMIT']  = ["7050",   "7050",   "99999999" ][ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]    #  ist tatsaechlich abgesenkt!
+            jw['KLIMIT']  = ["4837.50","4837.50","99999999" ][ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['RV'] = ["9.3" ,"15" ,"18.5" ]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['AV'] = ["1.2" ,"3.6","10.2" ]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['KV'] = ["7.3","13","1.7"]        [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['KG'] = ["0.3","0.0","0.0"]       [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
             jw['ZU'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
-                         "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
+                         "1518": "0.75", "1522": "0.45", "1523": "0.6" , "1579": "0.0" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
             jw['ZA'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
-                         "1518": "0.75", "1522": "0.45", "1523": "0.6" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
+                         "1518": "0.75", "1522": "0.45", "1523": "0.6" , "1579": "0.0" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
             jw['ZV'] = "1.3"  # der DURCHSCHNITTLICHE Wert der Krankenkassen-Arbeitnehmerzuschlaege
-            jw['PV'] = "1.525"
-            jw['PZ'] = "0.35"
+            jw['PV'] = [ "1.525","1.525","0.6" ] [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
+            jw['PZ'] = ["0.35","0.35","0.00"]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
             jw['U1'] = { "1510" : "2.2",  "1512" : "0.9", "1514": "1.1", "1515": "1.7", "1517": "1.6",
-                         "1518":  "2.0",  "1522": "1.4",  "1523": "1.7"  }  [ jw['NR'] ]  
+                         "1518":  "2.0",  "1522": "1.4",  "1523": "1.7"  , "1579": "0.0" }  [ jw['NR'] ]  
             jw['U2'] = { "1510" : "0.65", "1512" : "0.24", "1514": "0.46", "1515": "0.56", "1517": "0.65",
-                         "1518":  "0.59", "1522": "0.41", "1523": "0.39" } [ jw['NR'] ]  
-            jw['U3'] = "0.09"
+                             "1518":  "0.59", "1522": "0.41", "1523": "0.39" , "1579": "0.0" } [ jw['NR'] ]  
+            jw['U3'] = [ "0.09" ,"0.09","0.00"]  [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            
+                        
 
+        if jahr == "2023":      
+        
+            jw['RLIMIT']  = ["7050",   "7050",   "99999999" ][ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]    #  ist tatsaechlich abgesenkt!
+            jw['KLIMIT']  = ["4837.50","4837.50","99999999" ][ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['RV'] = ["9.3" ,"15" ,"18.5" ]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['AV'] = ["1.2" ,"3.6","10.2" ]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['KV'] = ["7.3","13","1.7"]        [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
+            jw['KG'] = ["0.3","0.0","0.0"]       [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
+            jw['ZU'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
+                         "1518": "0.75", "1522": "0.45", "1523": "0.6" , "1579": "0.0" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
+            jw['ZA'] = { "1510": "0.75", "1512" : "0.0",  "1514" : "0.55", "1515": "0.645", "1517": "0.60",
+                         "1518": "0.75", "1522": "0.45", "1523": "0.6" , "1579": "0.0" }  [ jw['NR'] ]  #  1523: ab Mai 0.5
+            jw['ZV'] = "1.3"  # der DURCHSCHNITTLICHE Wert der Krankenkassen-Arbeitnehmerzuschlaege
+            jw['PV'] = [ "1.525","1.525","0.6" ] [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
+            jw['PZ'] = ["0.35","0.35","0.00"]    [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ]  
+            jw['U1'] = { "1510" : "2.2",  "1512" : "0.9", "1514": "1.1", "1515": "1.7", "1517": "1.6",
+                         "1518":  "2.0",  "1522": "1.4",  "1523": "1.7"  , "1579": "0.0" }  [ jw['NR'] ]  
+            jw['U2'] = { "1510" : "0.65", "1512" : "0.24", "1514": "0.46", "1515": "0.56", "1517": "0.65",
+                             "1518":  "0.59", "1522": "0.41", "1523": "0.39" , "1579": "0.0" } [ jw['NR'] ]  
+            jw['U3'] = [ "0.09" ,"0.09","0.00"]  [ int( jw['NR'] == "1512" ) + 2*int( jw['NR'] == "1579")  ] 
 
 
         jw['ST'] =  "2.0"
         jw['PS'] = "25.0"
+        
             
 
 #*************************************************************************
