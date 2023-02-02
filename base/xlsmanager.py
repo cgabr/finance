@@ -98,6 +98,8 @@ class Xlsmanager(object):
         
         for zeile in text:
 
+            print(zeile)
+
             try:
                zeile_sum = zeile
                zeile     = zeile.split(",")
@@ -193,6 +195,8 @@ class Xlsmanager(object):
                         else:
                             del entry1
                             break
+
+            print(entry)
             if 'entry1' in vars():
 #                print "XXXX: 1 -----------------------------------------------"
 #                time.sleep(5)
@@ -218,6 +222,7 @@ class Xlsmanager(object):
 #        print self.import_query
 
         self.column_descriptors = column_descriptors
+        print(anzahl_importierte_datensaetze)
         return(anzahl_importierte_datensaetze)                
 
 #*************************************************************************
@@ -305,8 +310,8 @@ class Xlsmanager(object):
             text2     = text1.split("@SEPARATOR@")
             text1     = ""
             translate = False
-            for textpattern in text2:
-                if translate:
+            for textpattern in text2:  #  hier findet die eigentliche Ersetzung statt. Textteile, die ersetzt werden muessen, wechseln
+                if translate:          #  mit Teilen, die Kontext sind
                     textpattern1 = textpattern.split(",")
                     textpattern1 = self.valfield(entry,textpattern1[0],textpattern1[1],textpattern1[2])
                     text1        = text1 + textpattern1
@@ -363,6 +368,11 @@ class Xlsmanager(object):
         text1 = re.sub(r"\/","_",text1)
         if text2.lower() == text2 and not "-" in text2:
             text1 = text1.lower()
+            
+        if 'LFDNR' in entry:
+            m = re.search(r"^(.*\_20\d\d\_)\d+(.+)$",text1)
+            if m:
+                text1 = m.group(1) + entry['LFDNR'] + m.group(2)
 
         return(text1)
         
@@ -575,6 +585,7 @@ class Xlsmanager(object):
                 
         self.output_text    = ""
         self.import_query   = ""
+        self.lfdnr          = ""
         obj_to_change_entry = None
 
         if "__MERGE__" in pars:
@@ -636,7 +647,15 @@ class Xlsmanager(object):
 #            print(output_file_template)
             os.unlink(self.merge_files[1])
         if os.path.isfile(template):       #  wenn das Template ein File ist, dieses einlesen
+            print("hier",template)
             output_file_template = template
+            m = re.search(r"\_20\d\d\_(\d+)\D",output_file_template)
+            print(m.group(1))
+            if m:
+                self.lfdnr = m.group(1)
+                print("WE",m.group(1))
+            print(self.lfdnr,"XXX")
+
             text = self.read_excel_file(output_file_template)   #  erstmal versuchen, als Excel-File einzulesen
             if text:
                 template = ""
@@ -647,7 +666,10 @@ class Xlsmanager(object):
                 template = open(output_file_template,'r').read()
             if re.search(r"(csv|xlsx?)$",output_file_template):
                 template = re.sub(r"\r?\n","",template,99999999)
+                if not "LFDNR" in template:
+                   self.lfdnr = "" 
             template = template.strip()
+            print(self.lfdnr)
 
 #        template = re.sub(r"\\n","\n",template,99999999,flags=re.DOTALL) # keine Ahnung mehr, wozu diese Zeile gut sein sollte
 
@@ -738,6 +760,7 @@ class Xlsmanager(object):
         touched_files      = {}
 
         while (0 == 0):
+        
             self.entry_cache           = {}
             self.compiled_text_pattern = {}
             if 'entries' in vars():
@@ -750,7 +773,14 @@ class Xlsmanager(object):
                 entry = self.db.next_obj(cursor,obj_to_change_entry)
                 if not entry:
                     break
-            output_file    = self.ff_file(output_file_template,entry)
+            if not self.lfdnr == "":
+                entry['LFDNR'] = self.lfdnr
+                print("ZZ",self.lfdnr)
+                self.lfdnr  = ("%0"+str(len(self.lfdnr))+"u") % (int(self.lfdnr) + 1)
+            output_file = self.ff_file(output_file_template,entry)
+            output_file = self.replace_diacritic_letters(output_file)
+            output_file = re.sub(r"^\.+","",output_file)
+            output_file = re.sub(r"^\_+([^\-])","\\1",output_file)
             if output_file == output_file_template:
                 output_file = ""    #  to prevent from overwriting template-file
             output_content = self.ff_content(template,entry)
@@ -1052,6 +1082,43 @@ class Xlsmanager(object):
 
         return([merged_entry])
                                 
+#*************************************************************************
+
+    def replace_diacritic_letters (self,text):
+
+        text = re.sub(r"[ä]","ae",text)
+        text = re.sub(r"[ö]","oe",text)
+        text = re.sub(r"[ü]","ue",text)
+        text = re.sub(r"[Ä]","AE",text)
+        text = re.sub(r"[Ö]","OE",text)
+        text = re.sub(r"[Ü]","UE",text)
+        text = re.sub(r"[ß]","ss",text)
+        text = re.sub(r"[¿]","?",text)
+        text = re.sub(r"[áàăâãą]","a",text)
+        text = re.sub(r"[Á]","A",text)
+        text = re.sub(r"[ćčç]","c",text)
+        text = re.sub(r"[Č]","C",text)
+        text = re.sub(r"[đ]","d",text)
+        text = re.sub(r"[éèêěę]","e",text)
+        text = re.sub(r"[Ê]","E",text)
+        text = re.sub(r"[ğ]","g",text)
+        text = re.sub(r"[íìîı]","i",text)
+        text = re.sub(r"[Îİ]","I",text)
+        text = re.sub(r"[ľł]","l",text)
+        text = re.sub(r"[ńňñ]","n",text)
+        text = re.sub(r"[ºóôõ]","o",text)
+        text = re.sub(r"[ř]","r",text)
+        text = re.sub(r"[Ř]","R",text)
+        text = re.sub(r"[śšşș]","s",text)
+        text = re.sub(r"[Š]","S",text)
+        text = re.sub(r"[ťț]","t",text)
+        text = re.sub(r"[úûů]","u",text)
+        text = re.sub(r"[ý]","y",text)
+        text = re.sub(r"[źžż]","z",text)
+        
+        return(text)
+        
+
 #*************************************************************************
 
 

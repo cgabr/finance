@@ -295,7 +295,7 @@ class Konto ():
              
             m = re.search("^(.*?)\n *\n(.*\n\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ .*?\n)",text,re.DOTALL)   #  Check whether processed file has changed
                 
-            self.mark("F. Processed ktofile hashkey.")
+            self.mark("F. Processed ktofile hashkey. ")
             if m:
                 relevant_text_in_ktofile = m.group(2)
 #                print(relevant_text_in_ktofile)
@@ -526,7 +526,6 @@ class Konto ():
         if self.ukto == "":
             self.buchungen.sort(key=lambda x:x[0]+str(x[1])+x[3]+x[4])
         else:
-            print("UKTO: " + self.ukto)
 #            ktotext.sort(key=lambda x:str(x[5]+1)+x[0])
             self.buchungen.sort(key=lambda x:x[0]+str(x[5]+1)+x[2]+x[3]+x[4])
             
@@ -541,6 +540,7 @@ class Konto ():
 
         has_doublettes = 0
         datum          = ""
+        saldo          = ""
         for zeile in self.buchungen:   #   step through all accounting lines
                 
             ust = ""
@@ -626,9 +626,13 @@ class Konto ():
         self.title  = ("%-50s"%(re.sub(r"\.$","",self.ukto+add_minus+interval))) + " " + self.hkey + "       " + ("%13.2f"%gesamt)
 #        print(self.title)
 
+        if not self.ukto == "":
+            print("UKTO: " + self.ukto + saldo)
 
         if has_doublettes:
             print("Attention: Doublettes!")
+            
+        return(saldo)
 
 #**********************************************************************************
 

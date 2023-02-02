@@ -146,7 +146,7 @@ class Jahresabschluss (object):
         qs_sz = self.kto_soli_quellensteuer.split("/")
         ueb   = self.kto_ueberschuss.split("/")
 
-        if self.dataset["firmaland"] == "BA":
+        if "firmaland" in self.dataset and self.dataset["firmaland"] == "BA":
             self.steuersatz = self.steuersatz_ba
 
 #        jahresgewinn = {}    
@@ -189,7 +189,7 @@ class Jahresabschluss (object):
 
 #            print(jahr,ktoa,aus[0])
             if ktoa == aus[0]:
-                print(zeile)
+#                print(zeile)
                 ausschuettungen[jahr] = ausschuettungen[jahr] + float(betrag)
                 text = text + zeile + "\n"
                 max_jahr = max(int(jahr),max_jahr)
@@ -197,8 +197,8 @@ class Jahresabschluss (object):
         jahr = min_jahr - 1
         kto  = Konto()
         
-        print(ausschuettungen)
-        print(jahr,max_jahr)
+#        print(ausschuettungen)
+#        print(jahr,max_jahr)
  
         while 0 == 0:
 
@@ -208,17 +208,17 @@ class Jahresabschluss (object):
 
             jahr1         = min(max_jahr,int(jahr))
 
-            print(kto.read_saldo("12-."+str(jahr)[2:4]))
-            print(kto.read_saldo("13-."+str(jahr)[2:4]))
+            print("SALDO 12",kto.read_saldo("12-."+str(jahr)[2:4]))
+            print("SALDO 13",kto.read_saldo("13-."+str(jahr)[2:4]))
             gewinn        = - kto.read_saldo("12-."+str(jahr)[2:4]) - kto.read_saldo("13-."+str(jahr)[2:4])
             hebesatz      = int(self.steuersatz['HS'][jahr1])
-            print(jahr,hebesatz,jahr1,gewinn)
+#            print(jahr,hebesatz,jahr1,gewinn)
             soli          = float(self.steuersatz['SZ'][jahr1])
             ausschuettung = 0.00
             if str(jahr) in ausschuettungen:
                 ausschuettung = ausschuettungen[str(jahr)]
             rest          = gewinn - ausschuettung
-            print(jahr,"AUS",ausschuettung)
+#            print(jahr,"AUS",ausschuettung)
 
             betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1])
             print(jahr1,betrag1,gewinn)
@@ -250,10 +250,10 @@ class Jahresabschluss (object):
             rest     = rest - float ("%3.2f"%betrag1) 
 
             betrag1  = float(ausschuettung) * float(self.steuersatz["QS"][jahr1]) * soli
-            print(gesell_form,"BB",betrag1)
+#            print(gesell_form,"BB",betrag1)
             if int(gesell_form) < 2:
                 betrag1 = 0.00
-            print(gesell_form,"BC",betrag1)
+#            print(gesell_form,"BC",betrag1)
             zeile    = str(jahr)+"1227"  + "  " + ("%3.2f"%betrag1) + "  "  + qs_sz[0] + "  " + qs_sz[1] + "  0.00  "
             text     = text + zeile + "Solidaritaetszuschlag zur Quellensteuerr\n"
             rest     = rest - float ("%3.2f"%betrag1) 
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     kto.read_config("./15*/*.csv")
     kto.read_config("../05*/*.csv")
     r.dataset = kto.dataset
-    print("QQQQQ",r.dataset)
+#    print("QQQQQ",r.dataset)
 
     r.jahressteuer("",*sys.argv[1:])
     

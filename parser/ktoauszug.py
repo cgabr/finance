@@ -1,18 +1,24 @@
 #  coding:  utf8
 
-import os,sys,re,glob,time,random
+import os,sys,re,glob,time
 
-from konto.base import config
+try:
+    from konto_custom import config
+except:
+    from konto.base import config
+
 
 #*********************************************************************************
 
-class CSV (object):
+class Ktoauszug (object):
 
     def __init__ (self,dir="."):
-        self.dir             = dir
-        self.csv_doublettes  = {}  #  to avoid to have double entries from csv-files
-        self.check_cache     = {}
-        self.contra_accounts = config.STANDARD_CONTRA_ACCOUNT.split(",")
+        self.dir     = dir
+        self.ktoa    = config.KTO_KRANKENKASSEN     
+        self.ktob    = config.KTO_BEITRAGSNACHWEISE 
+        self.ktoc    = config.KTO_KK_MELDUNG 
+        self.ktod    = config.KTO_KK_MAHN
+        self.kkmap   = re.sub(r"\s","",config.MAP_KRANKENKASSEN,99999999).split(",")
     
 #*********************************************************************************
 
@@ -23,127 +29,433 @@ class CSV (object):
             print ( ("%9.2f" % ((t-self.t0)*1000)) + " ms for:  " + remark )
         self.t0 = t
 
+#********************************************************************************
+
+    def parse_ktoauszug (self):  #  not ktosafe
+
+        files = glob.glob("*.manuell") + glob.glob("*.ocr") 
+        if len(files) == 0:
+            return()
+            
+        uleistung = {}
+        
+        ktofile = glob.glob("*.kto")
+        ktotext = open(ktofile[0]).read()
+        
+        m = re.search(r"^(.*?)\-(15\d+)",ktotext)
+        if not m:
+            return()
+            
+        kknr = m.group(2)
+        ind    = self.kkmap.index(kknr)
+        kk = self.kkmap[ind+2]
+
+        text = []
+        for zeile in ktotext.split("\n"):
+            if not re.search(r"^\d\d\d\d\d\d\d\d +\-?\d+\.\d\d.*\-(meldung|meldZUS|saeumn|mahn|retour)",zeile):
+                if not "Leistung U" in zeile:
+                    text.append(zeile)
+                else:
+                   ukey = re.sub(r"^(\d\d\d\d\d\d\d\d) +(\S+).*$","\\1\\2",zeile)
+                   uleistung[ukey] = zeile
+            elif " manuell " in zeile:
+                text.append(zeile)
+        ktotext = "\n".join(text) + "\n"
+                  
+        files.sort()
+        day       = {}
+        entries   = {}
+        
+#        return(ktotext)
+
+
+        for file in files:
+        
+            if "_orig" in file or "orig_" in file or "_ORIG" in file or "ORIG_" in file:
+                continue
+        
+            print (file)
+        
+            buchungen = []
+
+#            periode = [100000,999999]
+            m       = re.search(r"\D(\d\d\d\d\d\d)\D+(\d\d\d\d\d\d)\D",file)
+            if m:
+                periode = [ int(m.group(1)) , int(m.group(2)) ]
+                periode.sort()
+            else:
+                continue
+            text = open(file).read()
+            text = self.normalize_text(text)
+            text = re.sub("BKK Verkehrsbau","VBU",text)
+
+            zeile0 = ""  #   special TKK
+            text0  = ""
+            for zeile in text.split("\n"):
+                m = re.search(r"^(.*?Gesamtbetr.*Beitrags)(.*)$",zeile0)
+                if m:
+                    if re.search(r" *monat",zeile):
+                        zeile0 = m.group(1) + zeile + m.group(2)
+                else:
+                    zeile0 = zeile
+                text0  = text0 + zeile0 + "\n"
+                zeile0 = zeile
+            text0 = text0 + zeile0 + "\n"       
+
+            text = re.sub(r"(\d\.\d\d\d)\.(\d\d\D)","\\1,\\2",text,999999)
+            text = re.sub(r"   (\d|\d\d|\d\d\d)\.(\d\d\D)","   \\1,\\2",text,999999)
+
+            text  = re.sub(r"(\d)\.(\d\d\d)\,","\\1\\2,",text0,999999); 
+            while (0 == 0):   #  Punkte und Leerzeichen entfernen in Zahlendarstellungen
+                text1 = text
+                text  = re.sub(r"(\s)(\d+) (\d+),","\\1\\2\\3,",text,9999)
+                text  = re.sub(r",(\d+) (\d+)(\s)",",\\1\\2\\3",text,9999)
+                text  = re.sub(r", (\d+)",",\\1",text,9999)
+                text  = re.sub(r"(\d+) ,","\\1,",text,9999)
+                if text1 == text:
+                    break
+           
+
+
+            jahr  = str(periode[0])[0:4]
+            monat = str(periode[0])[4:6]
+            text1 = []
+
+
+            if int(kknr) == 1517:  #  TKK
+                for zeile in text.split("\n"):
+                    m = re.search(r"(\d\d)[/\.](\d\d\d\d) +Faelligkei",zeile)
+                    if m:
+                        jahr  = m.group(2)
+                        monat = m.group(1)
+                        continue
+                    m = re.search(r"(Auszahlung.*?aus|Umbuchung.*?Leistung.*U|Saeumnis|g.*?tzter +Betrag|[bB]e.trags *nach|Mahngeb|Erlass|Retoure +G|Gebuehr|Umbuchung +Leistung +U1)(.*?) +(\-?\d+)[\,\.](\d\d)",zeile)
+                    if m:
+                        text1.append([jahr+monat,m.group(1) + m.group(2),m.group(3)+"."+m.group(4)])
+#                        print(text1[-1])
+      
+            elif int(kknr) == 1510:  #  DAK
+                for zeile in text.split("\n"):
+                    zeile = re.sub(r"Forderung","Ford. Beitrag",zeile)
+                    zeile = re.sub(r"B eitrag","Beitrag",zeile)
+                    m = re.search(r"Bezugszeitraum +(\d\d)\.(\d\d)\.(\d\d)",zeile,re.IGNORECASE)
+                    if m:
+                        jahr  = "20" + m.group(3)
+                        monat = m.group(2)
+                        continue
+                    else:
+                        m = re.search(r"^ *(\d\d)\.(\d\d)\.(\d\d\d\d)",zeile,re.IGNORECASE)
+                        if m:
+                            jahr  = m.group(3)
+                            monat = m.group(2)
+                    m = re.search(r"(Ford. Beitrag|Beitrag aus Betriebspruefung|Mahnge|Saeumnisz|Beitrag)(.*?) +(\-?\d+)\,(\d\d)",zeile)
+                    if m:
+                        text1.append([jahr+monat,m.group(1),re.sub(r" ","",m.group(3)+"."+m.group(4),99)])
+
+            else:
+                for zeile in text.split("\n"):
+                    zeile = re.sub(r"20t2","2012",zeile)
+                    zeile = re.sub(r"\s+","  ",zeile,9999)
+                    zeile = re.sub(r"'","",zeile,9999)
+                    zeile = re.sub(r"________"," ",zeile,9999)
+                    zeile = re.sub(r"(\D\d\d)\.(\d\d)\.(\d\d\D)","\\1.\\2.20\\3",zeile,9999)
+                    zeile = re.sub(r"(SZ|SA) +.?(B)(S?)"," Beitrag\\3 ",zeile,9999,re.IGNORECASE)  #  special MobilOil
+                    zeile = re.sub(r"(SZ|SA) +.?S"," Saeumniszuschlag ",zeile,9999,re.IGNORECASE)  #  special MobilOil
+#                    zeile = re.sub(r"(Säumnis)","Saeumnis",zeile,9999,re.IGNORECASE)       #  special AOK RPf
+                    zeile = re.sub(r"(Beitragszahlung|im +Beitrag)","",zeile,9999,re.IGNORECASE)   #  special Minijob, TKK
+                    zeile = re.sub(r"\((\d\d)\/(\d\d\d\d)\)\s*","01.\\1.\\2   ",zeile)             #  VBU BKK futur
+                    zeile = re.sub(r"(Beitraege )","Beitrag ",zeile,9999)                          #  Barmer                
+                    zeile = re.sub(r" 0,00 "," ",zeile,9999)                                       #  special Minijob
+#                    zeile = re.sub(r"(\(\d\d\.\d\d\.\d\d\d\d ?- ?\d\d\.\d\d\.\d\d\d\d\)) +\d\d\.\d\d\.\d\d\d\d","\\1",zeile,9999)   #  AOK
+#                    m = re.search(r"bezugszeitraum +(.*?) *$",zeile.lower())             #  special DAK
+#                    print (zeile)
+                    
+
+#                    print(zeile)
+                    m = re.search(r"(Betriebspruef|Ausser|Vollstreck|Mahn-|Mahngeb|Kosten +und +Geb|Saeumnisz|Rueckla.*?geb|Dauerbeitr|Beitrags?f?e?|Beitraege|Ruecklaeuf|Forderung\s)(.*?)(\s.*?\d\d)\.(\d\d)\.(\d\d.\d).*?\s(\-?[1-9]?\d*),(\d\d\-?)",zeile)
+                    if m:
+#                        print (" --->  MATCH  --->",zeile)
+#                        print(m.group(5))
+                        jahr  = m.group(5)
+                        monat = m.group(4)
+                        betrag = m.group(6)+"."+m.group(7)
+                        betrag = re.sub(r"(.*)(-$)","-\\1",betrag)
+                        text1.append([jahr+monat,m.group(1)+m.group(2),betrag])
+#                        print(text1[-1])
+                        
+#                text = re.sub(r"^(\d\d\.\d\d\.\d\d\d\d[ \-]+\d\d\.\d\d\.\d\d\d\d)(.*?)(\d\d\.\d\d\.\d\d\d\d)",
+#                                          "\\1$\\2",text,9999);  #  special AOK
+#                text = re.sub(r"^(\d\d\.\d\d\.\d\d\d\d) *\- *(\d\d\.\d\d\.\d\d\d\d)(.*?)","\\1-\\2",text,9999) # special Barmer
+#                text = re.sub(r"^(\d\d)[\.,](\d\d)[\.,](\d\d\d\d) "," \\1.\\2.\\3 ",text,9999)
+#
+#        for zeile in text.split("\n"):
+#            zeile = re.sub(r"\s+"," ",zeile,9999)
+#            zeile = re.sub(r"(SZ|SA) .?(B)(S?)"," Beitrag\\3 ",zeile,9999)       #  special MobilOil
+#            zeile = re.sub(r"(SZ|SA) .?S"," Saeumniszuschlag ",zeile,9999)       #  special MobilOil
+#            zeile = re.sub(r"(Beitragszahlung|im +Beitrag)","",zeile,9999)       #  special Minijob, TKK
+#            m = re.search(r"bezugszeitraum +(.*?) *$",zeile.lower())             #  special DAK
+#            if m:
+#                zeitraum = m.group(1)
+#            else:
+#                zeitraum = ""
+#            zeile = re.sub(r"^\s*Forderung \d\d\.\d\d\.\d\d","Forderung Beitrag "+zeitraum,zeile) #  special DAK
+#            m = re.search(r"(Betriebspr|Beitra.?g|Saeumnis|Mahn|[A-Z].*?gebuehr|Umbuchung +Leistung +U1)(.*?)(0\d|10|11|12)([\/\.])($jahr|$jahr1)[\_ ]+(.*?)(\-?\d+)\,(\d\d)(-?)",
+#                             zeile)
+#            print zeile
+#            if not m:
+#                continue
+#            text1.append([jahr + m.group(3) + ("%02u" % day[o9]),
+#                          re.sub(r"--","",m.group(9) + "-" + m.group(7) + "." + m.group(8)),
+#                          "555",
+#                          "899",
+#                          kk + ", " + m.group(1) + m.group(2) + m.group(3) + m.group(4) + m.group(5)])
+#'''
+
+
+
+
+            for zeile in text1:
+            
+                jjjjmm = zeile[0]
+                remark = zeile[1]
+                betrag = zeile[2]
+                o9     = kknr + jjjjmm + remark[0:10]
+                if o9 in day:
+                    day[o9] = day[o9] + 1
+                else:
+                    day[o9] = 26
+            
+                dd   = ("%02u" % day[o9])
+                ukey = ""
+                betrag = re.sub(r"--","",zeile[2])
+                if "Saeumn" in remark:
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-saeumn"
+                elif "Mahn" in remark or "Ausser" in remark or "Kosten " in remark or "Forderung" in remark or "Ruecklast" in remark or "Vollstreck" in remark:
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-mahn"
+                elif "Ruecklae" in remark or "Retoure" in remark:
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-retoure"
+                    remark = remark  #  + " " + dd
+                elif "Umbuchung Leistung" in remark:
+                    ktoa = self.ktoa + "-"+kknr+"-zahlung"   #  + "-"+self.ukto_from_betrag(betrag)
+                    ktob = self.ktoa + "-"+kknr+"-kkcheck"
+                    remark = remark + " " + dd
+                    ukey   = jjjjmm+dd + betrag
+                elif "Umbuchung" in remark or "Auszahlung" in remark:
+                    ktob = self.ktoa + "-"+kknr+"-kk-"+self.ukto_from_betrag(betrag)+"-abr"
+                    ktoa = self.ktoa + "-"+kknr+"-kkcheck"
+                    remark = remark + " " + dd
+                    continue
+                elif "eitra" in remark or "ettra" in remark or "orderung" or "Ford. " in remark:
+                    ktob = self.ktoa + "-"+kknr+"-meldung-"+dd
+                    ktoa = self.ktoc + "-"+kknr+"-beitrag"
+                if not periode[0] <= int(jjjjmm) <= periode[1]:
+                    continue
+#                print(zeile,dd)
+#                print(ktoa,ktob)
+
+#                print ("--->")
+                buchung =     [jjjjmm + dd,
+                              betrag,
+                              ktoa,ktob,"0.00",
+                              kk + ", " + remark + ", Beitragsmonat " + jjjjmm[4:6] + "/" + jjjjmm[0:4]]
+                entry = jjjjmm + dd + " " + buchung[1] + " " + ktoa + " " + buchung[5]
+#                print (buchung)
+#                print (entry)
+                if not entry in entries:
+                    if ukey in uleistung:
+                        buchungen.append([uleistung[ukey]])
+                        del uleistung[ukey]
+                    else:
+                        buchungen.append(buchung)
+                    entries[entry] = 1
+
+            zeilen = []
+            for buchung in buchungen:
+                zeilen.append("  ".join(buchung))
+
+            if buchungen:
+                ktotext = ktotext + "\n" + "\n".join(zeilen) + "\n"
+
+ 
+        ktotext = open(ktofile[0],"w").write(ktotext)
+        return(ktotext)
+            
+
+#************************************************************************************************************
+
+    def normalize_text (self,text,extended=""):
+    
+        text = re.sub(r"ä",   "ae",text,99999999)
+        text = re.sub(r"ö",   "oe",text,99999999)
+        text = re.sub(r"ü",   "ue",text,99999999)
+        text = re.sub(r"Ä",   "Ae",text,99999999)
+        text = re.sub(r"Ö",   "Oe",text,99999999)
+        text = re.sub(r"Ü",   "Ue",text,99999999)
+        text = re.sub(r"ß",   "ss",text,99999999)
+        text = re.sub(r"a\"", "ae",text,99999999)
+        text = re.sub(r"o\"", "oe",text,99999999)
+        text = re.sub(r"u\"", "ue",text,99999999)
+        text = re.sub(r"A\"", "Ae",text,99999999)
+        text = re.sub(r"O\"", "Oe",text,99999999)
+        text = re.sub(r"U\"", "Ue",text,99999999)
+        text = re.sub(r"s\"", "ss",text,99999999)
+        text = re.sub(r"&",   "u", text,99999999)
+        text = re.sub(r"\t",  "  ",text,99999999)
+        text = re.sub(chr(13),"",  text,99999999)
+        
+        if not extended == "":
+            text = re.sub(r"[\+\-\. \;\:\,\(\)\[\]\\\/]","_",  text,99999999)
+            text = re.sub(r" ",   "_", text,99999999)
+
+        return(text)
+
+#************************************************************************************************************
+
+
+    def xxxx ():
+
+
+
+        for zeile in ktotext.split('\n'):
+#            if not re.search('^\d\d\d\d\d\d\d\d +\-?\d+\.\d\d.* (.*?-\d\d\d\d|)-meldung', zeile):
+            if not re.search('^\d\d\d\d\d\d\d\d +\-?\d+\.\d\d.*-meld(ung|ZUS).*-meld(ung|ZUS)', zeile):
+                text.append(zeile)
+                continue
+
+        ktotext = '\n'.join(text) + '\n'
+        files.sort()
+        for file in files:
+
+                buchungen = []
+                text = open(file).read()
+
+                jahr    = m.group(3)
+                monat   = m.group(2)
+                newname = newname + '_' + (kk + '______')[0:6] + '__' + jahr + '_' + monat
+                newname = re.sub('KNAPPS', 'MINIJO', newname)
+                text = re.sub('(\d)\.(\d+\,\d\d)', '\\1\\2', text, 9999)
+                m = re.search('Einzugsstelle.*Betriebsnummer +(\d+)(.*?)Name +([^\n ]+)', text, re.DOTALL)
+                if not m:
+                    continue
+                self.betriebsnr_kk[kknr] = m.group(1)
+                remark = m.group(3) + ' ' + m.group(1)
+                remark = re.sub('[\\n-]/', ' ', remark, 9999, re.DOTALL)
+                remark = re.sub('^(.*?) +(.*?) .*? (\d+)$', '\\1 \\2 \\3', remark)
+                buchungen1 = []
+                o = kknr + ',' + jahr + monat
+                if o in kkdatum:
+                    kkdatum[o] = kkdatum[o] + 1
+                else:
+                    kkdatum[o] = 20
+                datum = jahr + monat + '%02u' % kkdatum[o]
+                new_addtext = False
+                stornofaktor = 1.0
+                remarkadd    = ""
+                if "Storno " in text:
+                    stornofaktor = -1.0
+                    remarkadd    = "manuell storniert - "
+                if re.search(r"Stornierung +(JA|Ja|ja)",text):
+                    stornofaktor = st
+                    print("STS",jahr+monat,st)
+                    remarkadd    = "Stornierung - "
+
+                while (0 == 0):
+                    m = re.search('^(.*\n)(.*?Pausch\S*|Storno|Beitrae?\"?ge? [a-z]\S*|Zusatzb\S*|Umlage\S*) ([^\n]*?) *(\-?\d+)\,(\d\d)', text, re.IGNORECASE + re.DOTALL)
+                    if not m:
+                        break
+                    text = m.group(1)
+                    remark1 = remark + ', ' + m.group(2) + ' ' + m.group(3)
+                    remark1 = re.sub('\n', ' ', remark1, 9999, re.DOTALL)
+                    ktoa = None
+                    ktob = '10-1510-' + kknr + '-meldung-' + datum[6:8]
+                    if 'Storno' in remark1:
+                        continue
+                    elif re.search(', Beitr.*Krankenvers.*ohne|, Beitr.*Krankenvers.*geringf', remark1):
+                        ktoa = '11-' + kknr + '-KV-meldung'
+                    elif re.search(', Zusatzbeitr.*Krankenvers|, Beitr.*Krankenvers.*erm.*igt', remark1):
+                        ktoa = '11-' + kknr + '-KV-meldZUS'
+                    elif ' Arbeitsfoerderung' in remark1 or 'Arbeitslosen' in remark1:
+                        ktoa = '11-' + kknr + '-AV-meldung'
+                    elif ' Rentenversicherung' in remark1:
+                        ktoa = '11-' + kknr + '-RV-meldung'
+                    elif ' Krankenversicherung' in remark1:
+                        ktoa = '11-' + kknr + '-KV-meldung'
+                    elif ' Pflegeversicherung' in remark1:
+                        ktoa = '11-' + kknr + '-PV-meldung'
+                    elif ' Krankheitsaufwendungen' in remark1:
+                        ktoa = '11-' + kknr + '-U1-meldung'
+                    elif ' Mutterschaftsaufwendungen' in remark1:
+                        ktoa = '11-' + kknr + '-U2-meldung'
+                    elif ' Insolvenzgeldversicherung' in remark1:
+                        ktoa = '11-' + kknr + '-U3-meldung'
+                    elif re.search('inheitliche *P', remark1):
+                        ktoa = '11-' + kknr + '-ST-meldung'
+#                    elif ' Storno' in remark1:
+#                        ktoa = '11-' + kknr + '-ZZ-meldung'
+                    elif ' UST' in remark1:
+                        ktoa = '11-' + kknr + '-xxUSTxx-meldung'
+                    elif ' einzubehaltene' in remark1:
+                        ktoa = '11-' + kknr + '-LS-meldung'
+                    elif ' pauschal' in remark1:
+                        ktoa = '11-' + kknr + '-PL-meldung'
+                    elif ' Solidarit' in remark1:
+                        ktoa = '11-' + kknr + '-SZ-meldung'
+                    elif ' Kirchensteuer roem' in remark1:
+                        ktoa = '11-' + kknr + '-KR-meldung'
+                    elif ' Kirchensteuer evan' in remark1:
+                        ktoa = '11-' + kknr + '-KE-meldung'
+                    elif ' Kirchensteuer altk' in remark1:
+                        ktoa = '11-' + kknr + '-KA-meldung'
+                    elif ' Kirchensteuer isra' in remark1:
+                        ktoa = '11-' + kknr + '-KB-meldung'
+                    elif re.search(' Sae?umn| Mahn|gebuehr', remark1):
+                        ktoa = '11-' + kknr + '-saeumn'
+                    elif re.search(' Beitrae?g| Betriebspr', remark1):
+                        ktoa = '11-' + kknr + '-beitrag'
+                    elif re.search(' Umbuchung +Leistung+ U1', remark1):
+                        ktoa = '11-' + kknr + '-umbuchung'
+#                    elif 'Storno' in remark1:
+#                        ktoa = '11-' + kknr + '-ZZ-meldung'
+                    else:
+                        continue
+                    if stornofaktor < -1.1:
+                        betrag1 = - (abs( float(m.group(4) + '.' + m.group(5)) ))
+                    else:
+                        betrag1 = stornofaktor * float(m.group(4) + '.' + m.group(5))
+                    if abs(betrag1) > 0.0001:
+                        buchungen1.append([datum, '%3.2f' % betrag1, ktoa, ktob, '0.00', remarkadd + remark1])
+                        continue
+
+                buchungen = buchungen + buchungen1
+                
+                m = re.search('^(.*)\.(.*?)$', file)  #  renaming the original files
+                filename = m.group(1)
+                if not filename == newname:
+                    print('rename file ' + file + ' to ' + newname + "." + m.group(2))
+                    os.rename(file, newname + '.' + m.group(2))
+                    if os.path.isfile(filename + '.pdf'):
+                        os.rename(filename + '.pdf', newname + '.pdf')
+
+                zeilen = []
+                for buchung in buchungen:
+                    zeilen.append('  '.join(buchung))
+
+                if buchungen:
+                    ktotext = ktotext + '\n' + '\n'.join(zeilen) + '\n'
+
+        return(ktotext)  
+
+#********************************************************************************
 #*********************************************************************************
 
-    def to_kto (self,*pars):     # open the csv and kto files and prepare for processing
+    def to_kto (self):     # open the csv and kto files and prepare for processing
     
-        ktofile = glob.glob(self.dir+"/*.kto")
-        
-        self.zeilen = []
-        print(pars)
-
-        if len(ktofile) > 1:
-            print("More than one kto-file.")
-            return()
-        elif len(ktofile) == 0:
-            print("No ktofile found.")
-            return()
-            
-        anchor_found = 0
-        
-#---------------------  anchor.txt   ---------------------------
-            
-        if os.path.isfile("anchor.txt"):
-
-            text1 = ""
-            if os.path.isfile("anchor.sh"):
-                text1 = re.sub("\s","",open("anchor.sh").read())
-                text1 = re.sub(r"^(.+)[ \=](.*)$","\\2",text1)
-#                print("TT",text1)
-                if os.path.isfile(text1):
-                    text1 = open(text1).read()
-                else:
-                    text1 = ""
-                    os.unlink("anchor.sh")
-       
-            if text1 == "":
-                filename = open("anchor.txt").read()
-                filename = re.sub("\s","",filename,99999999)
-
-                parent0  = ""
-                parent   = "."
-                while 0 == 0:
-                    if len(os.path.abspath(parent)) < 3:
-                        break
-                    if parent0 == parent:
-                        break
-                    if filename == "":
-                        break
-                    sublevel = "/"
-                    while 0 == 0:
-                        sourcefile = glob.glob(parent + sublevel + filename)
-                        if len(sourcefile) > 0:
-                            break
-                        sublevel = "/*" + sublevel
-                        if len(sublevel) > 15:
-                            break
-                    print(sourcefile)
-                    if len(sourcefile) == 1:
-                        anchor_found = 1
-                        open("anchor.sh","w").write("AN="+sourcefile[0]+"\n")
-                        text1 = open(sourcefile[0]).read()
-                        break
-                    parent0 = parent
-                    parent  = "../" + parent
-                    print(filename,sourcefile,parent+"/"+filename)
-                        
-            text0 = open(ktofile[0]).read()
-        
-            if not text1 == "":
-        
-                if len(pars) > 0:
-                    startdatum = pars[0]
-                    pars       = []
-                else:
-                    startdatum = ""
-                    for zeile in text0.split("\n"):
-                        m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-                        if m:
-                            startdatum = m.group(1)
-                        if len(startdatum) == 8:
-                            break
-
-#                print(startdatum)
-                
-                make_csv_text = ""
-                for zeile in text1.split("\n"):
-                    m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+)\.(\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-                    if not m:
-                        continue
-                    datum = m.group(1) + m.group(2) + m.group(3)
-#                    print(startdatum,datum,zeile)
-#                    if datum <= startdatum:
-#                        continue
-                    make_csv_text = make_csv_text + m.group(3) + "." + m.group(2) + "." + m.group(1) + ";-" + m.group(4) + "," + m.group(5) + ";" + m.group(9) + "\n"
-                    
-                make_csv_text = re.sub(r";--",";",make_csv_text,99999999)
-#                print(make_csv_text)
-                
-                open("anchor.csv","w").write(make_csv_text)
-                                
-#                return()
-      
-
-#---------------------  anchor.txt  end   ---------------------------
-
-
-            
-        csv_files = []
-        for csv_file in glob.glob(self.dir+"/*.csv"):
-            m = re.search(r"^(.*)[\\\/](.*)$",csv_file)
-            if m:
-                csv_file1 = m.group(2)
-            else:
-                csv_file1 = csv_file
-                
-            if len(pars) > 0 and not csv_file1 in pars:
-                continue
-                
-            csv_files.append(csv_file)
-
+        csv_files = glob.glob(self.dir+"/*.csv")
         csv_files.sort()
         
-        zeilen = []
         for csv_file in csv_files:
 
             text   = open(csv_file).read()
@@ -151,14 +463,8 @@ class CSV (object):
             zeile0 = ""
             bed    = 0
             for zeile in text.split("\n"):    #  erase additional line breaks
-
                 zeile = zeile.strip()
-                m = re.search(r"^(\d\d\d\d)(\d\d)(\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
-#                print(m,zeile[0:100])
-                if m:
-                    zeile = m.group(3) + "." + m.group(2) + "." + m.group(1) + ";" + m.group(4) + ";" + m.group(8)
-#                    print(zeile)
-                if re.search(r"(^|;)\"?\d\d\.\d\d\.(\d\d\d\d|\d\d)\"?",zeile):
+                if re.search(r"^\"?\d\d\.\d\d\.\d\d\d\d\"?",zeile):
                     text1  = text1 + zeile0 + "\n"
 #                    buchungen.append(text1.strip().split(";"))
                     zeile0 = zeile
@@ -171,42 +477,37 @@ class CSV (object):
                 open(csv_file+"~","w").write(text)
                 open(csv_file,"w").write(text1)
                 
+        ktofile = glob.glob(self.dir+"/*.kto")
+        
+        if len(ktofile) > 1:
+            print("More than one kto-file.")
+            return()
+        elif len(ktofile) == 0:
+            print("No ktofile found.")
+            return()
+            
         erg = self.analyse_ktofile(open(ktofile[0]).read())
         if not erg == "":
             print(erg)
             return()
 
         for csv_file in csv_files:
-            print("-> ",csv_file)
+            print(csv_file)
             erg = self.merge_with_ktofile_0(open(csv_file).read())
             if not erg == "":
                 print(erg)
                 return()
-                
+
         erg = self.merge_with_ktofile()
         if not erg == "":
- #           print(erg)
+            print(erg)
             return()
 
         self.assign_contra_accounts()
 
-        if os.path.isfile("anchor.txt"):  #  wenn es ein anchor-file gibt, dann die nicht durch CSV lines abgedeckten Zeilen wirklich loeschen
-            kto_text1 = []
-            for datum in self.ktolines:
-                for absbetrag in self.ktolines[datum]:
-#                    print(datum,absbetrag)
-                    for entry in self.ktolines[datum][absbetrag]:
-#                        print("EE",entry)
-                        if entry['ISINCSV'] == 1:
-                            kto_text1.append( self.kto_text[ entry['ZAEHLER'] ] )
-            self.kto_text = self.ktotext_misc + kto_text1            
-
         self.combine_ktofile()
 
-
         open(ktofile[0],"w").write(  "\n".join(self.kto_text) + "\n")
-
-        return(anchor_found)
 
 
 
@@ -221,8 +522,6 @@ class CSV (object):
         self.new_lines        = []
         self.csvlines         = {}
         self.undef_acc        = []
-        self.ktotext_misc     = []
-
 
 
         ktotext1              = self.kto_text[:]
@@ -234,7 +533,6 @@ class CSV (object):
 
             m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
             if not m:
-                self.ktotext_misc.append(zeile)
                 continue
                 
             datum    = m.group(1)
@@ -243,7 +541,7 @@ class CSV (object):
             kto2     = m.group(4)
             remark   = m.group(6)
             
-            if kto2 in self.contra_accounts:
+            if kto2 == config.STANDARD_CONTRA_ACCOUNT:
                 self.undef_acc.append(zaehler)
 
             patterns = self.extract_patterns_from_remark(remark)
@@ -253,7 +551,7 @@ class CSV (object):
                     self.equivalent_acc[patterns] = []
                 self.equivalent_acc[patterns].append(zeile)
                 
-                if kto2 in self.contra_accounts:
+                if kto2 == config.STANDARD_CONTRA_ACCOUNT:
                     zaehler1 = zaehler
                     while zaehler1 > 0:
                         zaehler1 = zaehler1 - 1
@@ -263,7 +561,7 @@ class CSV (object):
                             m1 = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile1)
                             if m1:
                                 kto02 = m1.group(4)
-                                if not kto02 in self.contra_accounts:
+                                if not kto02 == config.STANDARD_CONTRA_ACCOUNT:
                                     self.equivalent_acc[patterns][-1] = zeile1
                                     break
                     
@@ -283,18 +581,15 @@ class CSV (object):
                     else:
                         return("No account pattern found.")
                         
-            self.add_ktoline(datum,betrag,{ 'ZAEHLER' : zaehler, 'ZEILE' : zeile, 'REMARK' : remark, 'ISINCSV': 0})
+            self.add_ktoline(datum,betrag,{ 'ZAEHLER' : zaehler, 'ZEILE' : zeile, 'REMARK' : remark})
                     
-        if self.ukto == None:
-            self.ukto = "KONTO"
-        
         return("")
                                 
 #*********************************************************************************
 
     def add_ktoline (self,datum,betrag,entry):
     
-        absbetrag = re.sub(r"-","",betrag)
+        absbetrag = re.sub(r"---","",betrag)
         if not datum in self.ktolines:
             self.ktolines[datum] = {}
         if not absbetrag in self.ktolines[datum]:
@@ -306,7 +601,7 @@ class CSV (object):
 
     def add_csvline (self,datum,betrag,entry):
     
-        absbetrag = re.sub(r"-","",betrag)
+        absbetrag = re.sub(r"---","",betrag)
         if not datum in self.csvlines:
             self.csvlines[datum] = {}
         if not absbetrag in self.csvlines[datum]:
@@ -334,11 +629,7 @@ class CSV (object):
 
         self.csvline = {}
 
-        self.skip_erste_spalte = 0
-
         for zeile in csv_text.split("\n"):
-            if zeile.startswith("\"Saldo") or zeile.startswith("Saldo"):
-                self.skip_erste_spalte = 1
 #            print(zeile)
             bed = 1
             for ausschlusspattern in config.EXCLUDE_CSV_LINES.split(","):
@@ -348,18 +639,16 @@ class CSV (object):
             if bed == 0:
                 continue
                 
-            erg = self.create_buchung(zeile)
+#            print(zeile)
+            erg       = self.create_buchung(zeile)
 #            print(erg)
             if erg == None:
                 continue
             datum     = erg['DATUM']
             betrag    = erg['BETRAG']
             remark    = erg['REMARK']
-            absbetrag = re.sub(r"-","",betrag)
-#            if "IGEFA" in zeile:
-#                print(zeile)
+            absbetrag = re.sub(r"---","",betrag)
 
-#            print(datum,absbetrag,remark)
             self.add_csvline(datum,absbetrag,erg)
             
         return("")
@@ -369,72 +658,65 @@ class CSV (object):
     def merge_with_ktofile (self):
 
         for datum in self.csvlines:
-#            print("DD", datum)
             for absbetrag in self.csvlines[datum]:
                 for erg in self.csvlines[datum][absbetrag]:
- 
+
                     remark    = erg['REMARK']
 
                     if not datum in self.ktolines or not absbetrag in self.ktolines[datum]:
-                        print("---------->",datum,absbetrag)
                         self.append_to_konto(erg)
 
                     else:
 #                        print("-----")                        
 #                        print("VVV",datum,absbetrag,remark)
-#                        #  es gibt also mindestens einen Eintrag im ktofile mit gleichem Datum und gleichen Absolutbetrag
+#                        #  es gibt also mindestens einen Eintrag mit gleichem Datum und gleichen Absolutbetrag
                         #  Alle diese Eintrage durchgehen, fuer jedes moegliche Pattern in der CSV-Remark:
 
-
-                        candidates = self.ktolines[datum][absbetrag]
-                        
-#                        print(candidates)
-                        
-                        if len(candidates) > 1:
-
-                            for pattern in (remark.split(";")):
-                                pattern = re.sub(r"\"?(.*?)\"?","\\1",pattern)
-                                if pattern == "":
-                                    continue
-                                candidates1 = []
-                                for candidate in candidates:
-                                    if self.no_umlaute(pattern) in self.no_umlaute(candidate['REMARK']):
-                                        candidates1.append(candidate)
-                                candidates = candidates1[:]
-                                if len(candidates) == 0:
+                        for pattern in (remark.split(";")):
+                            pattern = re.sub(r"\"?(.*?)\"?","\\1",pattern)
+                            if pattern == "":
+                                continue
+#                            print(self.no_umlaute(pattern))
+                            anzahl_ziel    = 0
+                            anzahl_zeilen  = 0
+                            matching_entry = self.ktolines[datum][absbetrag][0]
+                            for entry in self.ktolines[datum][absbetrag]:
+#                                print("WW",pattern)
+#                                print("VV",entry['REMARK'])
+                                if self.no_umlaute(pattern) in self.no_umlaute(entry['REMARK']):
+                                    matching_entry = entry
+                                    anzahl_zeilen  = anzahl_zeilen + 1
+                                    if anzahl_zeilen > 1:
+                                        break
+                                if anzahl_zeilen > 1:
+                                    break
+                            if anzahl_zeilen == 1:
+                                for entry1 in self.csvlines[datum][absbetrag]:
+                                    if pattern in entry1['REMARK']:
+                                        anzahl_ziel = anzahl_ziel + 1
+                                    if anzahl_ziel > 1:
+                                        break
+                                if anzahl_ziel < 2:
                                     break
 
+                        if anzahl_zeilen > 1:
+                            return("More than one matching line found for " + entry['ZEILE'] + ".")
 
-                        if len(candidates) > 1:
-                            print("More than one matching line found for " + candidates[0]['ZEILE'] + ".")
-                            return("More than one matching line found for " + candidates[0]['ZEILE'] + ".")
-
-                        if len(candidates) == 0:
-                            self.append_to_konto(erg)
-
-                        if len(candidates) == 1:
-
-                            remark_orig = candidates[0]['REMARK']
-                            m9          = re.search(r"^(.*) *\[(.*)\]\s*$",remark_orig)
-                            remark_explain = ""
-                            if m9:
-                                remark_orig = m9.group(1)
-                                remark_explain = " [" + m9.group(2) + "]"
-                            candidates[0]['ISINCSV'] = 1
-                            remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
-                            remark1     = remark1.replace("#","",9999)
-#                            print(remark)
-#                            print(datum,"    ",remark1)
-                            if not remark.replace("#","",9999) == remark1 and remark1[0:2] == "XX":           #  only if the remark is changed and the line is marked
-#                                print(12345)
-                                zaehler = candidates[0]['ZAEHLER']                  #  then we replace it by the CSV, but keep the markers and the explains!
-                                zeile1  = candidates[0]['ZEILE']
-                                m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
-                                if m:
-                                    patterns_orig = self.extract_patterns_from_remark(remark_orig)
-                                    for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
-                                        remark.replace(pattern,"#"+pattern+"#")
-                                    self.kto_text[zaehler] = m.group(1) + remark + remark_explain
+                        remark_orig = matching_entry['REMARK']
+                        remark1     = re.sub(r"^[\+\-]{2}","",remark_orig)
+                        remark1     = remark1.replace("#","",9999)
+#                        print(remark)
+#                        print(datum,"    ",remark1)
+                        if not remark.replace("#","",9999) == remark1:           #  only if the remark is changed
+#                            print(12345)
+                            zaehler = matching_entry['ZAEHLER']                  #  we replace it by the CSV, but keep the markers!
+                            zeile1  = matching_entry['ZEILE']
+                            m = re.search(r"^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ +\S+ +\-?\d+\.\d\d +[\+\-]*)(.*)$",zeile1)
+                            if m:
+                                patterns_orig = self.extract_patterns_from_remark(remark_orig)
+                                for pattern in patterns_orig:    #  save the patterns by transferring them into new remark
+                                    remark.replace(pattern,"#"+pattern+"#")
+                                self.kto_text[zaehler] = m.group(1) + remark
                                 
                         
         return("")
@@ -465,8 +747,6 @@ class CSV (object):
 
     def create_buchung (self,buchungstext):
     
-#         print(buchungstext)
-
         datum    = ""
         betrag   = ""
         soll     = ""
@@ -476,24 +756,18 @@ class CSV (object):
         if m:
             return({ 'DATUM': m.group(1), 'BETRAG' : m.group(2), 'REMARK' : m.group(6), 'ZEILE' : buchungstext})
 
-        buchungstext  = re.sub(r"\"\"","\";\"",buchungstext,99999999)
-        buchungstext1 = buchungstext.split(";")
-        if self.skip_erste_spalte == 1:
-            buchungstext1.pop(0)
+        buchungstext = re.sub(r"\"\"","\";\"",buchungstext,99999999)
 
-        for pattern in buchungstext1:
+        for pattern in buchungstext.split(";"):
             pattern = re.sub(r"^\"?(.*?)\"?$","\\1",pattern)
-            m = re.search(r"^(\d\d)\.(\d\d)\.(\d\d|\d\d\d\d)$",pattern)
+            m = re.search(r"^(\d\d)\.(\d\d)\.(\d\d\d\d)$",pattern)
             if m:
                 if datum == "":
                     datum = m.group(3) + m.group(2) + m.group(1)
-                    if len(datum) == 6:
-                        datum = "20" + datum
                 continue
             m = re.search(r"^(\-?)([\.0123456789]+)[,\.](\d\d)(\-?)$",pattern)
             if m:
-                if betrag == "":
-                    betrag = m.group(1) + m.group(4) + re.sub(r"\.","",m.group(2),9999) + "." + m.group(3)
+                betrag = m.group(1) + m.group(4) + re.sub(r"\.","",m.group(2),9999) + "." + m.group(3)
                 continue
             if pattern == "S":
                 soll = "-"
@@ -531,27 +805,20 @@ class CSV (object):
         betrag = entry['BETRAG']
         remark = entry['REMARK']
 
-        print("Append",datum,betrag,self.ukto)
-        zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + self.contra_accounts[0] + "  0.00  " + remark
-#        print(self.zeilen)
-        while zeile in self.zeilen:
-            print("-----------------------------------------------")
-            zeile = zeile + " " + str(random.randint(10001,99998))
-        self.zeilen.append(zeile)
+        print(datum,betrag,self.ukto)
+        zeile  = datum + "  " + betrag + "  " + self.ukto + "  " + config.STANDARD_CONTRA_ACCOUNT + "  0.00  " + remark
 
 
 #        print("XX",zeile)
 
         self.new_lines.append(zeile)
-        
-#        print(self.new_lines)
 
 #******************************************************************************
 
     def combine_ktofile (self):
     
         for line in self.new_lines:
-#            print("New line",line)
+            print(line)
             self.kto_text.append(line)
 
 #******************************************************************************
@@ -571,21 +838,21 @@ class CSV (object):
             
             for zeile in self.equivalent_acc[patterns]:
             
-#                print(zeile)
+                print(zeile)
                 m = re.search(r"^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+) +(\S+) +(\-?\d+\.\d\d) +(.*)$",zeile)
                 if m:
                     kto1 = m.group(3)
                     if kto2 == "" or kto2 == m.group(4):
                         kto2 = m.group(4)
                     else:
-                        kto2 = self.contra_accounts[0]
+                        kto2 = ""
                         print("Ambiguous pattern in lines:")
                         print(zeile0)
                         print(zeile)
                         break
                 zeile0 = zeile
                 
-            for nr1 in self.undef_acc:   #   gehe durch alle undefinierten Zeilen des Kontofiles
+            for nr1 in self.undef_acc:
                 if nr1 in used_numbers1:
                     continue
                 x = self.check_patterns(patterns,kto1,kto2,self.kto_text[nr1])
@@ -1711,28 +1978,28 @@ class CSV (object):
                 ukey = ""
                 betrag = re.sub(r"--","",zeile[2])
                 if "Saeumn" in remark:
-                    ktoa = "13-6011"
-                    ktob = "10-1500-"+kknr+"-saeumn"
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-saeumn"
                 elif "Mahn" in remark or "Ausser" in remark or "Forderung" in remark or "Ruecklast" in remark or "Vollstreck" in remark:
-                    ktoa = "13-6011"
-                    ktob = "10-1500-"+kknr+"-mahn"
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-mahn"
                 elif "Ruecklae" in remark or "Retoure" in remark:
-                    ktoa = "13-6011"
-                    ktob = "10-1500-"+kknr+"-retoure"
+                    ktoa = self.ktod
+                    ktob = self.ktoa + "-"+kknr+"-retoure"
                     remark = remark  #  + " " + dd
                 elif "Umbuchung Leistung" in remark:
-                    ktoa = "10-1500-"+kknr+"-zahlung"   #  + "-"+self.ukto_from_betrag(betrag)
-                    ktob = "10-1500-"+kknr+"-kkcheck"
+                    ktoa = self.ktoa + "-"+kknr+"-zahlung"   #  + "-"+self.ukto_from_betrag(betrag)
+                    ktob = self.ktoa + "-"+kknr+"-kkcheck"
                     remark = remark + " " + dd
                     ukey   = jjjjmm+dd + betrag
                 elif "Umbuchung" in remark or "Auszahlung" in remark:
-                    ktob = "10-1500-"+kknr+"-kk-"+self.ukto_from_betrag(betrag)+"-abr"
-                    ktoa = "10-1500-"+kknr+"-kkcheck"
+                    ktob = self.ktoa + "-"+kknr+"-kk-"+self.ukto_from_betrag(betrag)+"-abr"
+                    ktoa = self.ktoa + "-"+kknr+"-kkcheck"
                     remark = remark + " " + dd
                     continue
                 elif "eitra" in remark or "ettra" in remark or "orderung" or "Ford. " in remark:
-                    ktob = "10-1500-"+kknr+"-meldung-"+dd
-                    ktoa = "10-1510-"+kknr+"-beitrag"
+                    ktob = self.ktoa + "-"+kknr+"-meldung-"+dd
+                    ktoa = self.ktoc + "-"+kknr+"-beitrag"
                 if not periode[0] <= int(jjjjmm) <= periode[1]:
                     continue
 #                print(zeile,dd)
@@ -2395,9 +2662,9 @@ class CSV (object):
             
 #********************************************************************************
 
-    def xxparse_beitragsnachweise1 (self,ktotext,files,kknr,kk,st=1.0):
+    def xxparse_sv_meldunge1 (self,ktotext,files,kknr,kk,st=1.0):
 
-        ktotext = self.parse_beitragsnachweise(ktotext,files,kknr,kk,st)
+        ktotext = self.parse_sv_meldunge(ktotext,files,kknr,kk,st)
         
         ktotext = re.sub(r"  11-",     "  11-C13-3740-", ktotext,99999999)
         ktotext = re.sub(r"  10-1510-","  11-C13-3759-", ktotext,99999999)
@@ -2405,214 +2672,6 @@ class CSV (object):
         return(ktotext)
 
 
-#********************************************************************************
-
-    def xxparse_beitragsnachweise2 (self,ktotext,files,kknr,kk,st=1.0):
-
-        ktotext = self.parse_beitragsnachweise(ktotext,files,kknr,kk,st)
-
-        ktotext = re.sub(r"  11-15",   "  11-C13-3740-15", ktotext,99999999)
-        ktotext = re.sub(r"  10-1510-","  11-C13-3759-",   ktotext,99999999)
-
-        return(ktotext)
-
-
-#********************************************************************************
-
-    def xxparse_beitragsnachweise (self,ktotext,files,kknr,kk,st=1.0):
-
-        kkdatum = {}
-        self.betriebsnr_kk = {}
-
-        if len(files) == 0:
-            return ()
-
-        kknr = str(kknr)
-        text = []
-        for zeile in ktotext.split('\n'):
-#            if not re.search('^\d\d\d\d\d\d\d\d +\-?\d+\.\d\d.* (.*?-\d\d\d\d|)-meldung', zeile):
-            if not re.search('^\d\d\d\d\d\d\d\d +\-?\d+\.\d\d.*-meld(ung|ZUS).*-meld(ung|ZUS)', zeile):
-                text.append(zeile)
-                continue
-
-        ktotext = '\n'.join(text) + '\n'
-        files.sort()
-        for file in files:
-            if "_orig." in file:
-                continue
-            print(file)
-            buchungen = []
-            text = open(file).read()
-            text = self.normalize_text(text)
-            m = re.search('TAN +(\d\d\d\d\d\d\d\d\d)\D', text)
-            if not m:
-                continue
-            newname = m.group(1)
-            m = re.search('Betriebsnummer +(\d\d\d\d\d\d\d\d)\D', text)
-            if not m:
-                continue
-            newname = newname + '_' + m.group(1)
-            m = re.search('Sendedatum\\:? +(\d\d)\.(\d\d)\.(\d\d)(\d\d)\D', text)
-            if not m:
-                continue
-            newname = newname + '_' + m.group(4) + m.group(2) + m.group(1)
-            text = re.sub('Techniker Krankenkasse', 'TKK', text, 9999)
-            text = re.sub('Minijob.*Zentrale', 'Knappschaft', text, 9999)
-            text = re.sub('\-?Rechtskreis +(West|Ost)', ' RK\\1', text, 9999)
-            text = re.sub(' BKK +', ' BKK', text, 9999)
-            text = re.sub(' DAK-', ' DAK ', text, 9999)
-            text = re.sub('(.*) +ohne +Sozialausgleich(.*)', '', text, 9999)  # wegen doppelt eingetragener Betraege
-#            m = re.search('Einzugs+telle.*?Name +([a-zA-Z0-9]+)', text, re.DOTALL)
-#            if m:
-#                kknr, kk = self.fibu.rules.kknr(text)
-            m = re.search('Zeitraum +von +(\d+)\.(\d+)\.(\d+).*?Zeitraum +bis +(\d+)\.(\d+)\.(\d+)', text, re.DOTALL)
-            if not m:
-                continue
-            if not not m.group(2) == m.group(5):
-                if not m.group(3) == m.group(6):
-                    continue
-                jahr    = m.group(3)
-                monat   = m.group(2)
-                newname = newname + '_' + (kk + '______')[0:6] + '__' + jahr + '_' + monat
-                newname = re.sub('KNAPPS', 'MINIJO', newname)
-                text = re.sub('(\d)\.(\d+\,\d\d)', '\\1\\2', text, 9999)
-                m = re.search('Einzugsstelle.*Betriebsnummer +(\d+)(.*?)Name +([^\n ]+)', text, re.DOTALL)
-                if not m:
-                    continue
-                self.betriebsnr_kk[kknr] = m.group(1)
-                remark = m.group(3) + ' ' + m.group(1)
-                remark = re.sub('[\\n-]/', ' ', remark, 9999, re.DOTALL)
-                remark = re.sub('^(.*?) +(.*?) .*? (\d+)$', '\\1 \\2 \\3', remark)
-                buchungen1 = []
-                o = kknr + ',' + jahr + monat
-                if o in kkdatum:
-                    kkdatum[o] = kkdatum[o] + 1
-                else:
-                    kkdatum[o] = 20
-                datum = jahr + monat + '%02u' % kkdatum[o]
-                new_addtext = False
-                stornofaktor = 1.0
-                remarkadd    = ""
-                if "Storno " in text:
-                    stornofaktor = -1.0
-                    remarkadd    = "manuell storniert - "
-                if re.search(r"Stornierung +(JA|Ja|ja)",text):
-                    stornofaktor = st
-                    print("STS",jahr+monat,st)
-                    remarkadd    = "Stornierung - "
-                while (0 == 0):
-                    m = re.search('^(.*\n)(.*?Pausch\S*|Storno|Beitrae?\"?ge? [a-z]\S*|Zusatzb\S*|Umlage\S*) ([^\n]*?) *(\-?\d+)\,(\d\d)', text, re.IGNORECASE + re.DOTALL)
-                    if not m:
-                        break
-                    text = m.group(1)
-                    remark1 = remark + ', ' + m.group(2) + ' ' + m.group(3)
-                    remark1 = re.sub('\n', ' ', remark1, 9999, re.DOTALL)
-                    ktoa = None
-                    ktob = '10-1510-' + kknr + '-meldung-' + datum[6:8]
-                    if 'Storno' in remark1:
-                        continue
-                    elif re.search(', Beitr.*Krankenvers.*ohne|, Beitr.*Krankenvers.*geringf', remark1):
-                        ktoa = '11-' + kknr + '-KV-meldung'
-                    elif re.search(', Zusatzbeitr.*Krankenvers|, Beitr.*Krankenvers.*erm.*igt', remark1):
-                        ktoa = '11-' + kknr + '-KV-meldZUS'
-                    elif ' Arbeitsfoerderung' in remark1 or 'Arbeitslosen' in remark1:
-                        ktoa = '11-' + kknr + '-AV-meldung'
-                    elif ' Rentenversicherung' in remark1:
-                        ktoa = '11-' + kknr + '-RV-meldung'
-                    elif ' Krankenversicherung' in remark1:
-                        ktoa = '11-' + kknr + '-KV-meldung'
-                    elif ' Pflegeversicherung' in remark1:
-                        ktoa = '11-' + kknr + '-PV-meldung'
-                    elif ' Krankheitsaufwendungen' in remark1:
-                        ktoa = '11-' + kknr + '-U1-meldung'
-                    elif ' Mutterschaftsaufwendungen' in remark1:
-                        ktoa = '11-' + kknr + '-U2-meldung'
-                    elif ' Insolvenzgeldversicherung' in remark1:
-                        ktoa = '11-' + kknr + '-U3-meldung'
-                    elif re.search('inheitliche *P', remark1):
-                        ktoa = '11-' + kknr + '-ST-meldung'
-#                    elif ' Storno' in remark1:
-#                        ktoa = '11-' + kknr + '-ZZ-meldung'
-                    elif ' UST' in remark1:
-                        ktoa = '11-' + kknr + '-xxUSTxx-meldung'
-                    elif ' einzubehaltene' in remark1:
-                        ktoa = '11-' + kknr + '-LS-meldung'
-                    elif ' pauschal' in remark1:
-                        ktoa = '11-' + kknr + '-PL-meldung'
-                    elif ' Solidarit' in remark1:
-                        ktoa = '11-' + kknr + '-SZ-meldung'
-                    elif ' Kirchensteuer roem' in remark1:
-                        ktoa = '11-' + kknr + '-KR-meldung'
-                    elif ' Kirchensteuer evan' in remark1:
-                        ktoa = '11-' + kknr + '-KE-meldung'
-                    elif ' Kirchensteuer altk' in remark1:
-                        ktoa = '11-' + kknr + '-KA-meldung'
-                    elif ' Kirchensteuer isra' in remark1:
-                        ktoa = '11-' + kknr + '-KB-meldung'
-                    elif re.search(' Sae?umn| Mahn|gebuehr', remark1):
-                        ktoa = '11-' + kknr + '-saeumn'
-                    elif re.search(' Beitrae?g| Betriebspr', remark1):
-                        ktoa = '11-' + kknr + '-beitrag'
-                    elif re.search(' Umbuchung +Leistung+ U1', remark1):
-                        ktoa = '11-' + kknr + '-umbuchung'
-#                    elif 'Storno' in remark1:
-#                        ktoa = '11-' + kknr + '-ZZ-meldung'
-                    else:
-                        continue
-                    if stornofaktor < -1.1:
-                        betrag1 = - (abs( float(m.group(4) + '.' + m.group(5)) ))
-                    else:
-                        betrag1 = stornofaktor * float(m.group(4) + '.' + m.group(5))
-                    if abs(betrag1) > 0.0001:
-                        buchungen1.append([datum, '%3.2f' % betrag1, ktoa, ktob, '0.00', remarkadd + remark1])
-                        continue
-
-                buchungen = buchungen + buchungen1
-                
-                m = re.search('^(.*)\.(.*?)$', file)  #  renaming the original files
-                filename = m.group(1)
-                if not filename == newname:
-                    print('rename file ' + file + ' to ' + newname + "." + m.group(2))
-                    os.rename(file, newname + '.' + m.group(2))
-                    if os.path.isfile(filename + '.pdf'):
-                        os.rename(filename + '.pdf', newname + '.pdf')
-
-                zeilen = []
-                for buchung in buchungen:
-                    zeilen.append('  '.join(buchung))
-
-                if buchungen:
-                    ktotext = ktotext + '\n' + '\n'.join(zeilen) + '\n'
-
-        return(ktotext)  
-
-#********************************************************************************
-
-    def xxnormalize_text (self,text,extended=""):
-    
-        text = re.sub(r"ä",   "ae",text,99999999)
-        text = re.sub(r"ö",   "oe",text,99999999)
-        text = re.sub(r"ü",   "ue",text,99999999)
-        text = re.sub(r"Ä",   "Ae",text,99999999)
-        text = re.sub(r"Ö",   "Oe",text,99999999)
-        text = re.sub(r"Ü",   "Ue",text,99999999)
-        text = re.sub(r"ß",   "ss",text,99999999)
-        text = re.sub(r"a\"", "ae",text,99999999)
-        text = re.sub(r"o\"", "oe",text,99999999)
-        text = re.sub(r"u\"", "ue",text,99999999)
-        text = re.sub(r"A\"", "Ae",text,99999999)
-        text = re.sub(r"O\"", "Oe",text,99999999)
-        text = re.sub(r"U\"", "Ue",text,99999999)
-        text = re.sub(r"s\"", "ss",text,99999999)
-        text = re.sub(r"&",   "u", text,99999999)
-        text = re.sub(r"\t",  "  ",text,99999999)
-        text = re.sub(chr(13),"",  text,99999999)
-        
-        if not extended == "":
-            text = re.sub(r"[\+\-\. \;\:\,\(\)\[\]\\\/]","_",  text,99999999)
-            text = re.sub(r" ",   "_", text,99999999)
-
-        return(text)
 
 #********************************************************************************
 
@@ -3695,7 +3754,7 @@ class CSV (object):
 
 if __name__ == "__main__":
 
-    CSV().to_kto(*(sys.argv[1:]))
+    Ktoauszug().parse_ktoauszug()
     
     
 

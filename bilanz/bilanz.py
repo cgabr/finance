@@ -16,7 +16,7 @@ class Bilanz (object):
         self.FORMAT3 = "%8s"
 
         self.ktotyp =  ["^[^-]+","xxB12-3695","C13-3751","C13-3759","C13-3740","B12-1361","B12-1369","B11-1374",
-                        "C11-3170","C11-3170-[a-z]+","C12-3310","B12-1435","B23-1437","B12-1340","B12-3695","B12-3696","D1a-4401","D1a-4101",
+                        "C11-3170","C11-3170-[a-z]+","C12-3310","B12-1435","B23-1437","B12-1340","B12-3695","B12-3696","D3a-4600","D1a-4610",
                         "Do.-6011","Do.-6111","Do.-6816","Do.-6817","Do.-6818","D7f-6612","C02-2080","B23-1890","B25-[^\ ]+","X[EFGH]11-[^\- ]+","F11-001",
                         "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700","C01-2900",
                         "D..-4100","D..-4105","D..-4106","D..-4400"]
@@ -229,6 +229,8 @@ class Bilanz (object):
                 zeile = zeile + "                                                     "
                 zeile = zeile[0:95]
                 for monat in monat_guv:
+                    if kto.startswith("C02") or kto.startswith("D6a"):
+                        continue
                     m = re.search("\n"+kto + " +(.*?)(\-?\d+\.\d\d)",monat)
                     betrag = 0
                     if m:
@@ -528,10 +530,9 @@ class Bilanz (object):
         text = re.sub(r"D..-4400                                      ","  4400   Erloese 19% USt ",text)
         text = re.sub(r"D..-4400-(\S+)                                    ","     davon \\1: ",text,999)
 
-        text = re.sub(r"D..-4401                                      ","  4401   Erloese 19% USt durch Parkgebuehren",text)
-        text = re.sub(r"D..-4401-(\S+)                                    ","     davon \\1: ",text,999)
-        text = re.sub(r"D..-4101                                      ","  4101   Steuerfr. Ums durch Vertragsstrafen",text)
-        text = re.sub(r"D..-4101-(\S+)                                    ","     davon \\1: ",text,999)
+        text = re.sub(r"D..-4610                                      ","  4610   Erloese 19% USt durch Parkgebuehren",text)
+        text = re.sub(r"D..-4610-(\S+)                                    ","     davon \\1: ",text,999)
+        text = re.sub(r"D..-4601                                      ","  4401   Erloese 19% USt durch Parkgebuehren",text)
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
         text = re.sub(r" +davon.*?\: +\-?\d\.\d\d *\n","",text,9999)
 
@@ -560,6 +561,8 @@ class Bilanz (object):
         text = re.sub(r"D..-7110                                      ","  7110   Zinsen auf Bodenwerte                 ",text)
         text = re.sub(r"D..-7141                                      ","  7141   Allgemeine Zinsen                     ",text)
         text = re.sub(r"D..-7111                                      ","  7111   Mieten                                ",text)
+        text = re.sub(r"D..-4600                                      ","  4600   Steuerfr. Ums durch Vertragsstrafen",text)
+        text = re.sub(r"D..-4600-(\S+)                                    ","     davon \\1: ",text,999)
 
 #        text = re.sub(r"D4a                                           ","\n"+
 #                                                                        "D4a: Aufwaende Parken                         ",text,1)
@@ -681,6 +684,7 @@ class Bilanz (object):
         text = re.sub(r"D..-6850                                      ","  6850   Diverse Kosten                       ",text)
         text = re.sub(r"D..-6851                                      ","  6851   Nicht naeher bestimmte Kosten        ",text)
         text = re.sub(r"D..-6855                                      ","  6855   Nebenkosten des Geldverkehrs         ",text)
+        text = re.sub(r"D..-6857                                      ","  6857   Retouren                             ",text)
         text = re.sub(r"D..-6859                                      ","  6859   Aufwend. f.Abraum u.Abfallbeseitigung",text)
 
 

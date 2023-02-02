@@ -15,6 +15,7 @@ UMSATZSTEUER_KONTO               = "11-C13-3060"
 EXCLUDE_CSV_LINES                = "Anfangssaldo,Endsaldo"
 STANDARD_CONTRA_ACCOUNT          = "13-D7f-6850-9999,10-B22-1699"
 
+KTO_KK_MAHN                      = "13-D9a-7303"
 KTO_KK_MELDUNG                   = "11-C13-3759"
 KTO_BEITRAGSNACHWEISE            = "11-C13-3740"
 KTO_KRANKENKASSEN                = "10-B12-1361"
