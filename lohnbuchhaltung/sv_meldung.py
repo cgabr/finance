@@ -22,7 +22,7 @@ class SV_Meldung():
     def __init__ (self):
     
         self.base_dir  = konto.Konto().base_dir
-        self.ankerjahr = "2022"
+        self.ankerjahr = "2023"
 
     def setup_method(self, method):
 
@@ -198,7 +198,7 @@ class SV_Meldung():
             else:
                 ende = "28" + ende
                 
-#            print(beginn,ende)
+            print(beginn,ende)
 #            return()
 
             self.dataset['beginn']         = beginn
@@ -333,8 +333,10 @@ class SV_Meldung():
             self.set_par("beginn",                         ".beginn")
             self.set_par("ende",                           ".ende")
 
-
             erg = self.auswertung(int(self.monatsanzahl))
+
+            print("MM2",self.monatsanzahl)
+            print(erg)
 
             self.set_par1("beitrag1000",                    erg,"KV")
             self.set_par1("beitragZusatzKrankenvers",       erg,"KV-ZUS")
@@ -439,7 +441,7 @@ class SV_Meldung():
 
             self.id("linkid_navi_formulare-leistungen").click()
             self.id("linkid_navi_formulare-leistungen_alleformulare").click()
-            self.el(".toggleBox:nth-child(9) .toggleBox__title").click()
+            self.el(".toggleBox:nth-child(10) .toggleBox__title").click()
             self.li("Lohnsteuerbescheinigung (Neu/Korrektur)").click()
 
             self.id("zeitraumJahr").click()
@@ -474,6 +476,10 @@ class SV_Meldung():
             self.el("#NextPage .interactive-icon__text").click()
 
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinIdNr)",                                    ".lohnstid")
+            try:
+                self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinETIN)",                                    ".etin")
+            except:
+                pass
             self.set_par("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinOrdnungsmerkmal)",                         ".account")
             dropdown = self.id("Startseite(0)_AngabenArbeitnehmer(0)_fields(eruLStBLohnsteuerbescheinigungAllgemeinPersongeschlecht)")
             if self.dataset["mw"].upper() == "M":
@@ -553,7 +559,10 @@ class SV_Meldung():
             self.set_par("Startseite(0)_VersorgungsbezErmArblohn(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKiSteuerEhegMKalJahr)")
             self.el("#NextPage .interactive-icon__text").click()
 
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKurzArbGeld)",                                          ".zahlungkug")
+            try:
+                self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenKurzArbGeld)",                                          ".zahlungkug")
+            except:
+                pass
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGeKrankVers)")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiPrKrankVers)")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenStFreiGePflegeVers)")
@@ -963,7 +972,7 @@ class SV_Meldung():
         konto.Konto().kto()
 
 #        print("")
-#        print(glob.glob("*.kto"))
+        print(glob.glob("*.kto"))
         erg = {}
         kv  = 0.00
         zus = 0.00

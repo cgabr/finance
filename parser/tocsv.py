@@ -35,6 +35,7 @@ class Tocsv (object):
             else:
                 continue
         
+            print("process " + ktofile)
             text        = open(ktofile).read()
             text1       = []
             text2       = []
@@ -82,6 +83,7 @@ class Tocsv (object):
                     
                 text1.append('"' + zeile + '"')
                 text2.append(self.normalize_text(zeile)[0:self.maxzeile])
+                maxzeile1 = min( max(maxzeile1,len(text2[-1])), self.maxzeile)
                 
             open(self.dir + "/" + fileroot + ".csv","w").write("\n".join(text1)+"\n")
                 

@@ -7,6 +7,14 @@ from konto.base.konto import Konto
 
 class Tool ():
 
+
+    def __init__  (self,plan=""):
+        self.plan = plan + " "
+        if self.plan == " ":
+            self.plan = ""
+
+#************************************************************************
+
     def join (self):
 
         zeile0 = ""
@@ -27,6 +35,63 @@ class Tool ():
             open(file1+"~","w").write(text)
             open(file1,"w").write(text1)
                 
+
+#************************************************************************
+
+    def add (self,zeitpunkt,months):
+    
+        zeitpunkt  = "%04u" % int(zeitpunkt)
+        monate     = int(zeitpunkt[0:2]) * 12 + int(zeitpunkt[2:]) - 1
+        monate1    = monate + int(months)
+        zeitpunkt1 = ("%02u" % (monate1 / 12)) + ("%02u" % ((monate1 % 12) + 1))
+        return(zeitpunkt1)
+
+#************************************************************************
+
+    def book(self,datum,betrag,ktoa,ktob,remark):  #  fuer automatisierte forecasts
+    
+        ktofile = glob.glob("*.kto")[0]
+        ktotext = open(ktofile).read()
+
+        try:
+            ff = self.factor
+        except:
+            ff = 1
+        
+        ust     = ""
+        if re.search(r"^[\-\+]+",remark):
+            ust    = remark[0:2]
+            remark = remark[2:]
+        
+        ktotext = re.sub(r"\n *\n","\n\n20" + datum + "  " + ("%3.2f" % (float(betrag)*ff)) + "  " + ktoa + "  " + ktob + "  0.00  " + ust + self.plan + remark + "\n",ktotext,1)
+        open(ktofile,"w").write(ktotext)
+
+#************************************************************************
+
+    def rate (self):  #  Kreditraten berechnen
+    
+        ktofile  = glob.glob("*.kto")[0]
+        ktotext  = open(ktofile).read()
+        ktotext1 = ""
+
+        gesamt  = 0.00
+        for zeile in ktotext.split("\n"):
+            m = re.search('^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+?) +(\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
+            if m:
+                datum  = m.group(1)
+                betrag = float(m.group(2))
+                ktoa   = m.group(3)
+                ktob   = m.group(4)
+                remark = m.group(6)
+                m = re.search(r"Kreditrate +([0123456789\,\.]+) *vH",remark)
+                if m:
+                    zinssatz = re.sub(r",",".",m.group(1))
+                    betrag   = gesamt * 0.01 * float(zinssatz)
+                    zeile    = datum + "  " + ("%3.2f" % betrag) + "  " + ktoa + "  " + ktob + "  0.00  " + remark
+                gesamt = gesamt + betrag
+            ktotext1 = ktotext1 + zeile + "\n"
+
+        open(ktofile,"w").write(ktotext1)
 
 #************************************************************************
 
@@ -213,6 +278,87 @@ class Tool ():
                 
         open( ktofile1 ,"w").write(ktotext1)
 
+#**************************************************************************
+
+    def analyse (self,*pars):
+        
+        expenses = pars[0]
+        income   = pars[1]
+        start    = pars[2]
+        end      = pars[3]
+        try:
+            interval = pars[4]
+        except:
+            interval = 1
+    
+    
+        gesamt = 0.00
+        konto = Konto([])
+
+        konto.startdatum = "20" + start
+        konto.enddatum   = "20" + end
+        
+        exp_konten = konto.format_salden(expenses)
+        inc_konten = konto.format_salden(income)
+        
+        exp_salden = {}
+        exp_salden["SUM"] = []
+        inc_salden = {}
+        inc_salden["SUM"] = []
+        gesamt = [0.00]
+        for k in exp_konten:
+            exp_salden[k[0]] = []
+        for k in inc_konten:
+            inc_salden[k[0]] = []
+
+        int1 = start
+        intervals2 = []
+        while (0 == 0):
+            
+            int2 = self.add(int1,interval-1)
+            print(int1,int2)
+            if int(int1) > int(end):
+                break
+            
+            intervals2.append(int(int2))
+            
+            konto.startdatum = "20"+int1
+            konto.enddatum   = "20"+int2
+
+            erg = konto.format_salden(expenses)
+            for k in erg:
+                exp_salden[k[0]].append(-float(k[2]))
+            exp_salden["SUM"].append(0.00)
+            for k in exp_konten:
+                if len(exp_salden[k[0]]) < len(exp_salden["SUM"]):
+                    exp_salden[k[0]].append(0.00)
+                exp_salden["SUM"][-1] = exp_salden["SUM"][-1] + float(exp_salden[k[0]][-1])
+
+            erg = konto.format_salden(income)
+            for k in erg:
+                inc_salden[k[0]].append(-float(k[2]))
+            inc_salden["SUM"].append(0.00)
+            for k in inc_konten:
+                if len(inc_salden[k[0]]) < len(inc_salden["SUM"]):
+                    inc_salden[k[0]].append(0.00)
+                inc_salden["SUM"][-1] = inc_salden["SUM"][-1] + float(inc_salden[k[0]][-1])
+                
+            gesamt.append( gesamt[-1] + exp_salden["SUM"][-1] + inc_salden["SUM"][-1] )
+            
+            int1 = self.add(int2,1)
+
+        gesamt.pop(0)
+
+#        for k in exp_konten:
+#            print(k[0],exp_salden[k[0]])
+#        print(exp_salden["SUM"])
+#        for k in inc_konten:
+#            print(k[0],inc_salden[k[0]])
+#        print(inc_salden["SUM"])
+#        print(gesamt)
+        
+        return(exp_salden,inc_salden,gesamt,intervals2)
+
 #************************************************************************
 
     def rechnung (self,*pars):   #   stimmt die Umsatzsteuer und die Gesamtsalden in einer Rechnung ab
@@ -258,7 +404,7 @@ class Tool ():
                 zahlen.pop(0)
                 zahlen1.append( betrag * ((100+ust)/100) )
                 
-        print(zahlen1)
+#        print(zahlen1)
  
         text1    = text
         text0    = ""
@@ -279,7 +425,6 @@ class Tool ():
             
         open(rechnung_file+"~","w").write(text)
         open(rechnung_file,"w").write(text0)
-
 
 #**************************************************************************
 

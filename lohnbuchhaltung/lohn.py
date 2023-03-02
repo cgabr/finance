@@ -3,6 +3,7 @@
 import os,sys,re,glob,random
 
 from konto.lohnbuchhaltung import lohnsteuer
+from konto.base import config
 
 #************************************************************************************
 
@@ -158,14 +159,35 @@ class Lohn (object):
         ukto              = "-"
         
         uebertragsbuchhaltung = ""
-        m = re.search(r" (10\-B23\-1890\-[\da-z]+\-)",buchungsdaten_text)
-        if m:
-            uebertragsbuchhaltung = m.group(1)
+#        m = re.search(r" (10\-B23\-1890\-[\da-z]+\-)",buchungsdaten_text)
+#        if m:
+#            uebertragsbuchhaltung = m.group(1)
         
+
+        for zeile in buchungsdaten_text.split('\n'):
+
+#            print(zeile)  
+            m = re.search('^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+?) +(\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
+            if not m:
+                continue
+                
+            datum  = m.group(1)
+            betrag = m.group(2)
+            ktoa   = m.group(3)
+            ktob   = m.group(4)
+            remark = m.group(6)
+
+            if ktob.startswith(config.LOHNSTEUER_KONTO):
+                uebertragsbuchhaltung = ""
+            else:
+                m = re.search("(10\-B23\-1890\-[\da-z]+\-)"+config.LOHNSTEUER_KONTO,ktob)
+                if m:
+                    uebertragsbuchhaltung = m.group(1)
+                    
         diffs = {}
         for art in self.abgabenarten:
             diffs[art] = 0.00
-
+            
 
 #   1.   Daten einlesen aus Lohnbescheinigungen
 
@@ -602,6 +624,7 @@ class Lohn (object):
                 fiktives_gehalt = float(lohndaten[jm]['LOHNFIKTIV'])
 
             agentur_zahlt_sozialabgaben = 0
+ #           kug_is_null = 0
             while (0 == 0):
                 if len(lohndaten[jm]['LOHN-AN']) == 0:
                     break
@@ -618,7 +641,12 @@ class Lohn (object):
                 if "KUGSOH" in remark:
                     agentur_zahlt_sozialabgaben = 0.5000001
                 if "KUG" in remark:
-                    kugausz = kugausz - float(betrag)
+  #                  if float(betrag) < 0.001:
+  #                      remark = ""
+  #                      kug_is_null = 1
+  #                      continue
+  #                  else:
+                        kugausz = kugausz - float(betrag)
                 buchungen.append(jm + day + "  " + betrag + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-AN  "
                              + [self.lohnkto,self.kugkto+"-LOHN"][int("KUG" in remark)]
                              + "-" + self.employee + "  0.00  " + remark)
@@ -694,6 +722,8 @@ class Lohn (object):
                         lohn_ar[int("Vor" in add)] = lohn_ar[int("Vor" in add)] - lssoz
                         ar_soz = ar_soz + lssoz
                     elif art[0:2] == "KN" or art[0:2] == "KR":
+#                        if kug_is_null == 1:
+#                            continue
                         lohn_kug[int("Vor" in add)] = lohn_kug[int("Vor" in add)] - lssoz
                         kug_soz = kug_soz + lssoz
                     elif art[0:2] == "AN":

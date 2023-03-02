@@ -7,6 +7,7 @@
 #   Umsatzsteuer
 
 UMSATZSTEUER_KONTO               = "11-C13-3060"
+LOHNSTEUER_KONTO                 = "11-C13-3740"
 
 
 

@@ -30,18 +30,19 @@ class USteuer (object):
             
 
         uebertragsbuchhaltung = ""
-        ktotext9 = ktotext.split("\n")
-        ktotext9.reverse()
-        for zeile in ktotext9:
-            if (" " + config.UMSATZSTEUER_KONTO) in zeile:
-                break
-            m = re.search(" (10\-B23\-1890\-[\da-z]+\-)"+config.UMSATZSTEUER_KONTO,ktotext)
-            if m:
-                uebertragsbuchhaltung = m.group(1)
-                break
+#        ktotext9 = ktotext.split("\n")
+#        ktotext9.reverse()
+#        for zeile in ktotext9:
+#            if (" " + config.UMSATZSTEUER_KONTO) in zeile:
+#                break
+#            m = re.search(" (10\-B23\-1890\-[\da-z]+\-)"+config.UMSATZSTEUER_KONTO,zeile)
+#            if m:
+#                uebertragsbuchhaltung = m.group(1)
+#                break
         
         for zeile in ktotext.split('\n'):
 
+#            print(zeile)  
             m = re.search('^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +(\S+?) +(\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
             if not m:
                 text.append(zeile)
@@ -52,6 +53,14 @@ class USteuer (object):
             ktoa   = m.group(3)
             ktob   = m.group(4)
             remark = m.group(6)
+
+            if ktob.startswith(config.UMSATZSTEUER_KONTO):
+                uebertragsbuchhaltung = ""
+            else:
+                m = re.search("(10\-B23\-1890\-[\da-z]+\-)"+config.UMSATZSTEUER_KONTO,ktob)
+                if m:
+                    uebertragsbuchhaltung = m.group(1)
+                    
 
 #            if ktob[0:ul] == config.UMSATZSTEUER_KONTO:
 #                continue

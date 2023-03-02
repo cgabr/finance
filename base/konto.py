@@ -359,19 +359,21 @@ class Konto ():
         if not salden_expand == None:
             self.salden_expand = salden_expand
 
+#        print(self.search_pattern)
         self.parse_pattern()
-#        print(self.ukto)
         
 #        print(self.grep_pattern)
         
         if self.grep_pattern[0] == " ":
             self.ukto = self.grep_pattern[1:]
             self.ukto = re.sub(r"-$","",self.ukto)
+#        print(self.ukto)
             
         self.startdatum = (self.startdatum + "00000000")[0:8]
         self.enddatum   = (self.enddatum   + "99999999")[0:8]
 
         salden_liste = self.format_salden()
+#        print(salden_liste)
 
         if len(salden_liste) == 0:
             return(0.00)
@@ -806,7 +808,7 @@ class Konto ():
 
 #*******************************************************************************************
 
-    def format_salden (self):
+    def format_salden (self,ktoparse=None):   #   Moeglichkeit zum freien Waehlen von Kontensalden geschaffen
 
         faktor              = 1
 #        kto                 = self.ukto
@@ -837,13 +839,14 @@ class Konto ():
             else:
                 ktofiles.append(ktofile_sum)
 
-#        self.mark("B")
-        if not self.ukto == None and not self.ukto == "" and self.ukto[0] in ("-","."):
-            return()
-#            faktor = -1
-#            kto    = kto0[1:]
-
-        ktoparse = "^" + self.ukto + self.salden_expand
+        if ktoparse == None:
+            if not self.ukto == None and not self.ukto == "" and self.ukto[0] in ("-","."):
+                return()
+            ktoparse = "^" + self.ukto + self.salden_expand
+            len_ukto = len(self.ukto) + 1
+        else:
+            self.ukto = ""
+            len_ukto  = 0
 #        print(ktoparse)
             
         self.enddatum   = (self.enddatum   + "99999999")[0:6]
@@ -855,7 +858,7 @@ class Konto ():
         ktotexts = []
 #        print("KTOPARSE",ktoparse)
         for ktofile in ktofiles:  #  retrieving of the relevant lines via grep
-#            print(ktofile)
+#            print("KTOFILE",ktofile)
             ktotexts.append([])
 #            print("grep -P '" + ktoparse + "' " + ktofile)
             for zeile in os.popen("grep -P '" + ktoparse + "' " + ktofile).read().split("\n")[:-1]:
@@ -868,7 +871,6 @@ class Konto ():
         salden_liste    = []
         max_offset      = self.max_offset
         max_kto_ordnung = 0
-        len_ukto        = len(self.ukto) + 1
         
         kto0 = " "
         while (0 == 0):   #   alle konten-Salden gleichzeitig nach vorne schieben, dabei auf luecken achten

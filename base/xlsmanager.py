@@ -98,7 +98,7 @@ class Xlsmanager(object):
         
         for zeile in text:
 
-            print(zeile)
+#            print(zeile)
 
             try:
                zeile_sum = zeile
@@ -196,7 +196,7 @@ class Xlsmanager(object):
                             del entry1
                             break
 
-            print(entry)
+#            print(entry)
             if 'entry1' in vars():
 #                print "XXXX: 1 -----------------------------------------------"
 #                time.sleep(5)
@@ -647,11 +647,11 @@ class Xlsmanager(object):
 #            print(output_file_template)
             os.unlink(self.merge_files[1])
         if os.path.isfile(template):       #  wenn das Template ein File ist, dieses einlesen
-            print("hier",template)
+            print("file-template:",template)
             output_file_template = template
             m = re.search(r"\_20\d\d\_(\d+)\D",output_file_template)
-            print(m.group(1))
             if m:
+                print(m.group(1))
                 self.lfdnr = m.group(1)
                 print("WE",m.group(1))
             print(self.lfdnr,"XXX")
@@ -739,8 +739,10 @@ class Xlsmanager(object):
                     entries_by_sort[sort_text] = []
                 entries_by_sort[sort_text].append(entry)
             sorting_of_entries = list(entries_by_sort.keys())
+            print(sorting_of_entries)
             sorting_of_entries.sort()
             entries = []
+#            print("SORT",sort_text)
             for sort_text in sorting_of_entries:   #   sort the grouped entries
                 entries1 = []
                 for e in entries_by_sort[sort_text]:
