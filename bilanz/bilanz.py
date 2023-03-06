@@ -21,7 +21,6 @@ class Bilanz (object):
                         "Bo.-ver","Bo.-kto","Bo.-umlagen","Bo.-1700","C01-2900","D7f-6870","D7f-6870-[A-Z].*","B22-1827","B22-1829","B22-1892",
                         "D..-4100","D..-4105","D..-4106","D..-4400","D..-4505"]
 
-        self.ini_text = self.ebilanz_ini()
                         
         kto          = Konto()
         self.dataset = kto.read_config()
@@ -113,6 +112,8 @@ class Bilanz (object):
     def base_bilanz1 (self,name,bez,jahr,WITH_BWA): 
 
         kto  = Konto(self.ktotyp)
+
+        self.ini_text = self.ebilanz_ini(jahr)
 
         text = "BILANZ " + name + ", Jahr 20" + jahr
         kto.read_saldo("10-:"+jahr)
@@ -1076,19 +1077,22 @@ class Bilanz (object):
                     stammkapital = float(m1.group(3))
                 if m1.group(1) == "7639":
                     difference = float(m1.group(3))
-                if m1.group(1) == "2970" or m1.group(1) == "2978":
+                if m1.group(1) in ("2970","2971","2972","2978"):
                     gvvortrag  = gvvortrag + float(m1.group(3))
                 text4 = text4 + m1.group(1) + ";" + ("%3.2f"%(faktor*float(m1.group(3)))) + ";\"" + m1.group(2).strip() + "\"\n"
                 
-        text4 = text4 + "2085;" + ("%3.2f"%(-thisyear-stammkapital-gvvortrag+difference))  + ";\"Beginn Periode\"\n"
-        text4 = text4 + "2087;" + ("%3.2f"%(-thisyear-stammkapital-gvvortrag)) + ";\"Ende Periode\"\n"
+        if int(jahr) > 17:
+            text4 = text4 + "2085;" + ("%3.2f"%(-thisyear-stammkapital-gvvortrag+difference))  + ";\"Beginn Periode\"\n"
+            text4 = text4 + "2087;" + ("%3.2f"%(-thisyear-stammkapital-gvvortrag)) + ";\"Ende Periode\"\n"
         text4 = text4 + "2082;" + ("%3.2f"%(-thisyear+difference)) + ";\"Kumulierte Erloese Beginn der Periode\"\n"
 
         open("j" + file + ".csv","w").write(text4)
         
         text2 = self.ini_text
         text2 = re.sub(r"---JAHR---",jahr,text2)
-        text2 = re.sub(r"---JFILE---","j"+file,text2)
+        text2 = re.sub(r"---JFILE---","j"+file+".csv",text2)
+        if int(jahr) > 16:
+            text2 = re.sub(r"---TAXO---",{"17":"6.1","18":"6.2","19":"6.3","20":"6.4","21":"6.5","22":"6.5","23":"6.5"}[jahr],text2)
             
    #  Anlagenspiegel:
 
@@ -1116,22 +1120,32 @@ class Bilanz (object):
             print(item,anl_data[item])
             nr = anl_data[item][4]
             anl_arten[nr] = 1
-            if not (nr+"A") in anl_data1:
-                for pos in ("A","B","C","D"):
+            if not (nr+"I") in anl_data1:
+                for pos in ("I","J","K","L"):
                     anl_data1[nr+pos] = 0.00
-            anl_data1[nr+"A"] = anl_data1[nr+"A"] + anl_data[item][0] 
-            anl_data1[nr+"B"] = anl_data1[nr+"B"] + anl_data[item][1] 
-            anl_data1[nr+"C"] = anl_data1[nr+"C"] + anl_data[item][2] 
-            anl_data1[nr+"D"] = anl_data1[nr+"D"] + anl_data[item][3] 
+            anl_data1[nr+"I"] = anl_data1[nr+"I"] + anl_data[item][0]    #   anfangsbestand anfang periode (AN)
+            anl_data1[nr+"J"] = anl_data1[nr+"J"] + anl_data[item][1]    #   anfangsbestand ende periode (AN)   
+            anl_data1[nr+"K"] = anl_data1[nr+"K"] + anl_data[item][2]    #   abschreibung bis anfang periode  
+            anl_data1[nr+"L"] = anl_data1[nr+"L"] + anl_data[item][3]    #   abschreibung bis ende periode
                     
         for nr in anl_arten:
-            anl_data1[nr+"B"] = anl_data1[nr+"A"] - anl_data1[nr+"B"]
-            anl_data1[nr+"D"] = anl_data1[nr+"C"] - anl_data1[nr+"D"]
-            anl_data1[nr+"C"] = -anl_data1[nr+"C"]
-            anl_data1[nr+"E"] = anl_data1[nr+"A"] - anl_data1[nr+"C"]
+            anl_data1[nr+"A"] =     anl_data1[nr+"I"] 
+            anl_data1[nr+"B"] =     anl_data1[nr+"J"] - anl_data1[nr+"I"]   #  Differenz im Anfangsbestand (AN)
+            anl_data1[nr+"C"] = -   anl_data1[nr+"K"]                       #  Abschreibungen bis Anfang Periode
+            anl_data1[nr+"D"] = - ( anl_data1[nr+"L"] - anl_data1[nr+"K"])  #  Abschreibung laufende Periode
+            anl_data1[nr+"E"] =     anl_data1[nr+"I"] + anl_data1[nr+"K"]   #  Endbestand Vorperiode, konsolidiert, AN minus AS
+            
+            
             for pos in ("A","B","C","D","E"):
                 text2 = text2.replace("-"+nr+pos+"-",("%3.2f"%anl_data1[nr+pos]))
+        print(anl_data1)
 
+
+        text2 = re.sub("\n\-?de-gaap-ci:.*?\!.*?\[\-.*?\-\].*?\n","\n",text2,9999)
+        text2 = re.sub("\n\-?de-gaap-ci:.*?\!.*?\[\-.*?\-\].*?\n","\n",text2,9999)
+        text2 = re.sub("\n\-?de-gaap-ci:.*?\!.*?\[\-.*?\-\].*?\n","\n",text2,9999)
+
+        
         open("i" + file + ".ini","w").write(text2)
         
 #------------------------------------------
@@ -1150,9 +1164,9 @@ class Bilanz (object):
 #**********************************************************************************************
 
 
-    def ebilanz_ini(self):
+    def ebilanz_ini(self,jahr):
 
-        return('''
+        erg = '''
 [magic]
 myebilanz=true
 guid=88D4E913-584C-41AC-AB2E-7CC6CA01063C
@@ -1199,7 +1213,7 @@ accountingStandard=HAOE
 specialAccountingStandard=K
 incomeStatementFormat=GKV
 consolidationRange=EA
-taxonomy=6.5
+taxonomy=---TAXO---
 MicroBilG=0
 
 [company]
@@ -1222,7 +1236,6 @@ de-gaap-ci:bs.ass.fixAss.tan.landBuildings.misc=200
 de-gaap-ci:bs.ass.fixAss.tan.landBuildings.buildingsOnOwnLand.buildings=300
 de-gaap-ci:bs.ass.fixAss.tan.machinery=400
 de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other=500
-de-gaap-ci:bs.ass.fixAss.tan.branche_kfz.compCar=600
 de-gaap-ci:bs.ass.fixAss.tan.inConstrAdvPaym=700
 de-gaap-ci:bs.ass.fixAss.fin.sharesInAffil.other=800
 de-gaap-ci:bs.ass.fixAss.fin.securities=900
@@ -1287,22 +1300,21 @@ de-gaap-ci:bs.eqLiab.liab.bank.other=3200
 
 [xbrl]
 de-gaap-ci:bs.ass.fixAss.intan.concessionBrands=100
-de-gaap-ci:bs.ass.fixAss.tan.landBuildings.misc=200
-de-gaap-ci:bs.ass.fixAss.tan.landBuildings.buildingsOnOwnLand.buildings=300
+de-gaap-ci:bs.ass.fixAss.tan.landBuildings=300
 de-gaap-ci:bs.ass.fixAss.tan.machinery=400
 de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other=500
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars=520
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans=560
-de-gaap-ci:bs.ass.fixAss.tan.branche_kfz.compCar=600
 de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten=675
 de-gaap-ci:bs.ass.fixAss.tan.inConstrAdvPaym=700
 de-gaap-ci:bs.ass.fixAss.fin.sharesInAffil.other=800
 de-gaap-ci:bs.ass.fixAss.fin.securities=900
+---INSERT---
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars=520
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans=560
 de-gaap-ci:bs.ass.currAss.inventory.material=1000
 de-gaap-ci:bs.ass.currAss.inventory.finishedAndMerch=1100
-de-gaap-ci:bs.ass.currAss.receiv.trade.misc=1200,1210
-de-gaap-ci:bs.ass.currAss.receiv.trade.other=3695
-de-gaap-ci:bs.ass.currAss.receiv.other.misc=1300
+de-gaap-ci:bs.ass.currAss.receiv.trade=1200,1210
+de-gaap-ci:bs.ass.currAss.receiv.affil=3695
+de-gaap-ci:bs.ass.currAss.receiv.other.secondaryPaym=1300
 de-gaap-ci:bs.ass.currAss.receiv.other.employees=1340
 de-gaap-ci:bs.ass.currAss.receiv.other.other=1355
 de-gaap-ci:bs.ass.currAss.receiv.other.socInsur=1361,1457
@@ -1310,18 +1322,16 @@ de-gaap-ci:bs.ass.currAss.receiv.other.tradeTaxOverpayment=1435
 de-gaap-ci:bs.ass.currAss.receiv.other.vat=1400
 de-gaap-ci:bs.ass.currAss.securities.affil=1500
 de-gaap-ci:bs.ass.currAss.cashEquiv.cash=1600
-de-gaap-ci:bs.ass.currAss.cashEquiv.bank=1700,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810
+de-gaap-ci:bs.ass.currAss.cashEquiv.bank=1700,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1891
 de-gaap-ci:bs.ass.currAss.cashEquiv.other=1890
 de-gaap-ci:bs.ass.prepaidExp=1900
 de-gaap-ci:bs.ass.defTax=2000,2100,2200,2300,2400,2500,2600,2700,2800
 de-gaap-ci:bs.eqLiab.accruals.pensions.direct=3000
 de-gaap-ci:bs.eqLiab.accruals.tax.gewst=3035
 de-gaap-ci:bs.eqLiab.accruals.tax.kst=3040
-de-gaap-ci:bs.eqLiab.accruals.tax.other=3050
-de-gaap-ci:bs.eqLiab.accruals.tax.additionalTax=3060
-de-gaap-ci:bs.eqLiab.accruals.tax.misc=3065
+de-gaap-ci:bs.eqLiab.accruals.tax.other=3050,3060
+de-gaap-ci:bs.eqLiab.accruals.tax.additionalTax=3065
 de-gaap-ci:bs.eqLiab.liab.securities=3100
-de-gaap-ci:bs.eqLiab.liab.trade.genOther=3300
 de-gaap-ci:bs.eqLiab.liab.assocComp=3400
 de-gaap-ci:bs.eqLiab.liab.other.other=3500,3600
 de-gaap-ci:bs.eqLiab.liab.other.theroffTax=3800,3751
@@ -1335,6 +1345,7 @@ de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.totalOutput.netSa
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.totalOutput.inventoryChange=4800
 de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.disposFixAss.sale.tan=4900
 de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.ownConsumption.nonCashBenefitsCompCar=4947
+de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.ownConsumption.nonCashBenefitsOther=4982
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.material.purchased.unknownVAT=5000,5200,5600,5700,5800
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.material.rawMatConsSup.unknownVAT=5100
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.material.purchased.reducedRateVAT=5300
@@ -1342,11 +1353,11 @@ de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.material.purchased.intraEU=5500
 de-gaap-ci:is.netIncome.regular.operatingTC.grossTradingProfit.materialServices.services.unknownVAT=5900
 de-gaap-ci:is.netIncome.regular.operatingTC.staff.salaries.misc=6000,6010
-de-gaap-ci:is.netIncome.regular.operatingTC.staff.salaries.nonAllocable=6000,6020
+de-gaap-ci:is.netIncome.regular.operatingTC.staff.salaries.inKind=6020
 de-gaap-ci:is.netIncome.regular.operatingTC.staff.social.other=6100,6110
 de-gaap-ci:is.netIncome.regular.operatingTC.deprAmort.fixAss.otherIntan=6200
 de-gaap-ci:is.netIncome.regular.operatingTC.deprAmort.fixAss.tan.otherMisc=6220
-de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.miscellaneous=6300
+de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.miscellaneous=6300,6850,6851,6855,6611
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.leaseFix.other=6310
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.energyCost=6325
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.insurance=6400,6420
@@ -1355,11 +1366,10 @@ de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.otherOrdinary=6485,6845
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.fixing=6450,6470,6490
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.vehicles=6500,6520,6530,6540,6570
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.leasingAll.moveable=6560,6595
-de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.marketing=6600
+de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.marketing=6600,6643
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.limitedDeductible.entertainment.deductible=6640
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.employee=6660,6663
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.administration=6815
-de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.misc=6850,6851,6855,6611
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.freight=6700,5840
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.communication=6800,6805
 de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.training=6820,6821
@@ -1374,9 +1384,9 @@ de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.ownConsumption.otherW
 de-gaap-ci:is.netIncome.regular.fin.netParticipation.earnings.other=7000,7011
 de-gaap-ci:is.netIncome.regular.fin.netInterest.income.deposits.banks=7100
 de-gaap-ci:is.netIncome.regular.fin.netInterest.income.valueDiscount=7141
-de-gaap-ci:is.netIncome.regular.fin.netParticipation.amortFinanc.financialsExcept.misc=7200
+de-gaap-ci:is.netIncome.regular.fin.netParticipation.amortFinanc.financialsExcept=7200
 de-gaap-ci:is.netIncome.regular.fin.netInterest.expenses.regularInterest.other=7300
-de-gaap-ci:is.netIncome.regular.fin.netInterest.expenses.misc=7303
+de-gaap-ci:is.netIncome.regular.fin.netInterest.expenses.regularInterest.relatedPayments=7303
 de-gaap-ci:is.netIncome.incomeSharing.gain=7400
 de-gaap-ci:is.netIncome.extraord.income.EGHGB=7500
 de-gaap-ci:is.netIncome.tax.kst=7600,7603
@@ -1388,9 +1398,10 @@ de-gaap-ci:incomeUse.gainLoss.releaseCapReserves=7799
 de-gaap-ci:incomeUse.gainLoss=7798
 de-gaap-ci:is.netIncome.incomeSharing.gain=7001
 de-gaap-ci:is.netIncome.incomeSharing.loss=6291
-de-gaap-ci:is.netIncome.regular.fin.commPart=7720,7730,7731
-de-gaap-ci:is.netIncome.regular.fin.lossCommPart=7740,7700,7701,7702
--de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.currLoss=7720
+de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.currGains=7720,7730,7731
+de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.currLoss=7740,7700,7701,7702
+-de-gaap-ci:is.netIncome.regular.operatingTC.otherOpRevenue.currGains=7740,7700,7701,7702
+-de-gaap-ci:is.netIncome.regular.operatingTC.otherCost.currLoss=7720,7730,7731
 -de-gaap-ci:incomeUse.gainLoss.dividensPlanned=7800,7900,8000,8100,8200,8300,8400,8500,8600,8700,8800,8900
 -de-gaap-ci:incomeUse.gainLoss.dividensPlanned=7720,7730,7800,7900,8000,8100,8200,8300,8400,8500,8600,8700,8800,8900
 -de-gaap-ci:incomeUse.gainLoss.dividensPlanned=7790
@@ -1400,12 +1411,13 @@ de-gaap-ci:bs.eqLiab.equity.retainedEarnings=2970,2971,2972,2978
 -de-gaap-ci:BVV.profitLoss.withdrawalDistrib=2100,2500
 -de-gaap-ci:BVV.profitLoss.withdrawalDistrib=7790
 de-gaap-ci:BVV.profitLoss.contribution=2180,2580
-de-gaap-ci:bs.eqLiab.liab.bank.other=3200
+de-gaap-ci:bs.eqLiab.liab.bank=3200
 de-gaap-ci:bs.eqLiab.equity.revenueRes.unappropriated.otherMeansDueCourse.finalPrev=2082
 -de-gaap-ci:bs.ass.deficitNotCoveredByCapital=2970,2971,2972,2978
 de-gaap-ci:BVV.profitLoss.assetsCurrentYear=2087
 de-gaap-ci:BVV.profitLoss.assetsPreviousYear=2085
 ignore=9000,9008,9009
+
 
 [ini]
 AutoSum=1
@@ -1417,30 +1429,90 @@ depthBVV=9
 
 
 [bal]
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other!de-gaap-ci:grossCost.beginning="[-0500A-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other!de-gaap-ci:gross.addition="[-0500B-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other!de-gaap-ci:accDepr.beginning="[-0500C-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other!de-gaap-ci:accDepr.deprPeriod.regular="[-0500D-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.other!de-gaap-ci:all_Prev_period="[-0500E-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars!de-gaap-ci:grossCost.beginning="[-0520A-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars!de-gaap-ci:gross.addition="[-0520B-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars!de-gaap-ci:accDepr.beginning="[-0520C-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars!de-gaap-ci:accDepr.deprPeriod.regular="[-0520D-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars!de-gaap-ci:all_Prev_period="[-0520E-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans!de-gaap-ci:grossCost.beginning="[-0560A-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans!de-gaap-ci:gross.addition="[-0560B-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans!de-gaap-ci:accDepr.beginning="[-0560C-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans!de-gaap-ci:accDepr.deprPeriod.regular="[-0560D-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans!de-gaap-ci:all_Prev_period="[-0560E-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten!de-gaap-ci:grossCost.beginning="[-0675A-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten!de-gaap-ci:gross.addition="[-0675B-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten!de-gaap-ci:accDepr.beginning="[-0675C-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten!de-gaap-ci:accDepr.deprPeriod.regular="[-0675D-]"
-de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten!de-gaap-ci:all_Prev_period="[-0675E-]"
+'''
 
 
-''')
+        bal = '''
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.---ART---!de-gaap-ci:grossCost.beginning="[-NR-A-]"
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.---ART---!de-gaap-ci:gross.addition="[-NR-B-]"
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.---ART---!de-gaap-ci:accDepr.beginning="[-NR-C-]"
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.---ART---!de-gaap-ci:accDepr.DeprPeriod.regular="[-NR-D-]"
+de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.---ART---!de-gaap-ci:all_Prev_period="[-NR-E-]"
+'''
 
+        for nr in (["0300","landBuildings"],["0500","other"],["0520","passengerCars"],["0560","otherTransportMeans"],["0675","gwgsammelposten"]):
+            bal1 = bal.replace("-NR-","-"+nr[0]).strip()
+            erg = erg + bal1.replace("---ART---",nr[1]) + "\n"
+                
+
+
+        if int(jahr) < 20:
+            erg = re.sub("otherEquipm.passengerCars","branche_kfz.compCar",erg,9999)
+            erg = re.sub("otherEquipm.otherTransportMeans","branche_kfz.demoModel",erg,9999)
+        
+        if int(jahr) < 18:
+            erg = re.sub(",BVV,",",",erg,9999)
+            erg = re.sub("\n\-?de-gaap-ci:BVV.*?\n","\n",erg,9999)
+            erg = re.sub("\n\-?de-gaap-ci:BVV.*?\n","\n",erg,9999)
+            erg = re.sub("\n\-?de-gaap-ci:BVV.*?\n","\n",erg,9999)
+        
+
+        return(erg)
+
+
+
+#        deleted='''
+#de-gaap-ci:bs.ass.fixAss.tan.landBuildings.misc=200
+#de-gaap-ci:bs.ass.fixAss.tan.landBuildings.buildingsOnOwnLand.buildings=300
+#de-gaap-ci:bs.eqLiab.liab.trade.genOther=3300
+#
+#-de-gaap-ci:is.netIncome.regular.fin.commPart=7720,7730,7731
+#-de-gaap-ci:is.netIncome.regular.fin.lossCommPart=7740,7700,7701,7702
+#'''
+
+
+#        if int(jahr) > 19:
+#            erg1 = ('''
+#de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars=520
+#de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans=560
+#'''.strip())
+#        else:
+#            erg1 = ('''
+#de-gaap-ci:bs.ass.fixAss.tan.branche_kfz.compCar=520
+#de-gaap-ci:bs.ass.fixAss.tan.branche_kfz.demoModel=560
+#'''.strip())
+#
+#        erg = erg.replace("---INSERT---",erg1)
+#
+#        m = re.search(r"^(.*?\[xbrl\])(.*?)(\[.*)$",erg,re.DOTALL)
+#        erg0 = m.group(1)
+#        erg1 = m.group(2)
+#        erg2 = m.group(3)
+#
+#        davon = {}
+#        for zeile in erg1.split("\n"):
+#            m = re.search(r"^(.*?)\.(misc)=",zeile)
+#            if m:
+#                davon[m.group(1)] = ""
+#        
+#        for zeile in erg1.split("\n"):
+#            for dline in list(davon.keys()):
+#                if zeile.startswith(dline):
+#                    m = re.search(r"=(.*?) *$",zeile)
+#                    davon[dline] = davon[dline] + "," + m.group(1)
+#
+#        erg3 = ""
+#        for zeile in erg1.split("\n"):
+#            for dline in list(davon.keys()):
+#                if zeile.startswith(dline+".misc="):
+#                    zeile = dline + "=" + davon[dline][1:]
+#            erg3 = erg3 + zeile + "\n"
+#        
+#        if int(jahr) < 2:
+#            erg = erg0 + erg3 + erg2
+#
+#        for k in davon.keys():
+#            print("DAVON",k,davon[k])
 
 
 
