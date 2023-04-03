@@ -243,7 +243,7 @@ class Lohn (object):
                     if rem == "":
                         break
                         
-            elif art == "LOHN-AN":  #   and not "KUG-Berechnung" in rem:
+            elif art == "LOHN-AN" or art == "LOHN-KN":  #   and not "KUG-Berechnung" in rem:
                 if not jm in lohndaten:
                     lohndaten[jm] = {}
                 if not 'LOHN1' in lohndaten[jm]:
@@ -647,11 +647,11 @@ class Lohn (object):
   #                      continue
   #                  else:
                         kugausz = kugausz - float(betrag)
-                buchungen.append(jm + day + "  " + betrag + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + "-LOHN-AN  "
+                buchungen.append(jm + day + "  " + betrag + "*" + lohndaten[jm]['LFAKTOR'] + "  " + ukto + ["-LOHN-AN  ","-LOHN-KN  "][int("KUG" in remark)]
                              + [self.lohnkto,self.kugkto+"-LOHN"][int("KUG" in remark)]
                              + "-" + self.employee + "  0.00  " + remark)
                 lohnsumme   = lohnsumme - float(betrag)
-                export_slip = export_slip + "LOHN-AN " + ("%11.2f" % -float(betrag)) + "   " + remark + "\n"
+                export_slip = export_slip +  ["LOHN-AN ","LOHN-KN "][int("KUG" in remark)] + ("%11.2f" % -float(betrag)) + "   " + remark + "\n"
                 day         = "%02u" % (int(day)+1)
 
             export_slip = export_slip + ("LOHN-AR -ARBEITGEBER-   Arbeitgeberabgaben, davon " +
@@ -901,7 +901,7 @@ class Lohn (object):
     
         text    = ""
         monate  = "JA|FE|MR|AP|MA|JN|JL|AU|SE|OC|NO|DE|01|02|03|04|05|06|07|08|09|10|11|12"
-        abgaben = "|".join(self.abgabenarten+['LOHN-AN','ZAHL'])
+        abgaben = "|".join(self.abgabenarten+['LOHN-AN','LOHN-KN','ZAHL'])
         
         m             = re.search(r"^(.*)[\\\/]([a-z]+)[\\\/]",os.path.abspath("."))
         self.employee = m.group(2)
@@ -921,6 +921,8 @@ class Lohn (object):
             m = re.search(r"^("+abgaben+").*? (\-?\d+)[,\.](\d\d) *(.*?) *$",zeile)
             if m:
                 abgabe = m.group(1)
+                if abgabe == "LOHN-KN":
+                    abgabe = "LOHN-AN"
                 betrag = m.group(2)+"."+m.group(3)
                 if not abgabe in erg:
                     erg[abgabe] = []
@@ -1901,7 +1903,7 @@ sdjomo         1     5.5  0   0 AOK     1514  9.35  1.5  7.3 1.175  1.1  0.25  9
 
 if __name__ == "__main__":
 
-    ktofile = glob.glob( "*.kto"  )[0]
+    ktofile = ( glob.glob( "*.kto"  )  + glob.glob( "*.kto.html"  ) )[0]
     ktoslip = glob.glob( "gehaltsbescheinigung*.md" )
     ktolstb = glob.glob( "LStB*.md" )
 

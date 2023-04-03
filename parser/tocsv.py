@@ -25,7 +25,10 @@ class Tocsv (object):
 
     def to_csv (self):     # open the csv and kto files and prepare for processing
     
-        for ktofile in glob.glob(self.dir+"/*.*"):
+        ktofiles = glob.glob(self.dir+"/*.*")
+        ktofiles.sort()
+        
+        for ktofile in ktofiles:
         
             m = re.search("^(.*)\.(.*)$",ktofile)
             if m:
@@ -37,6 +40,8 @@ class Tocsv (object):
         
             print("process " + ktofile)
             text        = open(ktofile).read()
+            text        = re.sub(r"^\<PRE\>","",text)
+            text        = re.sub(r"\<\/PRE\> *\n *$","",text,re.DOTALL)
             text1       = []
             text2       = []
             einrueckung = {}
@@ -48,7 +53,7 @@ class Tocsv (object):
                 m = re.search(r"^(\S+|\S+ +\S+) +([0123456789abcdef]+) +(\-?\d+\.\d\d) *",zeile)
                 if m:
                     betrag = re.sub(r"\.",".",m.group(3))
-                    text1.append('"' + m.group(1) + '";;"' + m.group(2) + '";;' + betrag + ";")
+                    text1.append('"' + m.group(1) + '";;;"' + m.group(2) + '";;' + betrag + ";")
                     text2.append( self.normalize_text(zeile) )
                     continue
 
@@ -56,7 +61,7 @@ class Tocsv (object):
                 if m:
                     betrag1 = re.sub(r"\.",".",m.group(4))
                     betrag2 = re.sub(r"\.",".",m.group(7))
-                    text1.append('"' + m.group(3) + "." + m.group(2) + "." + m.group(1) + '";' + betrag1 + ';"' + m.group(5) + '";"' + m.group(6) + '";' + betrag2 + ';"' + m.group(8) + '";')
+                    text1.append('"' + m.group(3) + "." + m.group(2) + "." + m.group(1) + '";' + betrag1 + ';;"' + m.group(5) + '";"' + m.group(6) + '";' + betrag2 + ';;"' + m.group(8) + '";')
                     text2.append( self.normalize_text(zeile)[0:self.maxzeile] )
                     maxzeile1 = min( max(maxzeile1,len(text2[-1])), self.maxzeile)
                     continue
@@ -74,7 +79,7 @@ class Tocsv (object):
                     ind              = zeile.index(".")
                     if not ind in einrueckung:
                         einrueckung[ind] = len(einrueckung) + 2
-                    text1.append('"' + m.group(1) + '"' + (";" * einrueckung[ind]) + betrag + ";")
+                    text1.append('"' + m.group(1) + '";' + (";" * einrueckung[ind]) + betrag + ";")
                     text2.append( self.normalize_text(zeile) )
                     continue
                     
@@ -93,6 +98,63 @@ class Tocsv (object):
             os.system("ps2pdf __tt.ps " + fileroot + ".pdf")
             os.unlink("__tt.txt")
             os.unlink("__tt.ps")
+
+
+        gesamt_csv = ""
+
+
+        ktofiles = glob.glob(self.dir+"/????.kto.csv")
+        ktofiles.sort()
+        for ktofile in ktofiles:
+        
+            text = open(ktofile).read()
+            
+            gesamt_csv = gesamt_csv + "KONTO;" + re.sub(r"\D","",ktofile,9999)[0:4] + ";;\"<<<<<<<<<<<<<\";\"<<<<<<<<<<<<\";\"<<<<<<<<<<<<\"" + "\n\"\"\n" + text
+            gesamt_csv = gesamt_csv + "\n\"\"\n\"\"\n\"\"\n"
+
+        jahr = re.sub(r"[\\\/]$","",os.path.abspath("."))
+        if re.search(r"kn(\d\d)$",jahr):
+            jahr = jahr[-2:]
+        else:
+            jahr = ""
+            
+        if len(jahr) > 1:
+            text1 = ""
+            non_empty_lines = 0
+            for zeile in gesamt_csv.split("\n"):
+                
+                m = re.search(r"^(\d\d\.\d\d\.\d\d)",zeile[1:])
+                if m:
+                    datum = m.group(1)
+                    if not datum[6:] == jahr:
+                        continue
+                else:
+                    m = re.search(r"^[^- ]+\-",zeile[1:])
+                    if m:
+                        continue
+                    else:
+                        if zeile[1:4] == "---":
+                            continue
+                            
+#                print(non_empty_lines,zeile)
+                if len(zeile) < 3:
+                    if non_empty_lines < 2:
+                        non_empty_lines = 0
+                        continue
+                    non_empty_lines = 0
+                else:
+                    non_empty_lines = non_empty_lines + 1
+                            
+                text1 = text1 + zeile + "\n"
+            jahr = "_" + jahr
+            gesamt_csv = "Kontennachweise " + jahr + ";\n" + text1.replace("KONTO;","\"\"\n\"\"\n\"\"\n\"\"\n\"\"\nKONTO;",999999)
+
+            
+        if len(gesamt_csv) > 10:
+            open("kontennachweise"+jahr+".csv","w").write(gesamt_csv)
+
+
+
             
 #************************************************************************************************************
 

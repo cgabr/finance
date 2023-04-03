@@ -50,6 +50,8 @@ class Meldung (object):
         
             if "_orig." in sv_meldung:
                 continue
+            if re.search(r"(^_|[\\\/]_)",sv_meldung):
+                continue
 
             m = re.search(r"_MODE(\d+)_",sv_meldung)
             mode = 0

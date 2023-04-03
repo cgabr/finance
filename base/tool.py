@@ -139,12 +139,13 @@ class Tool ():
                     time.sleep(2)
             changes_done = 0
             for mirror_dir in mirror_dirs:
+#                print(mirror_dir)
                 orig_dir = os.path.abspath(".")
                 os.chdir( re.sub(r"/mirror.sh","",mirror_dir) )
                 Konto().kto()
-                sign_before = open( glob.glob("*.kto")[0] ).read()
+                sign_before = open( (glob.glob("*.kto") + glob.glob("*.kto.html"))[0] ).read()
                 self.mirror()
-                sign_after  = open( glob.glob("*.kto")[0] ).read()
+                sign_after  = open( (glob.glob("*.kto")  + glob.glob("*.kto.html"))[0]  ).read()
                 if not sign_before == sign_after:
                     changes_done = 1
                 os.chdir(orig_dir)
@@ -157,7 +158,7 @@ class Tool ():
 #        print(os.path.abspath("."))
 
 
-        ktofile0 = glob.glob("*.kto")
+        ktofile0 = glob.glob("*.kto")  + glob.glob("*.kto.html")
         if len(ktofile0) > 1:
             print("More than one ktofile.")
             return(0)
@@ -216,7 +217,7 @@ class Tool ():
 
         ktotext  = [ open(ktofile0).read() ]
 
-        ktofile1 = glob.glob(ktodir1 + "/*.kto")
+        ktofile1 = glob.glob(ktodir1 + "/*.kto")  +  glob.glob(ktodir1 + "/*.kto.html")
 #        print("VV",ktofile1)
         if len(ktofile1) > 1:
             print("More than one ktofile in mirror dir " + ktodir1)
@@ -225,7 +226,7 @@ class Tool ():
             ktofile1 = ktofile1[0]
             ktotext.append( open(ktofile1).read() )
         else:
-            ktofile1 = ktodir1 + "/extern.kto"
+            ktofile1 = ktodir1 + "/extern.kto.html"
 
 #        print(ktofile1,"<--")
 
@@ -235,12 +236,13 @@ class Tool ():
         ukto1    = ""
         
         if len(ktotext) == 2:  #  wenn es ein Zielfile gibt, dieses untersuchen und das Konto heraussuchen
-            m     = re.search(r"^(\S+) +\S\S\S\S\S\S\S\S\S\S\S\S ",ktotext[1].split("\n")[0])
+            m     = re.search(r"^(\<PRE\>|)(\S+) +\S\S\S\S\S\S\S\S\S\S\S\S ",ktotext[1].split("\n")[0])
             if not m:
                 return(2)
-            ukto1 = m.group(1)
+            ukto1 = m.group(2)
 
         for zeile in ktotext[0].split("\n"):  #  erst das Quellfile aufbereiten
+#            print(ukto,zeile)
             m = re.search('^(\d\d\d\d\d\d\d\d) +(\-?\d+\.\d\d) +'+ukto+'\-(\S+?) +(\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
             if not ukto == "" and m:
                 zeile1    = m.group(1) + "  " + re.sub(r"--","","-"+m.group(2)) + "  " + ukto1 + "-" + m.group(4) + "  " + m.group(3)
@@ -252,15 +254,16 @@ class Tool ():
                                               # ohne Leerzeichen und Saldofeld sind
             elif ukto == "":
 #                print("::::",zeile)
-                m = re.search('^(\S+)\-(\S+) +\S\S\S\S\S\S\S\S\S\S\S\S',zeile)
+                m = re.search('^(\<PRE\>|)(\S+)\-(\S+) +\S\S\S\S\S\S\S\S\S\S\S\S',zeile)
                 if m:
-                    ukto  = m.group(1) + "-" + m.group(2)
+                    ukto  = m.group(2) + "-" + m.group(3)
                 else:
                     print("END")
                     return(4)
 
         if len(ktotext) == 2:  #  Zielfile untersuchen und die passenden Zeilen so lassen
             for zeile in ktotext[1].split("\n"):
+#                print(zeile)
                 m = re.search('^(\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+? +\S+) +(\-?\d+\.\d\d) +(.*)', zeile)
                 if m:
                     zeile_key = re.sub(r" ","",m.group(1)+m.group(3),99999999)

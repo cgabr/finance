@@ -99,7 +99,7 @@ class Bilanz (object):
             os.system("cp " + jahr + "_*md bilanz_" + jahr + "_" + bez + "_hauptteil.txt")
             os.system("cp anlagen*" + jahr + ".md bilanz_" + jahr + "_" + bez + "_zusaetze.txt")
 #            os.system("ps2pdf anlagen_" + jahr + "_" + bez + ".ps")
-            for file in glob.glob("*.ps") + glob.glob("*.ps~") + glob.glob("*.kto"):
+            for file in glob.glob("*.ps") + glob.glob("*.ps~") + glob.glob("*.kto") + glob.glob("*.kto.html"):
                 os.unlink(file);
 
             if jahr == jahr1:
@@ -117,25 +117,29 @@ class Bilanz (object):
 
         text = "BILANZ " + name + ", Jahr 20" + jahr
         kto.read_saldo("10-:"+jahr)
-        text = text + "\nXXAKTIVA   " + kto.salden_text()
+        text_10 = kto.salden_text()
+        text    = text + "\nXXAKTIVA   " + text_10
 
         kto.read_saldo("11-:"+jahr)
-        text1 = "\nXXPASSIVA  " + kto.salden_text()
+        text_11 = kto.salden_text()
+        text1   = "\nXXPASSIVA  " + text_11
 #        text1 = "\nXXPASSIVA  " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
         text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
         text1 = re.sub(r" --","   ",text1,999999)
         text  = text + text1
 
         kto.read_saldo("12-."+jahr)
+        text_12 = kto.salden_text()
 #        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
-        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + kto.salden_text()
+        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + text_12
         text1 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text1,999999)  #  Minuszeichen
         text1 = re.sub(r" --","   ",text1,999999)
         text  = text + text1
 
         kto.read_saldo("13-."+jahr)
+        text_13 = kto.salden_text()
 #        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read(),99999999)
-        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",kto.salden_text(),99999999)
+        text  = text + "\nXXAUFWAND" + re.sub(r"Do","Xo",text_13,99999999)
 
         kto.read_saldo("90-:"+jahr)
 #        text1 = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\f\nXXERTRAG " + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
@@ -250,16 +254,16 @@ class Bilanz (object):
         text = re.sub(r"\nXX([A-Z]+)        ([^\n]+)","\n\n\n\\1\\2\n=======\n",text,9999)
 
         Konto(self.ktotyp).kto("^12-."+jahr)
-        einnahmen = open(glob.glob("*kto")[0]).read()
+        einnahmen = open((glob.glob("*kto")+glob.glob("*kto.html"))[0]).read()
 
         Konto(self.ktotyp).kto("^13-."+jahr)
-        ausgaben = open(glob.glob("*kto")[0]).read()
+        ausgaben = open((glob.glob("*kto")+glob.glob("*kto.html"))[0]).read()
 
         Konto(self.ktotyp).kto("^10-A11-."+jahr)
-        anlagen = open(glob.glob("*kto")[0]).read()
+        anlagen = open((glob.glob("*kto")+glob.glob("*kto.html"))[0]).read()
 
         Konto(self.ktotyp).kto("^11-C13-3060-."+jahr)
-        ust = open(glob.glob("*kto")[0]).read()
+        ust = open((glob.glob("*kto")+glob.glob("*kto.html"))[0]).read()
 
  #       print(text)
  #       exit()
@@ -491,7 +495,7 @@ class Bilanz (object):
 
 
         text = re.sub(r"C02                                           ","\nEIGENKAPITAL\n\n"+
-                                                                        "C02: Kumulierte Erloese                       ",text,1)
+                                                                        "C02: Steuerliches Einlagenkonto               ",text,1)
         text = re.sub(r"C02-2080                                      ","  2080   Kumulierte Erloese vor Verwendung    ",text)
         text = re.sub(r"C02-2080-(\S+)                                    ","     davon \\1: ",text,999)
 
@@ -892,6 +896,7 @@ class Bilanz (object):
 
 #        print(text)
 
+        text_orig = text1
         text1 = ""
         for zeile in text.split("\n"):
             if re.search(r"^\=+$",zeile):
@@ -979,8 +984,7 @@ class Bilanz (object):
             text0 = text0 + "\n              " + "Gesamt" + (" "*(10-len("Gesamt"))) + ("%13.2f" % gesamt) + "\n"
             text0 = text0 + "\n\n\n\n"
 
-
-            print(text6)
+#             print(text6)
             
             text6 = re.sub("\n     davon (\S+):( +)(    )(\S+)(        )",  "\n  \\1\\2           \\4           ",text6,99999)
             text6 = re.sub("\n      davon (\S+):( +)(    )(\S+)(        )", "\n      \\1\\2             \\4      ",text6,99999)
@@ -1034,9 +1038,29 @@ class Bilanz (object):
             text1 = re.sub(r"(BILANZ [^\n]+?) *\n","\\1                                                 "+text_monate+"\n",text1)
             text1 = re.sub(r"(=====================[^\n]+?) *\n","\\1                                                     "+("-"*len(text_monate))[0:-4]+"\n",text1)
  
+#-------------------------------------------
 
         file = jahr + "_bilanz_"+bez+"__20" + jahr
         open(file + ".md","w").write(text1)
+
+
+        if os.path.isdir("kn"+jahr):   #  Kontennachweise:
+        
+            ktogruppe = 9
+            for text2 in (text_10,text_11,text_12,text_13):
+                ktogruppe = "%02u" % (int(ktogruppe)+1)
+                for zeile in text1.split("\n"):
+                    m = re.search(r"  (\d\d\d\d)  ",zeile)
+                    if m:
+                        ktoblatt = m.group(1)
+                        m = re.search("\n([A-Z]\S\S\-"+ktoblatt+")  ",text2)
+                        if m:
+                            if ktogruppe in ("10","11"):
+                                Konto().kto("^"+ktogruppe+"-"+m.group(1)+":"+jahr)
+                            else:
+                                Konto().kto("^"+ktogruppe+"-"+m.group(1)+"."+jahr)
+                            ktofile1 = (glob.glob("*kto") + glob.glob("*kto.html"))[0]
+                            os.system("mv " + ktofile1 + " kn" + jahr + "/" + ktoblatt + ".kto.html")
         
 #--------------  E-BILANZ: ----------------
 
@@ -1092,7 +1116,7 @@ class Bilanz (object):
         text2 = re.sub(r"---JAHR---",jahr,text2)
         text2 = re.sub(r"---JFILE---","j"+file+".csv",text2)
         if int(jahr) > 16:
-            text2 = re.sub(r"---TAXO---",{"17":"6.1","18":"6.2","19":"6.3","20":"6.4","21":"6.5","22":"6.5","23":"6.5"}[jahr],text2)
+            text2 = re.sub(r"---TAXO---",{"17":"6.1","18":"6.2","19":"6.3","20":"6.4","21":"6.5","22":"6.6","23":"6.6"}[jahr],text2)
             
    #  Anlagenspiegel:
 
@@ -1137,7 +1161,10 @@ class Bilanz (object):
             
             
             for pos in ("A","B","C","D","E"):
-                text2 = text2.replace("-"+nr+pos+"-",("%3.2f"%anl_data1[nr+pos]))
+                betr1 = "%3.2f" % anl_data1[nr+pos]
+                if betr1 == "-0.00":
+                    betr1 = "0.00"
+                text2 = text2.replace("-"+nr+pos+"-",betr1)
         print(anl_data1)
 
 
@@ -1159,6 +1186,8 @@ class Bilanz (object):
                   "AUSGABEN:\n========\n\n" + ausgaben + "\n\n\n" + 
                   "UMSATZ- UND VORSTEUER:\n======================\n\n" + ust )
         open(file + ".md","w").write(text1)
+        
+        
 
 
 #**********************************************************************************************
@@ -1307,7 +1336,6 @@ de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.gwgsammelposten=675
 de-gaap-ci:bs.ass.fixAss.tan.inConstrAdvPaym=700
 de-gaap-ci:bs.ass.fixAss.fin.sharesInAffil.other=800
 de-gaap-ci:bs.ass.fixAss.fin.securities=900
----INSERT---
 de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.passengerCars=520
 de-gaap-ci:bs.ass.fixAss.tan.otherEquipm.otherTransportMeans=560
 de-gaap-ci:bs.ass.currAss.inventory.material=1000

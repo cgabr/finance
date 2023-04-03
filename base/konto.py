@@ -113,7 +113,7 @@ class Konto ():
                 open(acc_file,"w").write("\n".join(file_text) + "\n")
                 return("Accounting base files sorted.")
 
-        ktofile = glob.glob("*.kto")
+        ktofile = glob.glob("*.kto") + glob.glob("*.kto.html")
         if len(ktofile) == 1:
             ktofile = ktofile[0]
         else:
@@ -123,9 +123,11 @@ class Konto ():
         pattern0 = None
 #        print(pattern,pattern0)
         if ktofile:
-            ktodir   = re.sub(r"^(.*[\\\/])(.*).kto$","\\1",os.path.abspath(ktofile))
+            ktodir   = re.sub(r"^(.*[\\\/])(.*).(kto|kto.html)$","\\1",os.path.abspath(ktofile))
             ktotext  = open(ktodir+"/"+ktofile).read()
-            m        = re.search(r"^(\.|)(\S+)",ktotext)
+            ktotext  = re.sub(r"^\<PRE\>","",ktotext)
+            ktotext  = re.sub(r"\<\/PRE\> *\n *$","",ktotext,re.DOTALL)
+            m = re.search(r"^(\.|)(\S+)",ktotext)
             if m:
                 if len(m.group(1)) > 0:
                     pattern0 = m.group(2)
@@ -135,7 +137,7 @@ class Konto ():
             ktotext  = ""
             ktodir   = os.path.abspath(".")
 
-#        print(pattern,pattern0)
+        print(pattern,pattern0)
 
         self.udir   = ""
         self.stable = 0
@@ -226,9 +228,9 @@ class Konto ():
         if not self.udir == "":
             if not self.stable:
                 while (0 == 0):
-                    text1 = open( glob.glob("*.kto")[0] ).read()
-                    os.system("joe *.kto")
-                    text2 = open( glob.glob("*.kto")[0] ).read()
+                    text1 = open( (glob.glob("*.kto") + glob.glob("*.kto.html"))[0] ).read()
+                    os.system("joe *.kto?????")
+                    text2 = open( (glob.glob("*.kto") + glob.glob("*.kto.html"))[0] ).read()
                     if text1 == text2:
                         for o in glob.glob("*.kto*"):
                             os.unlink(o)
@@ -264,7 +266,7 @@ class Konto ():
 
 
         kto_file          = None
-        konto_files_found = glob.glob("*.kto")
+        konto_files_found = glob.glob("*.kto") + glob.glob("*.kto.html")
         #print(konto_files_found,os.path.abspath("."))
         
         if len(konto_files_found) > 1:
@@ -319,7 +321,7 @@ class Konto ():
         self.mark("I. Compute salden.")
                     
         if len(konto_files_found) == 0 or re.search(r"([0123456789abcdef]{"+self.len_hkey_str+"})\.kto",kto_file):
-            kto_file = self.hkey + ".kto"
+            kto_file = self.hkey + ".kto.html"
             
         
         if len(konto_files_found) == 1 and not kto_file == konto_files_found[0]:
@@ -327,7 +329,7 @@ class Konto ():
 
         self.mark("J. Write result file.")
                     
-        open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
+        open(kto_file,"w").write( "<PRE>" + self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
 
         if change_acc_files:
 
@@ -345,10 +347,10 @@ class Konto ():
             self.mark("N. Reload kto file.")
             self.format_kto()
             self.mark("O. ktofile formatted again.")
-            open(kto_file,"w").write( self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
+            open(kto_file,"w").write( "<PRE>" + self.title + "\n\n" + "\n".join(self.formatted_acc) + "\n\n" )
 
         self.format_salden()
-        open(kto_file,"a").write( "\n".join(self.salden_aktuell) + "\n" )
+        open(kto_file,"a").write( "\n".join(self.salden_aktuell) + "\n" + "</PRE>\n")
 
 #**********************************************************************************
 
@@ -1364,7 +1366,7 @@ class Konto ():
     def sort (self,pattern,file=None):
     
         if file == None:
-            files = glob.glob("*.kto")
+            files = glob.glob("*.kto") + glob.glob("*.kto.html")
             if len(files) == 1:
                 file = files[0]
             else:

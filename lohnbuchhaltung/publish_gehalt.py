@@ -29,17 +29,21 @@ if endmonat == "":
     exit()
 
 
+
 if __name__ == "__main__":
 
     if filter == "":
-        mk_gehalt = os.popen("grep LOHN-AN [a-z]*/*/*.kto").read().split("\n")
+        mk_gehalt = os.popen("grep LOHN-AN [a-z]*/*/*.kto.html").read().split("\n")
     else:
-        mk_gehalt = os.popen("grep LOHN-AN "+filter+"*/*/*.kto").read().split("\n")
+        mk_gehalt = os.popen("grep LOHN-AN "+filter+"*/*/*.kto.html").read().split("\n")
     mk_gehalt.sort()
     pp = {}
 
 #    os.system("rm -r _tmp_")
-    os.system("mkdir _tmp_")
+    try:
+        os.system("mkdir _tmp_")
+    except:
+        pass
     for zeile in mk_gehalt:
         m      = re.search(r"(\d\d\d\d)(\d\d).*?([a-z]+)-LOHN",zeile)
         if not m:

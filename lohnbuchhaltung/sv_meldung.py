@@ -175,6 +175,7 @@ class SV_Meldung():
 
 
             if self.dataset["meldung"] == "70":
+                print("YY",self.yy,self.jahr)
                 self.dataset["meldejahr"] = "20" + self.yy
                 beginnmonat = int(self.jahr)
                 endmonat    = int(self.jahr)
@@ -569,7 +570,7 @@ class SV_Meldung():
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilKrankVers)",     ".ankv")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilPflegVers)",     ".anpv")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilArblVers)",      ".anav")
-            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilRenVers)",       ".anpv")
+            self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilRenVers)",       ".anrv")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbnAnteilBerufsVers)")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenArbgAnteilRenVers)",       ".arrv")
             self.set_par("Startseite(0)_Sonstiges(0)_fields(eruLStBLohnsteuerbescheinigungBesteuerungsgrundlagenSozialversicherungsleistungenBeitrPrKrankVers)")
@@ -972,11 +973,11 @@ class SV_Meldung():
         konto.Konto().kto()
 
 #        print("")
-        print(glob.glob("*.kto"))
+        print(glob.glob("*.kto")+glob.glob("*.kto.html"))
         erg = {}
         kv  = 0.00
         zus = 0.00
-        for zeile in os.popen("grep -P '^([A-Z0-9]+|KV-Z|KV-meldZUS) +(\S+) *$' *.kto").read().split("\n"):
+        for zeile in os.popen("grep -P '^([A-Z0-9]+|KV-Z|KV-meldZUS) +(\S+) *$' *.kto.html").read().split("\n"):
             print(zeile)
             m = re.search(r"^(\S+) +(.*)$",zeile)
             if not m:

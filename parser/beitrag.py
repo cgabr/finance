@@ -35,7 +35,7 @@ class Beitrag (object):
         kkdatum            = {}
         self.betriebsnr_kk = {}
 
-        ktofile = glob.glob("*.kto")
+        ktofile = glob.glob("*.kto") + glob.glob("*.kto.html")
         if not len(ktofile) == 1:
             print("Ktofile ambiguous.")
             return()
