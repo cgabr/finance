@@ -27,7 +27,7 @@ class CSV (object):
 
     def to_kto (self,*pars):     # open the csv and kto files and prepare for processing
     
-        ktofile = glob.glob(self.dir+"/*.kto")
+        ktofile = glob.glob(self.dir+"/*.kto") + glob.glob(self.dir+"/*.kto.html")
         
         self.zeilen = []
         print(pars)
