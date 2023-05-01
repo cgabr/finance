@@ -50,7 +50,7 @@ class Tool ():
 
     def book(self,datum,betrag,ktoa,ktob,remark):  #  fuer automatisierte forecasts
     
-        ktofile = glob.glob("*.kto")[0]
+        ktofile = glob.glob("*.kto.html")[0]
         ktotext = open(ktofile).read()
 
         try:
@@ -70,7 +70,7 @@ class Tool ():
 
     def rate (self):  #  Kreditraten berechnen
     
-        ktofile  = glob.glob("*.kto")[0]
+        ktofile  = glob.glob("*.kto.html")[0]
         ktotext  = open(ktofile).read()
         ktotext1 = ""
 
