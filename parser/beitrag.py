@@ -80,18 +80,24 @@ class Beitrag (object):
 
             m = re.search('TAN +(\d\d\d\d\d\d\d\d\d)\D', text)
             if not m:
-                continue
-            tan = m.group(1)
+                m = re.search('TAN\*', text)
+                if not m:
+                    continue
+                tan = "999999999"
+            else:
+                tan = m.group(1)
  
             m = re.search('Betriebsnummer +(\d\d\d\d\d\d\d\d)\D', text)
             if not m:
                 continue
             betriebsnummer = m.group(1)
+            print("xxxx")
  
             m = re.search('Sendedatum\\:? +(\d\d)\.(\d\d)\.(\d\d)(\d\d)\D', text)
             if not m:
-                continue
-            sendedatum =  m.group(4) + m.group(2) + m.group(1)
+                sendedatum = "999999"
+            else:            
+                sendedatum =  m.group(4) + m.group(2) + m.group(1)
 
 
             text = re.sub('(.*) +ohne +Sozialausgleich(.*)', '', text, 9999)  # wegen doppelt eingetragener Betraege
