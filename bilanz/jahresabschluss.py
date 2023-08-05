@@ -221,7 +221,7 @@ class Jahresabschluss (object):
 #            print(jahr,"AUS",ausschuettung)
 
             betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1])
-            print(jahr1,betrag1,gewinn)
+#            print(jahr1,betrag1,gewinn)
             if int(gesell_form) < 2:
                 betrag1 = 0.00
             zeile    = str(jahr)+"1223" + "  " + ("%3.2f"%betrag1) + "  "  + ks[0] + "  " + ks[1] + "  0.00  "

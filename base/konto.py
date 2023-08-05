@@ -287,13 +287,14 @@ class Konto ():
             kto_file           = konto_files_found[0]
             text               = open(kto_file).read()
             self.processed_acc = text.split("\n")
-            m                  = re.search("^.*? ([0123456789abcdef]{"+self.len_hkey_str+"}) ",text)
+            m                  = re.search("^.*? ([012KEP3456789abcdef]{"+self.len_hkey_str+"}) ",text)
         
             if not m:
                 break
                 
-            if not m.group(1) == self.hkey:   #  the key which is found in the existing kto-file allows to change the result of the computed sub account
-                break                         #  so we take the chance
+            
+            if not (m.group(1) == self.hkey or "KEEP" in m.group(1)):   #  the key which is found in the existing kto-file allows to change
+                break                                                   #  the result of the computed sub account so we take the chance
              
             m = re.search("^(.*?)\n *\n(.*\n\d\d\d\d\d\d\d\d +\-?\d+\.\d\d +\S+ .*?\n)",text,re.DOTALL)   #  Check whether processed file has changed
                 

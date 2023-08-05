@@ -1141,7 +1141,7 @@ class Bilanz (object):
         for item in anl_data:
             if anl_data[item][0] == anl_data[item][1] == -anl_data[item][2] == -anl_data[item][3]:
                 continue
-            print(item,anl_data[item])
+#            print(item,anl_data[item])
             nr = anl_data[item][4]
             anl_arten[nr] = 1
             if not (nr+"I") in anl_data1:
@@ -1165,7 +1165,7 @@ class Bilanz (object):
                 if betr1 == "-0.00":
                     betr1 = "0.00"
                 text2 = text2.replace("-"+nr+pos+"-",betr1)
-        print(anl_data1)
+ #       print(anl_data1)
 
 
         text2 = re.sub("\n\-?de-gaap-ci:.*?\!.*?\[\-.*?\-\].*?\n","\n",text2,9999)
