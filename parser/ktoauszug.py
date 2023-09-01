@@ -39,7 +39,7 @@ class Ktoauszug (object):
             
         uleistung = {}
         
-        ktofile = glob.glob("*.kto")
+        ktofile = glob.glob("*.kto") + glob.glob("*.kto.html") 
         ktotext = open(ktofile[0]).read()
         
         m = re.search(r"^(.*?)\-(15\d+)",ktotext)
@@ -129,7 +129,7 @@ class Ktoauszug (object):
                         jahr  = m.group(2)
                         monat = m.group(1)
                         continue
-                    m = re.search(r"(Auszahlung.*?aus|Umbuchung.*?Leistung.*U|Saeumnis|g.*?tzter +Betrag|[bB]e.trags *nach|Mahngeb|Erlass|Retoure +G|Gebuehr|Umbuchung +Leistung +U1)(.*?) +(\-?\d+)[\,\.](\d\d)",zeile)
+                    m = re.search(r"(Auszahlung.*?aus|Umbuchung.*?Leistung.*U|Sae?umnis|g.*?tzter +Betrag|[bB]e.trags *nach|Mahngeb|Erlass|Retoure +G|Gebuehr|Umbuchung +Leistung +U1)(.*?) +(\-?\d+)[\,\.](\d\d)",zeile)
                     if m:
                         text1.append([jahr+monat,m.group(1) + m.group(2),m.group(3)+"."+m.group(4)])
 #                        print(text1[-1])
@@ -148,7 +148,7 @@ class Ktoauszug (object):
                         if m:
                             jahr  = m.group(3)
                             monat = m.group(2)
-                    m = re.search(r"(Ford. Beitrag|Beitrag aus Betriebspruefung|Mahnge|Saeumnisz|Beitrag)(.*?) +(\-?\d+)\,(\d\d)",zeile)
+                    m = re.search(r"(Ford. Beitrag|Beitrag aus Betriebspruefung|Mahnge|Sae?umnisz|Beitrag)(.*?) +(\-?\d+)\,(\d\d)",zeile)
                     if m:
                         text1.append([jahr+monat,m.group(1),re.sub(r" ","",m.group(3)+"."+m.group(4),99)])
 
@@ -172,7 +172,7 @@ class Ktoauszug (object):
                     
 
 #                    print(zeile)
-                    m = re.search(r"(Betriebspruef|Ausser|Vollstreck|Mahn-|Mahngeb|Kosten +und +Geb|Saeumnisz|Rueckla.*?geb|Dauerbeitr|Beitrags?f?e?|Beitraege|Ruecklaeuf|Forderung\s)(.*?)(\s.*?\d\d)\.(\d\d)\.(\d\d.\d).*?\s(\-?[1-9]?\d*),(\d\d\-?)",zeile)
+                    m = re.search(r"(Betriebspruef|Ausser|Vollstreck|Mahn-|Mahngeb|Kosten +und +Geb|Sae?umnisz|Rueckla.*?geb|Dauerbeitr|Beitrags?f?e?|Beitraege|Ruecklaeuf|Forderung\s)(.*?)(\s.*?\d\d)\.(\d\d)\.(\d\d.\d).*?\s(\-?[1-9]?\d*),(\d\d\-?)",zeile)
                     if m:
 #                        print (" --->  MATCH  --->",zeile)
 #                        print(m.group(5))
@@ -228,7 +228,7 @@ class Ktoauszug (object):
                 dd   = ("%02u" % day[o9])
                 ukey = ""
                 betrag = re.sub(r"--","",zeile[2])
-                if "Saeumn" in remark:
+                if "Saeumn" in remark or "Saumn" in remark:
                     ktoa = self.ktod
                     ktob = self.ktoa + "-"+kknr+"-saeumn"
                 elif "Mahn" in remark or "Ausser" in remark or "Kosten " in remark or "Forderung" in remark or "Ruecklast" in remark or "Vollstreck" in remark:
@@ -477,7 +477,7 @@ class Ktoauszug (object):
                 open(csv_file+"~","w").write(text)
                 open(csv_file,"w").write(text1)
                 
-        ktofile = glob.glob(self.dir+"/*.kto")
+        ktofile = glob.glob(self.dir+"/*.kto") + glob.glob(self.dir+"/*.kto.html")
         
         if len(ktofile) > 1:
             print("More than one kto-file.")

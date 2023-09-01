@@ -23,7 +23,7 @@ class USteuer (object):
 #        ul                    = len(config.UMSATZSTEUER_KONTO)
         
         if ktotext0 == "":
-            ktofile = glob.glob("*.kto")[0]
+            ktofile = ( glob.glob("*.kto") + glob.glob("*.kto.html") )[0]
             ktotext = open(ktofile).read()
         else:
             ktotext = ktotext0

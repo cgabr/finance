@@ -133,7 +133,7 @@ class Jahresabschluss (object):
                                 #  0: keine Bilanzierung
 
         if ktotext0 == "":
-            ktofile = glob.glob("*.kto")[0]
+            ktofile = ( glob.glob("*.kto") + glob.glob("*.kto.html") )[0]
             ktotext = open(ktofile).read()
         else:
             ktotext = ktotext0
