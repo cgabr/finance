@@ -57,7 +57,7 @@ class Unicredit (object):
             for zeile in open(file1+".ocr").read().split("\n"):
                 if "VALUTI" in zeile:
                     fileroot = "IzvodDevPLReport"
-                m = re.search("IZVOD BROJ.*?(\d+)",zeile)
+                m = re.search("IZVOD BRO[J\)].*?(\d+)",zeile)
                 if m:
                     auszug_nr = m.group(1)
                     continue

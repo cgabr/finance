@@ -232,7 +232,19 @@ class Bilanz (object):
 
         kto.read_saldo("14-."+jahr)
 #        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
-        text  = text + "\n\n\f\nABSCHLUSS" + kto.salden_text()
+        text1 = ("ABSCHLUSS" + kto.salden_text()).split("\n")
+
+        kto.read_saldo("15-:"+jahr)
+#        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text2  = "\n\n\nSTEUERLICHES EINLAGEKONTO" + kto.salden_text().split("\n")[0]
+
+        kto.read_saldo("16-."+jahr)
+#        text  = text + "\n\n\f\nABSCHLUSS" + os.popen("grep -P '^(\S+|     ) +(\S+) *$' *kto").read()
+        text3 = "\n" + "\n".join(kto.salden_text().split("\n")[1:])
+        text3 = re.sub(r" (\-?\d+\.\d\d)","-\\1",text3,999999)  #  Minuszeichen
+        text3 = re.sub(r" --","   ",text3,999999)
+
+        text  = text + "\n\n\f\n" + text1[0] + text2 + text3 + "\n".join(text1[1:]) + "\n"
 
 
 # --- fuer anlagenspiegel: ------
@@ -247,6 +259,9 @@ class Bilanz (object):
 #        exit()
 
 #---------------------------
+
+#        print(text)
+#        exit()
 
         text = text + text_add
 
@@ -265,8 +280,8 @@ class Bilanz (object):
         Konto(self.ktotyp).kto("^11-C13-3060-."+jahr)
         ust = open((glob.glob("*kto")+glob.glob("*kto.html"))[0]).read()
 
- #       print(text)
- #       exit()
+#        print(text)
+#        exit()
 
         text = re.sub(r"\n([^\-]{3}  +\-?\d+\.\d\d) *","\n\n\\1\n",text,99999999)
 
@@ -296,8 +311,8 @@ class Bilanz (object):
 
         text = re.sub(r"Xo","Do",text1,99999999)
 
- #       print(text)
- #       exit()
+#        print(text)
+#        exit()
 
         text = re.sub(r"A11                                           ","\nANLAGEVERMOEGEN\n\n"+
                                                                         "A11: Sachanlagen - Betriebsausstattung        ",text,1)
@@ -846,6 +861,8 @@ class Bilanz (object):
                                                                         "H11: Value differences                        ",text,1)
         text = re.sub(r"H11-(\S+)                                     ","     xxyyzz.\\1                                ",text)
 
+#        print(text)
+#        return()
 
 
         for i in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20):  #  loeschen von Zeilen, die alle Null sind
@@ -860,14 +877,31 @@ class Bilanz (object):
         text = re.sub(r"\nXX([A-Z]+)","\\n\\1\\n=======",text,999999)
         
 
-#        print(text)
-#        return()
 
-        text = re.sub(r"Daa    ","\nUNTERNEHMENSSTEUERN\n\n"+
+        m = re.search(r"ABSCHLUSS +(\-?\d+\.\d\d)",text)
+        try:
+            erg1 = float(m.group(1))
+        except:
+            erg1 = 0.00
+        m = re.search(r"Da1 +(\-?\d+\.\d\d)",text)
+        try:
+            erg1 = "%3.2f" % (erg1 + float(m.group(1)))
+        except:
+            erg1 = "%3.2f" % erg1
+#        print(text)
+#        exit()
+        
+        text = re.sub(r"Da1    ",""+
+                                                                        "Da1: abzueglich Vor- und Ruecktraege          ",text,1)
+
+
+        text = re.sub(r"Daa    ","\nBASIS FUER BESTEUERUNG:                                    "+erg1+"\n\n"+
                                                                         "Daa: Koerperschaft- und Gewerbesteuer          ",text,1)
         text = re.sub(r"Daa-7603                 ","  7603   Koerperschaftsteuer                   ",text)
         text = re.sub(r"Daa-7608                 ","  7608   Solidaritaetszuschlag zur KoerpSteuer ",text)
         text = re.sub(r"Daa-7610                 ","  7610   Gewerbesteuer                         ",text)
+
+        text
 
 
         text = re.sub(r"Dba                      ","\nENTNAHME\n\n"+
@@ -895,6 +929,7 @@ class Bilanz (object):
             text = text.replace(a,b)
 
 #        print(text)
+#        exit()
 
         text_orig = text1
         text1 = ""
@@ -998,8 +1033,8 @@ class Bilanz (object):
             text6 = re.sub(r" (-0)( |\n)","  0\\2",text6,999999)  #  Minuszeichen
             
             ges0 = 0.00
-            for unterkonten in ( ["Einnahmen","spende","einnahme","zuschuss","spende","mitgliedsbeitrag","mitgliedsbeitrag"],
-                                 ["Ausgaben ","honorar","beitrag","bestand","werbung","ausgaben","notar","webhosting","kontogebuehr"] ):
+            for unterkonten in ( ["Einnahmen","spende","einnahme","zuschuss","spende","mitgliedsbeitrag"],
+                                 ["Ausgaben ","honorar","beitrag","bestand","werbung","ausgaben","notar","webhosting","kontogebuehr","mitgliedseinlage"] ):
 
                 konten = {}
                 for zeile in text6.split("\n"):
@@ -1039,6 +1074,11 @@ class Bilanz (object):
             text1 = re.sub(r"(=====================[^\n]+?) *\n","\\1                                                     "+("-"*len(text_monate))[0:-4]+"\n",text1)
  
 #-------------------------------------------
+
+#        print(text1)
+#        exit()
+        text1 = re.sub(r"\n(STEUERLICHES.*?) (\-?\d+\.\d\d)","\n(\\1\\2)",text1,re.DOTALL)
+
 
         file = jahr + "_bilanz_"+bez+"__20" + jahr
         open(file + ".md","w").write(text1)

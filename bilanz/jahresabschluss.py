@@ -210,17 +210,19 @@ class Jahresabschluss (object):
 
             print("SALDO 12",kto.read_saldo("12-."+str(jahr)[2:4]))
             print("SALDO 13",kto.read_saldo("13-."+str(jahr)[2:4]))
-            gewinn        = - kto.read_saldo("12-."+str(jahr)[2:4]) - kto.read_saldo("13-."+str(jahr)[2:4])
+            print("SALDO 16",kto.read_saldo("16-."+str(jahr)[2:4]))  #  Vor- und Ruecktraege
+            gewinn_o_vortrag = - kto.read_saldo("12-."+str(jahr)[2:4]) - kto.read_saldo("13-."+str(jahr)[2:4])
+            gewinn_m_vortrag = gewinn_o_vortrag - kto.read_saldo("16-."+str(jahr)[2:4])
             hebesatz      = int(self.steuersatz['HS'][jahr1])
 #            print(jahr,hebesatz,jahr1,gewinn)
             soli          = float(self.steuersatz['SZ'][jahr1])
             ausschuettung = 0.00
             if str(jahr) in ausschuettungen:
                 ausschuettung = ausschuettungen[str(jahr)]
-            rest          = gewinn - ausschuettung
+            rest          = gewinn_o_vortrag - ausschuettung
 #            print(jahr,"AUS",ausschuettung)
 
-            betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1])
+            betrag1  = max(0.00,float(gewinn_m_vortrag)) * float(self.steuersatz["KS"][jahr1])
 #            print(jahr1,betrag1,gewinn)
             if int(gesell_form) < 2:
                 betrag1 = 0.00
@@ -228,14 +230,14 @@ class Jahresabschluss (object):
             text     = text + zeile + "Koerperschaftsteuer\n"
             rest     = rest - float ("%3.2f"%betrag1) 
 
-            betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["KS"][jahr1]) * soli
+            betrag1  = max(0.00,float(gewinn_m_vortrag)) * float(self.steuersatz["KS"][jahr1]) * soli
             if int(gesell_form) < 2:
                 betrag1 = 0.00
             zeile    = str(jahr)+"1224" + "  " + ("%3.2f"%betrag1) + "  "  + ks_sz[0] + "  " + ks_sz[1] + "  0.00  "
             text     = text + zeile +  "Solidaritaetszuschlag zur Koerperschaftsteuer\n"
             rest     = rest - float ("%3.2f"%betrag1) 
 
-            betrag1  = max(0.00,float(gewinn)) * float(self.steuersatz["GW"][jahr1]) * int(hebesatz) * 0.01
+            betrag1  = max(0.00,float(gewinn_m_vortrag)) * float(self.steuersatz["GW"][jahr1]) * int(hebesatz) * 0.01
             if int(gesell_form) < 1:
                 betrag1 = 0.00
             zeile    = str(jahr)+"1225"  + "  " + ("%3.2f"%betrag1) + "  "  + gw[0] + "  " + gw[1] + "  0.00  "
